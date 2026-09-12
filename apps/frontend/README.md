@@ -1,75 +1,50 @@
-# React + TypeScript + Vite
+# @warden/frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Vite + React dashboard for Warden. See the root README for how this fits into the monorepo.
 
-Currently, two official plugins are available:
+## Why Vite (not Next.js)
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+Warden's frontend is a logged-in dashboard, not a public/SEO-facing site — Next's core value (SSR/SSG for SEO, ISR) doesn't apply here. Vite gives a straightforward SPA without the app-router/server-components complexity, which matters for a heavily interactive UI (the Railway-style draggable canvas view).
 
-## React Compiler
+## Tabs
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- **Home** — overview cards: Projects, Services, Deploys, connected Servers
+- **Projects** — project cards → project settings + "add services"; Railway-style canvas view of servers/databases as draggable icons
+- **Settings** — remote servers, SSH keys, team & roles, notifications, API tokens, Argus integration, branding, plan & billing
 
-## Expanding the ESLint configuration
+## Stack
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+| Concern                  | Choice                                                                                   |
+| ------------------------ | ---------------------------------------------------------------------------------------- |
+| Build tool               | Vite                                                                                     |
+| Language                 | TypeScript                                                                               |
+| Styling                  | Tailwind CSS v4 (`@tailwindcss/vite` plugin — no `tailwind.config.js`/PostCSS needed)    |
+| Icons                    | Hugeicons                                                                                |
+| Routing                  | React Router                                                                             |
+| Forms                    | React Hook Form + Zod (via `@hookform/resolvers`)                                        |
+| Server state / API calls | TanStack Query (React Query) + Axios                                                     |
+| Client state             | Zustand — added only when a piece of state genuinely needs it beyond React Query's cache |
+| Realtime                 | Socket.io-client — live deploy log streaming from `api`'s WS gateway                     |
+| Testing                  | Vitest (matches Vite, unlike Jest which assumes a different transform pipeline)          |
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+## Setup
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-
+```bash
+pnpm install
 ```
 
-You can also install [eslint-plugin-react-x](https://npmx.dev/package/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://npmx.dev/package/eslint-plugin-react-dom) for React-specific lint rules:
+## Running
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-
+```bash
+pnpm run dev      # Vite dev server, localhost:5173
+pnpm run build     # tsc -b && vite build -> dist/
+pnpm run preview    # preview the production build locally
 ```
+
+## Design reference
+
+Reuses the Atlinix design system: dark canvas/sidebar, white content panel, sand-warm neutral text, blue accent. Dokploy used as an additional style reference for the dashboard layout patterns.
+
+## Status
+
+Scaffolded (TypeScript variant, Tailwind v4 confirmed rendering), builds clean via `pnpm turbo run build`. None of the listed libraries beyond Tailwind are installed yet — React Router, RHF, Zod, TanStack Query, Axios, Hugeicons, Socket.io-client, and Zustand (when needed) are next.
