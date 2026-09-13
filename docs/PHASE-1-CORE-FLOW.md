@@ -137,7 +137,7 @@ Clicking a server opens its detail view:
 ### Team & roles
 
 - Invite by name + email.
-- Roles: `viewer`, `developer`, `deployer`, `devops`.
+- Roles: `viewer` (default), `developer`, `deployer`, `devops`, `admin`. `admin` manages the team, servers, SSH keys, org settings and can delete the organisation.
 - ⚠️ **Open decision, not resolved for Phase 1**: the exact permission boundary between `deployer` and `devops` isn't defined yet (e.g. does `devops` get SSH key/server management that `deployer` doesn't?). Needs deciding before this maps onto real auth guards.
 
 ### API tokens

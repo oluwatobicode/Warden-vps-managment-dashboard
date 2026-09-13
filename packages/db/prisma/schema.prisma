@@ -11,3 +11,455 @@ generator client {
 datasource db {
   provider = "postgresql"
 }
+
+/**
+ * Relationships:
+ * 1 user belongs to 1 organization (Phase 1 — single-org-per-user; Membership is
+ * already shaped so multi-org later just means allowing >1 Membership row per user)
+ * 1 organization has many projects, sshKeys, servers, apiTokens, memberships,
+ * invitations, notificationChannels, auditLogs
+ * 1 project has many environments, apiTokens
+ * 1 environment has many services
+ * 1 service has many deployments
+ * 1 service runs on 0..1 server (via serverId — assigned after creation, not on the
+ * project-creation form); 1 server runs many services, from any project in the org
+ * 1 server belongs to 1 organization (not locked to a single project — a server
+ * can run services from more than one project)
+ * 1 server has 1 sshKey (via serverSshKeyId); 1 sshKey can be reused across servers
+ * 1 auditLog is performed by 0..1 user (nullable + snapshot fields so the log
+ * outlives the user)
+ * Cascade behavior: deleting an Organization deletes everything under it
+ * (projects, servers, keys, tokens, memberships, invitations, notification
+ * channels, audit logs) and deleting a Server deletes its metrics/logs/
+ * containers/traefik config/docker data — these are pure child records with no
+ * standalone meaning. This is a deliberate choice for Phase 1 (simple, no orphaned
+ * data) — revisit if you want a "soft delete with grace period" pattern instead
+ * before this ships to real users with real infra on the line.
+ * Restrict (delete is blocked; the app must catch Prisma error P2003 and tell the
+ * user what is still referencing the row):
+ * - Server -> SshKey: a key still used by a server can't be deleted. Reassign first.
+ * - Service -> Server: a server still running services can't be deleted. Those
+ * services are live containers — dropping the rows would orphan them. Remove or
+ * move the services first.
+ * CONSEQUENCE FOR ORG DELETION (verified against Postgres): a single
+ * `delete organization` fails if any Service is still assigned to a Server,
+ * because Server is 1 hop from Organization but Service is 3 hops
+ * (Project -> Environment -> Service), so the Restrict check on Server fires
+ * before the cascade reaches Service. The org-delete service method must delete
+ * the org's Projects first, then the Organization row, inside one transaction.
+ * That ordering is what you want anyway: teardown of live containers belongs
+ * before Warden forgets the servers.
+ * - Membership -> User: a user with memberships can't be hard-deleted. Account
+ * deletion isn't a Phase 1 flow; revisit when it is.
+ * SetNull:
+ * - User -> Organization: org deletion leaves the user account behind, unattached.
+ * - AuditLog -> User / ApiToken: the log row survives deletion of the actor;
+ * performedByEmail / performedByRole / apiTokenName snapshots keep it readable.
+ * Indexes: Postgres does NOT auto-index FK columns and neither does Prisma, so every
+ * FK has one here. Time-series children index (serverId, createdAt) so range queries
+ * and the 24h retention purge stay cheap. Where a @@unique already leads with the FK
+ * column (e.g. Project [organizationId, slug]) that index covers it, no duplicate.
+ */
+
+// ADMIN: org-level administrator (team, servers, keys, org settings, org deletion).
+// New memberships default to VIEWER (least privilege) — see Membership.role.
+enum Role {
+  ADMIN
+  DEVELOPER
+  DEPLOYER
+  DEV_OPS
+  VIEWER
+}
+
+enum PlatformRole {
+  OWNER
+}
+
+enum MembershipStatus {
+  PENDING
+  ACTIVE
+  SUSPENDED
+}
+
+enum DeploymentStatus {
+  PENDING
+  IN_PROGRESS
+  SUCCESS
+  FAILED
+}
+
+enum ServiceStatus {
+  NOT_DEPLOYED
+  DEPLOYING
+  HEALTHY
+  DEGRADED
+  FAILED
+}
+
+enum ServerType {
+  BUILD
+  DEPLOY
+}
+
+enum ServerStatus {
+  CONNECTED
+  IDLE
+  OFFLINE
+}
+
+enum DeploymentType {
+  MANUAL
+  AUTOMATED
+}
+
+enum AuthProvider {
+  GOOGLE
+  GITHUB
+  EMAIL
+}
+
+enum ApiTokenScope {
+  READ
+  DEPLOY
+  ADMIN
+}
+
+enum NotificationChannelType {
+  SLACK
+  EMAIL
+  DISCORD
+}
+
+model User {
+  id              String        @id @default(uuid())
+  firstName       String
+  lastName        String
+  email           String        @unique
+  passwordHashed  String?
+  authProcess     AuthProvider  @default(EMAIL)
+  googleAccountId String?       @unique
+  githubAccountId String?       @unique
+  platformRole    PlatformRole?
+  organizationId  String?
+  organization    Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  memberships     Membership[]
+  auditLogs       AuditLog[]
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@index([organizationId])
+}
+
+model Invitation {
+  id             String           @id @default(uuid())
+  email          String
+  organizationId String
+  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  token          String           @unique
+  role           Role             @default(VIEWER)
+  status         MembershipStatus @default(PENDING)
+  expiresAt      DateTime
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  @@index([organizationId])
+  @@index([email])
+}
+
+model Membership {
+  id             String           @id @default(uuid())
+  userId         String
+  user           User             @relation(fields: [userId], references: [id], onDelete: Restrict)
+  organizationId String
+  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  role           Role             @default(VIEWER)
+  status         MembershipStatus @default(PENDING)
+  lastActiveAt   DateTime?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  @@unique([userId, organizationId])
+  @@index([organizationId])
+}
+
+model Organization {
+  id                   String                @id @default(uuid())
+  organizationName     String
+  organizationEmail    String                @unique
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  users                User[]
+  memberships          Membership[]
+  projects             Project[]
+  sshKeys              SshKey[]
+  servers              Server[]
+  apiTokens            ApiToken[]
+  auditLogs            AuditLog[]
+  invitations          Invitation[]
+  notificationChannels NotificationChannel[]
+}
+
+model NotificationChannel {
+  id              String                  @id @default(uuid())
+  organizationId  String
+  organization    Organization            @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  type            NotificationChannelType
+  name            String
+  enabled         Boolean                 @default(true)
+  webhookUrl      String?
+  emailRecipients String[]
+  events          String[]
+  createdAt       DateTime                @default(now())
+  updatedAt       DateTime                @updatedAt
+
+  @@index([organizationId])
+}
+
+model Project {
+  id                 String        @id @default(uuid())
+  projectName        String
+  // URL-safe identifier shown on project cards (e.g. "argus" -> /argus).
+  // Generated from projectName at creation in the app layer; unique per org.
+  slug               String
+  projectDescription String?
+  // One repo per project; environments differ by branch, not by repo.
+  // Optional so a project can be created before its repo is connected.
+  githubRepoUrl      String?
+  organizationId     String
+  organization       Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  environments       Environment[]
+  apiTokens          ApiToken[]
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+
+  @@unique([organizationId, slug])
+}
+
+model Environment {
+  id              String    @id @default(uuid())
+  environmentName String
+  // Default branch deployed to this environment (e.g. "main" for production,
+  // "develop" for staging). Deployment.branch records what a deploy actually shipped.
+  branch          String?
+  projectId       String
+  project         Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  services        Service[]
+  createdAt       DateTime  @default(now())
+
+  @@unique([projectId, environmentName])
+}
+
+model Service {
+  id            String        @id @default(uuid())
+  serviceName   String
+  image         String?
+  port          Int?
+  status        ServiceStatus @default(NOT_DEPLOYED)
+  environmentId String
+  environment   Environment   @relation(fields: [environmentId], references: [id], onDelete: Cascade)
+  // Which server this service runs on. Nullable because assignment is a follow-up
+  // step after project creation. Restrict: a server that still has services can't
+  // be deleted — the app prompts the user to remove or move them first.
+  serverId      String?
+  server        Server?       @relation(fields: [serverId], references: [id], onDelete: Restrict)
+  deployments   Deployment[]
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@unique([environmentId, serviceName])
+  @@index([serverId])
+}
+
+model Deployment {
+  id               String              @id @default(uuid())
+  deploymentStatus DeploymentStatus    @default(PENDING)
+  deploymentType   DeploymentType      @default(MANUAL)
+  branch           String?
+  commitSha        String?
+  serviceId        String
+  service          Service             @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  history          DeploymentHistory[]
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+
+  @@index([serviceId, createdAt])
+}
+
+// Audit trail of state transitions within one deployment
+// (e.g. PENDING -> IN_PROGRESS -> SUCCESS), not just a timestamp log.
+model DeploymentHistory {
+  id           String           @id @default(uuid())
+  deploymentId String
+  deployment   Deployment       @relation(fields: [deploymentId], references: [id], onDelete: Cascade)
+  status       DeploymentStatus
+  message      String?
+  createdAt    DateTime         @default(now())
+
+  @@index([deploymentId, createdAt])
+}
+
+model Server {
+  id                    String              @id @default(uuid())
+  serverName            String
+  serverIp              String
+  serverPort            Int
+  serverSSHUsername     String
+  serverType            ServerType          @default(DEPLOY)
+  // Starts OFFLINE until the first successful SSH handshake proves it reachable.
+  status                ServerStatus        @default(OFFLINE)
+  // Last successful SSH heartbeat or metrics poll. Drives the connected/idle/offline badge.
+  lastSeenAt            DateTime?
+  serverSshKeyId        String
+  serverSshKey          SshKey              @relation(fields: [serverSshKeyId], references: [id], onDelete: Restrict)
+  serverLocation        String?
+  dockerCleanupEnabled  Boolean             @default(false)
+  dockerCleanupInterval Int?                @default(30) // in days
+  organizationId        String
+  organization          Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  services              Service[]
+  serverMetrics         ServerMetrics[]
+  serverContainers      ServerContainer[]
+  serverLogs            ServerLogs[]
+  serverTraefik         ServerTraefik[]
+  dockerCleanupLogs     DockerCleanupLog[]
+  dockerDiskMetrics     DockerDiskMetrics[]
+  lastUsedAt            DateTime?
+  createdAt             DateTime            @default(now())
+
+  @@unique([organizationId, serverIp, serverPort])
+  @@index([serverSshKeyId])
+}
+
+model ServerMetrics {
+  id          String   @id @default(uuid())
+  serverId    String
+  server      Server   @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  cpuUsage    Float
+  memoryUsage Float
+  diskUsage   Float
+  createdAt   DateTime @default(now())
+
+  @@index([serverId, createdAt])
+}
+
+model DockerCleanupLog {
+  id        String   @id @default(uuid())
+  serverId  String
+  server    Server   @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@index([serverId, createdAt])
+}
+
+model DockerDiskMetrics {
+  id              String   @id @default(uuid())
+  serverId        String
+  server          Server   @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  totalDiskUsage  Float
+  imageSize       Float
+  volumeSize      Float
+  buildCacheSize  Float
+  containerSize   Float
+  reclaimableSize Float
+  createdAt       DateTime @default(now())
+
+  @@index([serverId, createdAt])
+}
+
+model ServerContainer {
+  id                   String    @id @default(uuid())
+  serverId             String
+  server               Server    @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  containerName        String
+  containerStatus      String
+  containerCpuUsage    Float
+  containerMemoryUsage Float
+  createdAt            DateTime  @default(now())
+  lastUsedAt           DateTime?
+
+  @@index([serverId, createdAt])
+}
+
+model ServerLogs {
+  id         String   @id @default(uuid())
+  serverId   String
+  server     Server   @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  logMessage String
+  createdAt  DateTime @default(now())
+
+  @@index([serverId, createdAt])
+}
+
+model ServerTraefik {
+  id            String   @id @default(uuid())
+  serverId      String
+  server        Server   @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  traefikConfig String
+  createdAt     DateTime @default(now())
+
+  @@index([serverId, createdAt])
+}
+
+model SshKey {
+  id                  String       @id @default(uuid())
+  sshKeyName          String
+  // Public half. Shown to the user to append to authorized_keys on their host.
+  publicKey           String
+  // Private half, encrypted at the application layer (e.g. AES-256-GCM with a
+  // master key from env) BEFORE it reaches Prisma. Never stored or logged in plaintext.
+  privateKeyEncrypted String
+  servers             Server[]
+  organizationId      String
+  organization        Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdAt           DateTime     @default(now())
+  lastUsedAt          DateTime?
+
+  @@index([organizationId])
+}
+
+model ApiToken {
+  id             String        @id @default(uuid())
+  apiName        String
+  // SHA-256 of the raw token. The raw token is shown once at creation and never stored.
+  tokenHash      String        @unique
+  // Leading chars of the raw token (e.g. "wdn_a1b2c3") for display in the tokens table.
+  tokenPrefix    String
+  apiTokenScope  ApiTokenScope @default(READ)
+  organizationId String
+  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  projectId      String?
+  project        Project?      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  expiresAt      DateTime?
+  lastUsedAt     DateTime?
+  auditLogs      AuditLog[]
+  createdAt      DateTime      @default(now())
+
+  @@index([organizationId])
+  @@index([projectId])
+}
+
+model AuditLog {
+  id               String       @id @default(uuid())
+  action           String
+  entityType       String
+  entityId         String
+  // Actor. Exactly one of performedById / apiTokenId is set for a user- or
+  // token-initiated action; both null = system action (cron, automated deploy).
+  // Nullable + SetNull so the row survives deletion of the user or token; the
+  // snapshot fields keep it readable afterwards.
+  performedById    String?
+  performedBy      User?        @relation(fields: [performedById], references: [id], onDelete: SetNull)
+  performedByEmail String?
+  performedByRole  Role?
+  apiTokenId       String?
+  apiToken         ApiToken?    @relation(fields: [apiTokenId], references: [id], onDelete: SetNull)
+  apiTokenName     String?
+  organizationId   String
+  organization     Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdAt        DateTime     @default(now())
+
+  @@index([organizationId, createdAt])
+  @@index([performedById])
+  @@index([apiTokenId])
+  @@index([entityType, entityId])
+}
