@@ -6,9 +6,9 @@ export const envSchema = z.object({
     .default('development'),
   PORT: z.coerce.number().int().positive().default(3000),
   DATABASE_URL: z.string(),
-  REDOIS_URL: z.string(),
+  REDIS_URL: z.string(),
 
-  CORS_ORIGINS: z.string().default(''),
+  CORS_ORIGIN: z.string().default(''),
   APP_URL: z.string().default(''),
   JWT_ACCESS_SECRET: z.string().min(1, 'JWT_ACCESS_SECRET is required'),
   JWT_ACCESS_TTL: z.string().min(1).default('15m'),

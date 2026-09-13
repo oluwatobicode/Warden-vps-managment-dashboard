@@ -5,6 +5,7 @@ allowBuilds:
   "@parcel/watcher": true
   "@prisma/engines": true
   argon2: true
+  bcrypt: true
   cpu-features: true
   esbuild: true
   msgpackr-extract: true

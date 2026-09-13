@@ -40,7 +40,7 @@ Both `api` and `worker` need database and SSH/Docker access. Keeping them as sep
 ## Auth (decided 2026-09-13)
 
 - Access JWT (15 min, httpOnly cookie, no `role` claim) + opaque refresh token (7 days, httpOnly, path-scoped to `/auth/refresh`, hashed in Redis, rotated on use). `session:{sid}` in Redis is the source of truth; every guarded request verifies the JWT then loads the session — missing session = 401.
-- Flows: magic link (token in Redis, 15 min, single use) -> onboarding (password + org name, one transaction, creator becomes `ADMIN`); email + argon2id password; GitHub / Google OAuth via direct `fetch`; API tokens as bearer (SHA-256 -> `ApiToken.tokenHash`).
+- Flows: magic link (token in Redis, 15 min, single use) -> onboarding (password + org name, one transaction, creator becomes `ADMIN`); email + bcrypt password; GitHub / Google OAuth via direct `fetch`; API tokens as bearer (SHA-256 -> `ApiToken.tokenHash`).
 - No Passport, no class-validator. `ZodValidationPipe` + schemas from `shared-types`.
 - Module layout in `apps/api/src`: `prisma/`, `redis/` (global), `session/` (`SessionService`, `TokenService`), `auth/` (controller, `AuthService`, `OnboardingService`, guards `SessionGuard` / `RolesGuard` / `ApiTokenGuard`, decorators `@Roles` / `@CurrentUser` / `@CurrentOrg`), `mail/`.
 
