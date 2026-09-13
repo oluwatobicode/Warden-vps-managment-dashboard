@@ -6,6 +6,7 @@
 generator client {
   provider = "prisma-client"
   output   = "../generated/prisma"
+  moduleFormat = "cjs"
 }
 
 datasource db {
@@ -55,14 +56,19 @@ datasource db {
  * - User -> Organization: org deletion leaves the user account behind, unattached.
  * - AuditLog -> User / ApiToken: the log row survives deletion of the actor;
  * performedByEmail / performedByRole / apiTokenName snapshots keep it readable.
+ * Tenancy guard: Environment, Service, Server, SshKey and ApiToken all carry
+ * organizationId, and the cross-model relations (Environment->Project,
+ * Service->Environment, Service->Server, Server->SshKey, ApiToken->Project) are
+ * COMPOSITE foreign keys on (id, organizationId). Postgres therefore rejects any
+ * row that points at a parent in a different organization, even if the app
+ * forgets to check. The @@unique([id, organizationId]) pairs exist only to be
+ * referenced by those composite FKs.
  * Indexes: Postgres does NOT auto-index FK columns and neither does Prisma, so every
  * FK has one here. Time-series children index (serverId, createdAt) so range queries
  * and the 24h retention purge stay cheap. Where a @@unique already leads with the FK
  * column (e.g. Project [organizationId, slug]) that index covers it, no duplicate.
  */
 
-// ADMIN: org-level administrator (team, servers, keys, org settings, org deletion).
-// New memberships default to VIEWER (least privilege) — see Membership.role.
 enum Role {
   ADMIN
   DEVELOPER
@@ -140,14 +146,10 @@ model User {
   googleAccountId String?       @unique
   githubAccountId String?       @unique
   platformRole    PlatformRole?
-  organizationId  String?
-  organization    Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
   memberships     Membership[]
   auditLogs       AuditLog[]
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
-
-  @@index([organizationId])
 }
 
 model Invitation {
@@ -188,7 +190,6 @@ model Organization {
   organizationEmail    String                @unique
   createdAt            DateTime              @default(now())
   updatedAt            DateTime              @updatedAt
-  users                User[]
   memberships          Membership[]
   projects             Project[]
   sshKeys              SshKey[]
@@ -233,6 +234,7 @@ model Project {
   updatedAt          DateTime      @updatedAt
 
   @@unique([organizationId, slug])
+  @@unique([id, organizationId])
 }
 
 model Environment {
@@ -242,32 +244,40 @@ model Environment {
   // "develop" for staging). Deployment.branch records what a deploy actually shipped.
   branch          String?
   projectId       String
-  project         Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  // Denormalized from Project so the composite FK below can prove same-org.
+  organizationId  String
+  project         Project   @relation(fields: [projectId, organizationId], references: [id, organizationId], onDelete: Cascade)
   services        Service[]
   createdAt       DateTime  @default(now())
 
   @@unique([projectId, environmentName])
+  @@unique([id, organizationId])
+  @@index([organizationId])
 }
 
 model Service {
-  id            String        @id @default(uuid())
-  serviceName   String
-  image         String?
-  port          Int?
-  status        ServiceStatus @default(NOT_DEPLOYED)
-  environmentId String
-  environment   Environment   @relation(fields: [environmentId], references: [id], onDelete: Cascade)
+  id             String        @id @default(uuid())
+  serviceName    String
+  image          String?
+  port           Int?
+  status         ServiceStatus @default(NOT_DEPLOYED)
+  environmentId  String
+  // Denormalized from Environment (which proves it against Project). Also makes
+  // org-scoped dashboard queries a single join instead of four.
+  organizationId String
+  environment    Environment   @relation(fields: [environmentId, organizationId], references: [id, organizationId], onDelete: Cascade)
   // Which server this service runs on. Nullable because assignment is a follow-up
   // step after project creation. Restrict: a server that still has services can't
   // be deleted — the app prompts the user to remove or move them first.
-  serverId      String?
-  server        Server?       @relation(fields: [serverId], references: [id], onDelete: Restrict)
-  deployments   Deployment[]
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
+  serverId       String?
+  server         Server?       @relation(fields: [serverId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  deployments    Deployment[]
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
 
   @@unique([environmentId, serviceName])
   @@index([serverId])
+  @@index([organizationId])
 }
 
 model Deployment {
@@ -310,7 +320,7 @@ model Server {
   // Last successful SSH heartbeat or metrics poll. Drives the connected/idle/offline badge.
   lastSeenAt            DateTime?
   serverSshKeyId        String
-  serverSshKey          SshKey              @relation(fields: [serverSshKeyId], references: [id], onDelete: Restrict)
+  serverSshKey          SshKey              @relation(fields: [serverSshKeyId, organizationId], references: [id, organizationId], onDelete: Restrict)
   serverLocation        String?
   dockerCleanupEnabled  Boolean             @default(false)
   dockerCleanupInterval Int?                @default(30) // in days
@@ -327,6 +337,7 @@ model Server {
   createdAt             DateTime            @default(now())
 
   @@unique([organizationId, serverIp, serverPort])
+  @@unique([id, organizationId])
   @@index([serverSshKeyId])
 }
 
@@ -414,6 +425,7 @@ model SshKey {
   createdAt           DateTime     @default(now())
   lastUsedAt          DateTime?
 
+  @@unique([id, organizationId])
   @@index([organizationId])
 }
 
@@ -428,12 +440,13 @@ model ApiToken {
   organizationId String
   organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   projectId      String?
-  project        Project?      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  project        Project?      @relation(fields: [projectId, organizationId], references: [id, organizationId], onDelete: Cascade)
   expiresAt      DateTime?
   lastUsedAt     DateTime?
   auditLogs      AuditLog[]
   createdAt      DateTime      @default(now())
 
+  @@unique([id, organizationId])
   @@index([organizationId])
   @@index([projectId])
 }

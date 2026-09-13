@@ -37,11 +37,19 @@ Both `api` and `worker` need database and SSH/Docker access. Keeping them as sep
 - `worker` isn't coupled to Nest's request/response lifecycle — it's just job processors
 - Either app can scale/restart independently in production
 
+## Auth (decided 2026-09-13)
+
+- Access JWT (15 min, httpOnly cookie, no `role` claim) + opaque refresh token (7 days, httpOnly, path-scoped to `/auth/refresh`, hashed in Redis, rotated on use). `session:{sid}` in Redis is the source of truth; every guarded request verifies the JWT then loads the session — missing session = 401.
+- Flows: magic link (token in Redis, 15 min, single use) -> onboarding (password + org name, one transaction, creator becomes `ADMIN`); email + argon2id password; GitHub / Google OAuth via direct `fetch`; API tokens as bearer (SHA-256 -> `ApiToken.tokenHash`).
+- No Passport, no class-validator. `ZodValidationPipe` + schemas from `shared-types`.
+- Module layout in `apps/api/src`: `prisma/`, `redis/` (global), `session/` (`SessionService`, `TokenService`), `auth/` (controller, `AuthService`, `OnboardingService`, guards `SessionGuard` / `RolesGuard` / `ApiTokenGuard`, decorators `@Roles` / `@CurrentUser` / `@CurrentOrg`), `mail/`.
+
 ## Current state
 
 Monorepo skeleton is built and compiles clean (`pnpm turbo run build`). Not yet wired:
 
-- Prisma schema not yet written (`packages/db/prisma/schema.prisma` is a stub)
+- Prisma schema written and migrated (`init`, `cross_org_guard`); `pnpm infra:up` starts Postgres + Redis from `infra/docker-compose.yml`
+- `packages/db` has no `src/index.ts` yet — nothing exports a Prisma client for api/worker to import
 - No app yet imports from `db`, `ssh-client`, `docker-client`, or `shared-types` as real workspace dependencies
 - Deploy job logic, health-check logic, and rollback logic not yet implemented
 
