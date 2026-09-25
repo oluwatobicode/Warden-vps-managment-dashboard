@@ -7,20 +7,16 @@ export const GENERIC_MESSAGES = {
 } as const;
 
 export const AUTH_MESSAGES = {
-  // magic link — same response whether or not the email exists
   magic_link_sent:
     'If an account can be created for that email, a sign-in link has been sent',
   magic_link_invalid: 'This sign-in link is invalid or has expired',
-  // password login — never say which half was wrong
   invalid_credentials: 'Invalid email or password',
   account_suspended: 'Your access to this organization has been suspended',
-  // session
   unauthenticated: 'You need to sign in to continue',
   session_expired: 'Your session has expired. Please sign in again',
   refresh_invalid: 'Session could not be refreshed. Please sign in again',
   logged_out: 'Logged out successfully',
   logged_out_everywhere: 'Logged out of all devices',
-  // oauth
   oauth_state_invalid: 'Sign-in could not be completed. Please try again',
   oauth_email_missing: 'Your provider account has no verified email address',
   oauth_account_linked: 'Account linked successfully',
@@ -107,7 +103,6 @@ export const SSH_KEY_MESSAGES = {
   deleted: 'SSH key deleted',
   not_found: 'SSH key not found',
   invalid_key: 'That is not a valid SSH private key',
-  // Restrict on Server -> SshKey. Interpolate the count in the service layer.
   in_use: 'This key is still used by {count} server(s). Reassign them first',
 } as const;
 

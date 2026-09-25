@@ -3,7 +3,7 @@ import { ZodType } from 'zod';
 
 // "implements PipeTransform" is what makes nest Nest recgonise it as a pipe
 @Injectable()
-export class zodValidationPipe<T> implements PipeTransform<unknown, T> {
+export class ZodValidationPipe<T> implements PipeTransform<unknown, T> {
   constructor(private readonly schema: ZodType<T>) {}
 
   transform(value: unknown): T {
