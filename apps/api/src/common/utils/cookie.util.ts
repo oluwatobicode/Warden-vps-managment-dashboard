@@ -45,6 +45,11 @@ export function setPendingCookie(res: Response, id: string, isProd: boolean) {
   });
 }
 
+/** Onboarding done (or abandoned): drop only the pending cookie. */
+export function clearPendingCookie(res: Response, isProd: boolean) {
+  res.clearCookie(COOKIE.pending, { ...base(isProd), path: PATHS.pending });
+}
+
 export function clearAuthCookies(res: Response, isProd: boolean) {
   res.clearCookie(COOKIE.access, { ...base(isProd), path: PATHS.access });
   res.clearCookie(COOKIE.refresh, { ...base(isProd), path: PATHS.refresh });

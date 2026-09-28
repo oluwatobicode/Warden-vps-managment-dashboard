@@ -5,21 +5,29 @@ import {
   HttpCode,
   Post,
   Query,
+  Req,
   Res,
+  UseGuards,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { Response } from 'express';
 import {
+  EmailOnboardingSchema,
   MagicLinkRequestSchema,
   MagicLinkVerifySchema,
   type AuthOutcome,
+  type EmailOnboardingInput,
   type MagicLinkRequest,
   type MagicLinkVerify,
 } from 'shared-types';
 import { AuthService } from './auth.service';
+import { OnboardingService } from './onboarding.service';
+import { OnboardingGuard } from '../../common/guards/onboarding.guard';
+import type { AuthenticatedRequest } from '../../common/types/request';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import { AUTH_MESSAGES } from '../../common/constants/messages.config';
 import {
+  clearPendingCookie,
   setAccessCookie,
   setPendingCookie,
   setRefreshCookie,
@@ -32,6 +40,7 @@ export class AuthController {
 
   constructor(
     private readonly auth: AuthService,
+    private readonly onboarding: OnboardingService,
     config: ConfigService,
   ) {
     this.isProd = config.get('NODE_ENV') === 'production';
@@ -69,5 +78,28 @@ export class AuthController {
     // New user: the pending cookie is what OnboardingGuard will read on route 3.
     setPendingCookie(res, outcome.pendingId, this.isProd);
     return { status: 'onboarding', provider: outcome.provider };
+  }
+
+  // Route 3. OnboardingGuard runs first: no valid pending cookie → 401 before
+  // this method is entered. @Req() gives the same request the guard decorated.
+  @Post('onboarding')
+  @UseGuards(OnboardingGuard)
+  async completeOnboarding(
+    @Body(new ZodValidationPipe(EmailOnboardingSchema))
+    body: EmailOnboardingInput,
+    @Req() req: AuthenticatedRequest,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    // The `!` is safe: the guard guarantees both are set on this route.
+    const { user, tokens } = await this.onboarding.completeEmailSignup(
+      req.pending!,
+      req.pendingId!,
+      body,
+    );
+
+    clearPendingCookie(res, this.isProd); // signup state is spent
+    setAccessCookie(res, tokens.accessToken, this.isProd); // logged in immediately
+    setRefreshCookie(res, tokens.refreshToken, this.isProd);
+    return user;
   }
 }
