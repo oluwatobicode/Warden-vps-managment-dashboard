@@ -12,6 +12,8 @@ export interface ApiErrorResponse {
   statusCode: number;
   errorCode: string;
   message: string;
+  // Field-level validation errors from ZodValidationPipe, when applicable.
+  issues?: Record<string, string[]>;
   requestId?: string;
   timestamp: string;
 }
