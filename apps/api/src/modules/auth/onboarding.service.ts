@@ -5,6 +5,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { RedisService } from '../../redis/redis.service';
 import { SessionService } from './session/session.service';
 import { hashPassword } from '../../common/utils/password.util';
+import { toSessionUser } from './auth.mapper';
 import { REDIS_KEY } from '../../common/constants/constants.config';
 import { SIGNUP_MESSAGES } from '../../common/constants/messages.config';
 import type { PendingSignupRecord } from './auth.service';
@@ -92,17 +93,11 @@ export class OnboardingService {
     );
 
     // 5. Shape the response explicitly — never hand a Prisma User to a controller.
-    const user: SessionUser = {
-      id: created.user.id,
-      email: created.user.email,
-      firstName: created.user.firstName,
-      lastName: created.user.lastName,
-      organization: {
-        id: created.organization.id,
-        name: created.organization.organizationName,
-      },
-      role: created.membership.role,
-    };
+    const user = toSessionUser(
+      created.user,
+      created.organization,
+      created.membership,
+    );
 
     return { user, tokens };
   }

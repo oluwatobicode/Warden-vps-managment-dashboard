@@ -8,3 +8,8 @@ export function hashPassword(plain: string): Promise<string> {
 export function verifyPassword(hash: string, plain: string): Promise<boolean> {
   return bcrypt.compare(plain, hash);
 }
+
+export const DUMMY_HASH = bcrypt.hashSync(
+  'warden-dummy-password-never-matches',
+  COST,
+);

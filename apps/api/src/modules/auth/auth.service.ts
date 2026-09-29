@@ -1,15 +1,22 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { RedisService } from '../../redis/redis.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { MailService } from '../../mail/mail.service';
-import { SessionService } from './session/session.service';
+import { SessionRecord, SessionService } from './session/session.service';
 import { randomToken, sha256 } from '../../common/utils/token.util';
+import type { SessionUser } from 'shared-types';
+import { toSessionUser } from './auth.mapper';
 import {
   REDIS_KEY,
   TTL_SECONDS,
 } from '../../common/constants/constants.config';
 import { AUTH_MESSAGES } from '../../common/constants/messages.config';
+import { DUMMY_HASH, verifyPassword } from '../../common/utils/password.util';
 
 /** What we store under `warden:magic:{hash}` between "send link" and "click link". */
 interface MagicLinkRecord {
@@ -110,5 +117,65 @@ export class AuthService {
       TTL_SECONDS.pendingSignup,
     );
     return { status: 'onboarding', provider: 'EMAIL', pendingId };
+  }
+
+  /**
+   * Route 4: GET /auth/me — the frontend's "who am I" on page load.
+   * Reads from Postgres (not just the session) so a renamed user or org shows
+   * up immediately. Role comes from the membership, never platformRole.
+   */
+  async me(session: SessionRecord): Promise<SessionUser> {
+    const user = await this.prisma.client.user.findUnique({
+      where: { id: session.userId },
+      include: {
+        memberships: {
+          where: { organizationId: session.organizationId },
+          include: { organization: true },
+        },
+      },
+    });
+
+    // User deleted (or membership removed) after login → treat as logged out.
+    const membership = user?.memberships[0];
+    if (!user || !membership) {
+      throw new UnauthorizedException(AUTH_MESSAGES.session_expired);
+    }
+
+    return toSessionUser(user, membership.organization, membership);
+  }
+
+  /** Route 5: POST /auth/login. Returns tokens; the controller sets cookies. */
+  async login(
+    email: string,
+    password: string,
+  ): Promise<{ accessToken: string; refreshToken: string }> {
+    const theUser = await this.prisma.client.user.findUnique({
+      where: { email: email },
+      include: {
+        memberships: true,
+      },
+    });
+
+    // Always run bcrypt exactly once — against DUMMY_HASH when the email is
+    // unknown — so timing can't reveal which emails have accounts.
+    const hash = theUser?.passwordHashed ?? DUMMY_HASH;
+    const isPasswordCorrect = await verifyPassword(hash, password);
+
+    // One message for "no such user" and "wrong password".
+    if (!theUser || !isPasswordCorrect) {
+      throw new UnauthorizedException(AUTH_MESSAGES.invalid_credentials);
+    }
+
+    const membership = theUser.memberships[0];
+
+    if (membership.status !== 'ACTIVE') {
+      throw new ForbiddenException(AUTH_MESSAGES.account_suspended);
+    }
+
+    return this.sessions.create(
+      theUser.id,
+      membership.organizationId,
+      membership.role,
+    );
   }
 }

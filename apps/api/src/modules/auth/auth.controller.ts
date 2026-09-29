@@ -7,12 +7,15 @@ import {
   Query,
   Req,
   Res,
+  UnauthorizedException,
   UseGuards,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { Response } from 'express';
 import {
   EmailOnboardingSchema,
+  type LoginInput,
+  LoginSchema,
   MagicLinkRequestSchema,
   MagicLinkVerifySchema,
   type AuthOutcome,
@@ -21,17 +24,24 @@ import {
   type MagicLinkVerify,
 } from 'shared-types';
 import { AuthService } from './auth.service';
+import { SessionService } from './session/session.service';
+import { COOKIE } from '../../common/constants/constants.config';
 import { OnboardingService } from './onboarding.service';
 import { OnboardingGuard } from '../../common/guards/onboarding.guard';
 import type { AuthenticatedRequest } from '../../common/types/request';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
-import { AUTH_MESSAGES } from '../../common/constants/messages.config';
 import {
+  AUTH_MESSAGES,
+  LOGIN_MESSAGES,
+} from '../../common/constants/messages.config';
+import {
+  clearAuthCookies,
   clearPendingCookie,
   setAccessCookie,
   setPendingCookie,
   setRefreshCookie,
 } from '../../common/utils/cookie.util';
+import { SessionGuard } from '../../common/guards/session.guard';
 
 @Controller('auth')
 export class AuthController {
@@ -41,6 +51,7 @@ export class AuthController {
   constructor(
     private readonly auth: AuthService,
     private readonly onboarding: OnboardingService,
+    private readonly sessions: SessionService,
     config: ConfigService,
   ) {
     this.isProd = config.get('NODE_ENV') === 'production';
@@ -101,5 +112,60 @@ export class AuthController {
     setAccessCookie(res, tokens.accessToken, this.isProd); // logged in immediately
     setRefreshCookie(res, tokens.refreshToken, this.isProd);
     return user;
+  }
+
+  @Get('me')
+  @UseGuards(SessionGuard)
+  async getMe(@Req() req: AuthenticatedRequest) {
+    return this.auth.me(req.session!);
+  }
+
+  @Post('login')
+  @HttpCode(200)
+  async login(
+    @Body(new ZodValidationPipe(LoginSchema))
+    body: LoginInput,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const tokens = await this.auth.login(body.email, body.password);
+    setAccessCookie(res, tokens.accessToken, this.isProd);
+    setRefreshCookie(res, tokens.refreshToken, this.isProd);
+    return { message: LOGIN_MESSAGES.login_success };
+  }
+
+  @Post('logout')
+  @HttpCode(200)
+  @UseGuards(SessionGuard)
+  async logout(
+    @Req() req: AuthenticatedRequest,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    // Await it: the response must not go out before Redis has dropped the session.
+    await this.sessions.destroy(
+      req.sid!,
+      req.session!.userId,
+      req.cookies[COOKIE.refresh],
+    );
+    clearAuthCookies(res, this.isProd);
+    return { message: AUTH_MESSAGES.logged_out };
+  }
+
+  @Post('refresh')
+  @HttpCode(200)
+  async refresh(
+    @Req() req: AuthenticatedRequest,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const raw = req.cookies[COOKIE.refresh];
+
+    if (!raw) {
+      throw new UnauthorizedException(AUTH_MESSAGES.refresh_invalid);
+    }
+
+    const tokens = await this.sessions.refreshToken(raw);
+    setAccessCookie(res, tokens.accessToken, this.isProd);
+    setRefreshCookie(res, tokens.refreshToken, this.isProd);
+
+    return { message: 'ok' };
   }
 }
