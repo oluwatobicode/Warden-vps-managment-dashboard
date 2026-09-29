@@ -66,6 +66,7 @@ warden/
 - **db:** Prisma **v7** (stable) — not v8, which is still an rc rewrite with no stable matching `@prisma/client` published. Revisit once v8 is GA.
 - **Database:** PostgreSQL, via `@prisma/adapter-pg` driver adapter
 - **Sessions / auth tokens:** Redis — not a Postgres model. Decided shape (owner's call, do not relitigate): short-lived access **JWT** (15 min, httpOnly cookie, carries `sub`, `sid`, `org`, `jti` — **never `role`**) plus an opaque **refresh token** (7 days, httpOnly cookie path-scoped to `/auth/refresh`, stored **hashed** in Redis, rotated on every use, reuse of a rotated token revokes the whole session family). Redis keys: `session:{sid}` (source of truth, sliding 7-day TTL refreshed at most hourly), `refresh:{tokenHash}`, `user-sessions:{userId}`. Every guarded request verifies the JWT **and** loads `session:{sid}` — a missing session is a 401, which is the revocation check. Role is read from the session record so demotion is instant.
+- **Mail:** Resend, via `MailService` (`RESEND_API_KEY`, `MAIL_FROM`). When the key is empty the service logs the link to the console instead of sending — keeps fresh clones and tests mail-free.
 - **Auth libraries:** no Passport, no `class-validator`. Magic-link, password (bcrypt, cost 12, password schema capped at 72 bytes), GitHub and Google OAuth are implemented directly in `AuthService` (OAuth = two `fetch` calls per provider). Magic-link tokens live in Redis with a 15-minute TTL, single use.
 - **Request validation:** a `ZodValidationPipe` applied per-handler with schemas from `shared-types`. Same schema validates the React Hook Form on the frontend and the request body on the API. Response shapes are also Zod schemas — never return a Prisma model from a controller (`User.passwordHashed`, `SshKey.privateKeyEncrypted`, `ApiToken.tokenHash` must never leak).
 - **Reverse proxy on target servers:** Traefik or Caddy, for zero-downtime container swaps (reference: how Coolify/Dokploy pair these with their deploy pipelines)
@@ -113,7 +114,6 @@ Schema covers: auth (`User`, `AuthProvider`, platform role), org structure (`Org
 ## Open items (do not build past these without confirmation)
 
 - **Cookie policy:** `SameSite=Lax` if frontend and API share a site in production, otherwise `SameSite=None; Secure` + CORS with credentials. Depends on how Warden itself will be deployed — undecided.
-- **Mail provider** for magic links (Resend / Postmark / SES / SMTP): undecided. Use a console-logging `MailService` until then.
 - **OAuth onboarding state:** new GitHub/Google users still need the org-name step. Preferred: hold the OAuth identity in Redis until onboarding completes, then create `User` + `Organization` + `Membership` together (no orphan users). Not yet confirmed.
 
 - **Traefik dynamic config editing:** raw text editor with validate-before-apply, or a structured form limited to safe fields? Unresolved — a bad direct edit can break live routing.

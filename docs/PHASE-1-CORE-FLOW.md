@@ -165,6 +165,6 @@ Clicking a server opens its detail view:
 - [ ] Exact permission split between `deployer` and `devops` roles
 - [ ] Whether GitHub/Google OAuth users can also set an optional password as a fallback login method
 - [ ] Cookie `SameSite` policy (depends on whether frontend and API share a site in production)
-- [ ] Mail provider for magic links
+- [x] Mail provider for magic links: Resend (console fallback when no API key)
 - [ ] Where new OAuth users live between callback and finishing onboarding (proposed: Redis, no `User` row until org is named)
 - [x] `PlatformRole.OWNER`: set manually in the DB for the project owner only; gates platform stats. Never assigned by code.
