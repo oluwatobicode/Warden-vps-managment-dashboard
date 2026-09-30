@@ -6,6 +6,7 @@ import { PrismaModule } from './prisma/prisma.module';
 import { ConfigModule } from '@nestjs/config';
 import { validateEnv } from './config/env.validation';
 import { AuthModule } from './modules/auth/auth.module';
+import { TeamModule } from './modules/teams/team.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { AuthModule } from './modules/auth/auth.module';
     PrismaModule,
     RedisModule,
     AuthModule,
+    TeamModule,
   ],
   controllers: [AppController],
   providers: [AppService],

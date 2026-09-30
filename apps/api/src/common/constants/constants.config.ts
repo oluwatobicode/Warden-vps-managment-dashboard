@@ -65,6 +65,15 @@ export const API_TOKEN_EXPIRY_DAYS = {
 // Team & invitations
 export const INVITATION_TTL_DAYS = 7;
 
+/** Human-readable role names for emails and UI. Names only — no permission copy. */
+export const ROLE_LABEL: Record<string, string> = {
+  ADMIN: 'Admin',
+  DEV_OPS: 'DevOps',
+  DEPLOYER: 'Deployer',
+  DEVELOPER: 'Developer',
+  VIEWER: 'Viewer',
+} as const;
+
 // Rate limiting (per IP unless noted). GUESS
 export const RATE_LIMIT = {
   magicLink: { limit: 5, ttlSeconds: 15 * 60 }, // also keyed by email in the service

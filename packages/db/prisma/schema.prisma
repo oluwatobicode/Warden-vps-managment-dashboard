@@ -87,6 +87,13 @@ enum MembershipStatus {
   SUSPENDED
 }
 
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  EXPIRED 
+  REVOKED
+}
+
 enum DeploymentStatus {
   PENDING
   IN_PROGRESS
@@ -148,6 +155,7 @@ model User {
   platformRole    PlatformRole?
   memberships     Membership[]
   auditLogs       AuditLog[]
+  setInvitations  Invitation[]
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
 }
@@ -159,13 +167,16 @@ model Invitation {
   organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   token          String           @unique
   role           Role             @default(VIEWER)
-  status         MembershipStatus @default(PENDING)
+  status         InvitationStatus @default(PENDING)
+  invitedById    String?
+  invitedBy      User?            @relation(fields: [invitedById], references: [id], onDelete: SetNull)
   expiresAt      DateTime
   createdAt      DateTime         @default(now())
   updatedAt      DateTime         @updatedAt
 
   @@index([organizationId])
   @@index([email])
+  @@index([invitedById])
 }
 
 model Membership {

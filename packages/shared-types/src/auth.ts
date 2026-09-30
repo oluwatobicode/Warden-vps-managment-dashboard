@@ -1,7 +1,5 @@
 import { z } from "zod";
-
-const email = z.string().trim().toLowerCase().email();
-const password = z.string().min(8).max(72);
+import { email, password } from "./field.js";
 
 export const MagicLinkRequestSchema = z.object({ email });
 export type MagicLinkRequest = z.infer<typeof MagicLinkRequestSchema>;

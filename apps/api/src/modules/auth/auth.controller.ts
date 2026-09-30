@@ -14,6 +14,8 @@ import {
 import { ConfigService } from '@nestjs/config';
 import type { Response } from 'express';
 import {
+  AcceptInviteSchema,
+  type AcceptInviteInput,
   EmailOnboardingSchema,
   OAuthOnboardingSchema,
   type OAuthOnboardingInput,
@@ -146,6 +148,19 @@ export class AuthController {
     );
 
     clearPendingCookie(res, this.isProd);
+    setAccessCookie(res, tokens.accessToken, this.isProd);
+    setRefreshCookie(res, tokens.refreshToken, this.isProd);
+    return user;
+  }
+
+  // Public: the invitee has no account yet; the token identifies the invite.
+  // Same cookie handling as onboarding — they land logged in.
+  @Post('invitations/accept')
+  async acceptInvitation(
+    @Body(new ZodValidationPipe(AcceptInviteSchema)) body: AcceptInviteInput,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const { user, tokens } = await this.onboarding.acceptInvite(body);
     setAccessCookie(res, tokens.accessToken, this.isProd);
     setRefreshCookie(res, tokens.refreshToken, this.isProd);
     return user;

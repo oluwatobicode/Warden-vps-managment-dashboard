@@ -24,6 +24,10 @@ Entry point: **Sign in with email** or **Sign in with GitHub**.
    - "Email verified" status shown at the top (already true, by virtue of having clicked the link)
 4. Account is created **and the user is immediately logged in** — no second login prompt. They set a password here for _future_ sign-ins, not to unlock this one.
 
+### Forgot password
+
+- User enters email → a 6-digit one-time code is emailed (short TTL, rate-limited, single use) → user enters the code and a new password. Distinct from the magic-link sign-in above, which remains code-free.
+
 ### GitHub / Google flow
 
 - Separate flow from email — OAuth handles identity + verification implicitly. No password step needed (unless we later want an optional password for users who also want email/password as a fallback — not decided for Phase 1).
