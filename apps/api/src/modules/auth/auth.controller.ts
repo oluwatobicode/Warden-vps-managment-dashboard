@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Get,
@@ -14,6 +15,8 @@ import { ConfigService } from '@nestjs/config';
 import type { Response } from 'express';
 import {
   EmailOnboardingSchema,
+  OAuthOnboardingSchema,
+  type OAuthOnboardingInput,
   type LoginInput,
   LoginSchema,
   MagicLinkRequestSchema,
@@ -22,6 +25,8 @@ import {
   type EmailOnboardingInput,
   type MagicLinkRequest,
   type MagicLinkVerify,
+  OAuthCallbackSchema,
+  type OAuthCallback,
 } from 'shared-types';
 import { AuthService } from './auth.service';
 import { SessionService } from './session/session.service';
@@ -33,6 +38,7 @@ import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import {
   AUTH_MESSAGES,
   LOGIN_MESSAGES,
+  SIGNUP_MESSAGES,
 } from '../../common/constants/messages.config';
 import {
   clearAuthCookies,
@@ -47,6 +53,7 @@ import { SessionGuard } from '../../common/guards/session.guard';
 export class AuthController {
   // Cookies need `secure` in prod and not on localhost. Decide once, here.
   private readonly isProd: boolean;
+  private readonly appUrl: string;
 
   constructor(
     private readonly auth: AuthService,
@@ -55,6 +62,7 @@ export class AuthController {
     config: ConfigService,
   ) {
     this.isProd = config.get('NODE_ENV') === 'production';
+    this.appUrl = config.getOrThrow<string>('APP_URL');
   }
 
   // Route 1. The pipe validates + normalises the body (email lowercased/trimmed)
@@ -102,6 +110,10 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
   ) {
     // The `!` is safe: the guard guarantees both are set on this route.
+    // OAuth signups have no password step — they must use /onboarding/oauth.
+    if (req.pending!.provider !== 'EMAIL') {
+      throw new BadRequestException(SIGNUP_MESSAGES.wrong_onboarding_route);
+    }
     const { user, tokens } = await this.onboarding.completeEmailSignup(
       req.pending!,
       req.pendingId!,
@@ -110,6 +122,31 @@ export class AuthController {
 
     clearPendingCookie(res, this.isProd); // signup state is spent
     setAccessCookie(res, tokens.accessToken, this.isProd); // logged in immediately
+    setRefreshCookie(res, tokens.refreshToken, this.isProd);
+    return user;
+  }
+
+  // Route 3b. Same guard, same cookies, no password — for pending records
+  // created by an OAuth callback.
+  @Post('onboarding/oauth')
+  @UseGuards(OnboardingGuard)
+  async completeOAuthOnboarding(
+    @Body(new ZodValidationPipe(OAuthOnboardingSchema))
+    body: OAuthOnboardingInput,
+    @Req() req: AuthenticatedRequest,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    if (req.pending!.provider === 'EMAIL') {
+      throw new BadRequestException(SIGNUP_MESSAGES.wrong_onboarding_route);
+    }
+    const { user, tokens } = await this.onboarding.completeOAuthSignup(
+      req.pending!,
+      req.pendingId!,
+      body,
+    );
+
+    clearPendingCookie(res, this.isProd);
+    setAccessCookie(res, tokens.accessToken, this.isProd);
     setRefreshCookie(res, tokens.refreshToken, this.isProd);
     return user;
   }
@@ -167,5 +204,33 @@ export class AuthController {
     setRefreshCookie(res, tokens.refreshToken, this.isProd);
 
     return { message: 'ok' };
+  }
+
+  @Get('github')
+  @HttpCode(200)
+  async github(@Res() res: Response) {
+    res.redirect(await this.auth.startOAuth('GITHUB'));
+  }
+
+  @Get('github/callback')
+  @HttpCode(200)
+  async githubCallback(
+    @Query(new ZodValidationPipe(OAuthCallbackSchema)) query: OAuthCallback,
+    @Res() res: Response,
+  ) {
+    const outcome = await this.auth.completeOauth(
+      'GITHUB',
+      query.code,
+      query.state,
+    );
+
+    if (outcome.status === 'authenticated') {
+      setAccessCookie(res, outcome.tokens.accessToken, this.isProd);
+      setRefreshCookie(res, outcome.tokens.refreshToken, this.isProd);
+      res.redirect(this.appUrl + '?state=authenticated');
+    } else {
+      setPendingCookie(res, outcome.pendingId, this.isProd);
+      res.redirect(this.appUrl + '/onboarding?status=onboarding');
+    }
   }
 }

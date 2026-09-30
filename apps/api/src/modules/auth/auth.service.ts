@@ -17,6 +17,7 @@ import {
 } from '../../common/constants/constants.config';
 import { AUTH_MESSAGES } from '../../common/constants/messages.config';
 import { DUMMY_HASH, verifyPassword } from '../../common/utils/password.util';
+import { GithubService } from './github.service';
 
 /** What we store under `warden:magic:{hash}` between "send link" and "click link". */
 interface MagicLinkRecord {
@@ -27,6 +28,7 @@ interface MagicLinkRecord {
 export interface PendingSignupRecord {
   email: string;
   provider: 'EMAIL' | 'GITHUB' | 'GOOGLE';
+  providerId?: string;
 }
 
 /**
@@ -39,7 +41,11 @@ export type VerifyOutcome =
       status: 'authenticated';
       tokens: { accessToken: string; refreshToken: string };
     }
-  | { status: 'onboarding'; provider: 'EMAIL'; pendingId: string };
+  | {
+      status: 'onboarding';
+      provider: PendingSignupRecord['provider'];
+      pendingId: string;
+    };
 
 @Injectable()
 export class AuthService {
@@ -50,6 +56,7 @@ export class AuthService {
     private readonly prisma: PrismaService,
     private readonly mail: MailService,
     private readonly sessions: SessionService,
+    private readonly github: GithubService,
     config: ConfigService,
   ) {
     this.appUrl = config.getOrThrow<string>('APP_URL');
@@ -177,5 +184,86 @@ export class AuthService {
       membership.organizationId,
       membership.role,
     );
+  }
+
+  async startOAuth(provider: 'GITHUB'): Promise<string> {
+    const state = randomToken();
+    await this.redis.set(
+      REDIS_KEY.oauthState(state),
+      JSON.stringify({ provider }),
+      'EX',
+      TTL_SECONDS.oauthState,
+    );
+
+    return this.github.getAuthorizeUrl(state);
+  }
+
+  async completeOauth(
+    provider: 'GITHUB',
+    code: string,
+    state: string,
+  ): Promise<VerifyOutcome> {
+    const stateKey = await this.redis.getdel(REDIS_KEY.oauthState(state));
+
+    if (!stateKey) {
+      throw new UnauthorizedException(AUTH_MESSAGES.oauth_state_invalid);
+    }
+
+    const identity = await this.github.exchangeCode(code);
+
+    const findUser = await this.prisma.client.user.findUnique({
+      where: { githubAccountId: identity.providerId },
+      include: { memberships: true },
+    });
+
+    if (findUser) {
+      const membership = findUser.memberships[0];
+
+      const tokens = await this.sessions.create(
+        findUser.id,
+        membership.organizationId,
+        membership.role,
+      );
+      return { status: 'authenticated', tokens };
+    }
+
+    const theUser = await this.prisma.client.user.findUnique({
+      where: { email: identity.email },
+      include: { memberships: true },
+    });
+
+    if (theUser) {
+      await this.prisma.client.user.update({
+        where: { id: theUser.id },
+        data: {
+          githubAccountId: identity.providerId,
+        },
+      });
+
+      const membership = theUser.memberships[0];
+
+      const tokens = await this.sessions.create(
+        theUser.id,
+        membership.organizationId,
+        membership.role,
+      );
+      return { status: 'authenticated', tokens };
+    }
+
+    const pendingId = randomToken();
+    const pending: PendingSignupRecord = {
+      email: identity.email,
+      provider,
+      providerId: identity.providerId,
+    };
+
+    await this.redis.set(
+      REDIS_KEY.pendingSignup(pendingId),
+      JSON.stringify(pending),
+      'EX',
+      TTL_SECONDS.pendingSignup,
+    );
+
+    return { status: 'onboarding', provider, pendingId };
   }
 }

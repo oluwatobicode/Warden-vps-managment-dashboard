@@ -31,6 +31,8 @@ export const SIGNUP_MESSAGES = {
   onboarding_expired: 'Your sign-up session has expired. Please start again',
   account_created: 'Account created successfully',
   email_taken: 'An account with this email already exists',
+  wrong_onboarding_route:
+    'This sign-up must be completed through the route matching how you signed in',
 } as const;
 
 export const ORGANIZATION_MESSAGES = {

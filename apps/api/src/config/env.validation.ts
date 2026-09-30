@@ -18,6 +18,8 @@ export const envSchema = z.object({
   GITHUB_CLIENT_ID: z.string().optional().default(''),
   RESEND_API_KEY: z.string().optional().default(''),
   MAIL_FROM: z.string().optional().default('noreply@oluwatobii.xyz'),
+  GITHUB_CLIENT_SECRET: z.string().optional().default(''),
+  GITHUB_CALLBACK_URL: z.string().optional().default(''),
 });
 
 export type Env = z.infer<typeof envSchema>;

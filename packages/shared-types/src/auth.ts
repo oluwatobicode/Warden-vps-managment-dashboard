@@ -60,3 +60,10 @@ export const AuthOutcomeSchema = z.discriminatedUnion("status", [
   }),
 ]);
 export type AuthOutcome = z.infer<typeof AuthOutcomeSchema>;
+
+export const OAuthCallbackSchema = z.object({
+  code: z.string().min(1),
+  state: z.string().min(1),
+});
+
+export type OAuthCallback = z.infer<typeof OAuthCallbackSchema>;
