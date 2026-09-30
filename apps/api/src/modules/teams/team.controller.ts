@@ -6,8 +6,10 @@ import {
   HttpCode,
   Param,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { z } from 'zod';
 import { InviteMemberSchema, type InviteMemberInput } from 'shared-types';
 import { SessionGuard } from '../../common/guards/session.guard';
@@ -15,10 +17,15 @@ import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { CurrentOrg } from '../../common/decorators/current-org.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { RATE_LIMIT, throttle } from '../../common/constants/constants.config';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import { TeamService } from './team.service';
 
 const UuidPipe = new ZodValidationPipe(z.string().uuid());
+const AllFlag = z
+  .string()
+  .optional()
+  .transform((v) => v === 'true');
 
 @Controller('team')
 @UseGuards(SessionGuard, RolesGuard)
@@ -30,6 +37,7 @@ export class TeamController {
     return this.team.listMembers(orgId);
   }
 
+  @Throttle(throttle(RATE_LIMIT.magicLink))
   @Post('invitations')
   @Roles('ADMIN')
   invite(
@@ -40,10 +48,14 @@ export class TeamController {
     return this.team.inviteMember(orgId, userId, body);
   }
 
+  // ?all=true → full history (accepted / declined / revoked / expired too).
   @Get('invitations')
   @Roles('ADMIN')
-  listInvitations(@CurrentOrg() orgId: string) {
-    return this.team.listInvitations(orgId);
+  listInvitations(
+    @CurrentOrg() orgId: string,
+    @Query('all', new ZodValidationPipe(AllFlag)) all: boolean,
+  ) {
+    return this.team.listInvitations(orgId, all);
   }
 
   @Delete('invitations/:id')
@@ -51,5 +63,16 @@ export class TeamController {
   @HttpCode(204)
   async revoke(@CurrentOrg() orgId: string, @Param('id', UuidPipe) id: string) {
     await this.team.revokeInvitation(orgId, id);
+  }
+
+  @Throttle(throttle(RATE_LIMIT.magicLink))
+  @Post('invitations/:id/resend')
+  @Roles('ADMIN')
+  @HttpCode(200)
+  async resendInvite(
+    @CurrentOrg() orgId: string,
+    @Param('id', UuidPipe) id: string,
+  ) {
+    return this.team.resendInvitation(orgId, id);
   }
 }

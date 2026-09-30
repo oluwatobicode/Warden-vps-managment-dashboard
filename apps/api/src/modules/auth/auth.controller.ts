@@ -11,11 +11,14 @@ import {
   UnauthorizedException,
   UseGuards,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { ConfigService } from '@nestjs/config';
 import type { Response } from 'express';
 import {
   AcceptInviteSchema,
   type AcceptInviteInput,
+  DeclineInviteSchema,
+  type DeclineInviteInput,
   EmailOnboardingSchema,
   OAuthOnboardingSchema,
   type OAuthOnboardingInput,
@@ -32,7 +35,11 @@ import {
 } from 'shared-types';
 import { AuthService } from './auth.service';
 import { SessionService } from './session/session.service';
-import { COOKIE } from '../../common/constants/constants.config';
+import {
+  COOKIE,
+  RATE_LIMIT,
+  throttle,
+} from '../../common/constants/constants.config';
 import { OnboardingService } from './onboarding.service';
 import { OnboardingGuard } from '../../common/guards/onboarding.guard';
 import type { AuthenticatedRequest } from '../../common/types/request';
@@ -69,6 +76,7 @@ export class AuthController {
 
   // Route 1. The pipe validates + normalises the body (email lowercased/trimmed)
   // before this method runs; on failure Nest already answered 400.
+  @Throttle(throttle(RATE_LIMIT.magicLink))
   @Post('magic-link')
   @HttpCode(200) // Nest defaults POST to 201; nothing is created yet
   async requestMagicLink(
@@ -166,12 +174,22 @@ export class AuthController {
     return user;
   }
 
+  // Public, like accept. 204: nothing to return, no cookies to set.
+  @Post('invitations/decline')
+  @HttpCode(204)
+  async declineInvitation(
+    @Body(new ZodValidationPipe(DeclineInviteSchema)) body: DeclineInviteInput,
+  ) {
+    await this.onboarding.declineInvite(body);
+  }
+
   @Get('me')
   @UseGuards(SessionGuard)
   async getMe(@Req() req: AuthenticatedRequest) {
     return this.auth.me(req.session!);
   }
 
+  @Throttle(throttle(RATE_LIMIT.login))
   @Post('login')
   @HttpCode(200)
   async login(

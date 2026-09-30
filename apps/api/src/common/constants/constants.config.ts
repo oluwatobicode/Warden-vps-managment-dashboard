@@ -82,6 +82,11 @@ export const RATE_LIMIT = {
   default: { limit: 100, ttlSeconds: 60 },
 } as const;
 
+/** Shape a RATE_LIMIT entry for @Throttle(). The library wants ms; we store seconds. */
+export const throttle = (r: { limit: number; ttlSeconds: number }) => ({
+  default: { limit: r.limit, ttl: r.ttlSeconds * 1000 },
+});
+
 // Pagination
 export const PAGINATION = {
   defaultLimit: 20,

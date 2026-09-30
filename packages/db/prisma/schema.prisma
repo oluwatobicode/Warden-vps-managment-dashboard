@@ -92,6 +92,7 @@ enum InvitationStatus {
   ACCEPTED
   EXPIRED 
   REVOKED
+  DECLINED
 }
 
 enum DeploymentStatus {

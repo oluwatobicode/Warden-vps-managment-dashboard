@@ -13,7 +13,52 @@ import { randomToken, sha256 } from '../../common/utils/token.util';
 import {
   INVITATION_TTL_DAYS,
   ROLE_LABEL,
+  TTL_SECONDS,
 } from '../../common/constants/constants.config';
+
+const INVITE_CONTEXT = {
+  organization: { select: { organizationName: true } },
+  invitedBy: { select: { firstName: true, lastName: true } },
+} satisfies Prisma.InvitationInclude;
+
+type InviteWithContext = Prisma.InvitationGetPayload<{
+  include: typeof INVITE_CONTEXT;
+}>;
+
+type MembershipWithUser = Prisma.MembershipGetPayload<{
+  include: { user: true };
+}>;
+
+function toMember(row: MembershipWithUser): Member {
+  return {
+    id: row.id,
+    userId: row.userId,
+    email: row.user.email,
+    firstName: row.user.firstName,
+    lastName: row.user.lastName,
+    role: row.role,
+    status: row.status,
+    joinedAt: row.createdAt.toISOString(),
+  };
+}
+
+function toInvitation(row: {
+  id: string;
+  email: string;
+  role: Invitation['role'];
+  status: Invitation['status'];
+  expiresAt: Date;
+  createdAt: Date;
+}): Invitation {
+  return {
+    id: row.id,
+    email: row.email,
+    role: row.role,
+    status: row.status,
+    expiresAt: row.expiresAt.toISOString(),
+    createdAt: row.createdAt.toISOString(),
+  };
+}
 
 @Injectable()
 export class TeamService {
@@ -37,6 +82,22 @@ export class TeamService {
     return rows.map(toMember);
   }
 
+  private async sendInviteEmail(
+    invite: InviteWithContext,
+    raw: string,
+  ): Promise<void> {
+    await this.mail.sendInvite({
+      inviteeEmail: invite.email,
+      inviterName: invite.invitedBy
+        ? `${invite.invitedBy.firstName} ${invite.invitedBy.lastName}`.trim()
+        : 'A workspace admin',
+      organizationName: invite.organization.organizationName,
+      roleLabel: ROLE_LABEL[invite.role] ?? invite.role,
+      acceptUrl: `${this.appUrl}/invite/${raw}`,
+      expiresAt: invite.expiresAt,
+    });
+  }
+
   //  list Invitations
 
   async inviteMember(
@@ -44,6 +105,13 @@ export class TeamService {
     inviterUserId: string,
     input: InviteMemberInput,
   ): Promise<Invitation> {
+    const expired = await this.prisma.client.invitation.updateMany({
+      where: { organizationId: orgId, email: input.email },
+      data: {
+        status: 'EXPIRED',
+      },
+    });
+
     // 1. Already an active member? Nothing to invite.
     const existing = await this.prisma.client.membership.findFirst({
       where: {
@@ -80,25 +148,13 @@ export class TeamService {
         invitedById: inviterUserId,
         expiresAt: new Date(Date.now() + INVITATION_TTL_DAYS * 86_400_000),
       },
-      include: {
-        organization: { select: { organizationName: true } },
-        invitedBy: { select: { firstName: true, lastName: true } },
-      },
+      include: INVITE_CONTEXT,
     });
 
     // 4. Send. If the email can't go out, the invite must not exist either —
     //    otherwise the admin gets a 500 AND a PENDING row that 409s every retry.
     try {
-      await this.mail.sendInvite({
-        inviteeEmail: invite.email,
-        inviterName: invite.invitedBy
-          ? `${invite.invitedBy.firstName} ${invite.invitedBy.lastName}`.trim()
-          : 'A workspace admin',
-        organizationName: invite.organization.organizationName,
-        roleLabel: ROLE_LABEL[invite.role] ?? invite.role,
-        acceptUrl: `${this.appUrl}/invite/${raw}`,
-        expiresAt: invite.expiresAt,
-      });
+      await this.sendInviteEmail(invite, raw); // awaited, or the catch below never fires
     } catch (e) {
       await this.prisma.client.invitation.delete({ where: { id: invite.id } });
       throw e;
@@ -107,14 +163,18 @@ export class TeamService {
     return toInvitation(invite);
   }
 
-  /** Pending, unexpired invitations for the org. */
-  async listInvitations(orgId: string): Promise<Invitation[]> {
+  async listInvitations(
+    orgId: string,
+    includeInactive = false,
+  ): Promise<Invitation[]> {
     const rows = await this.prisma.client.invitation.findMany({
-      where: {
-        organizationId: orgId,
-        status: 'PENDING',
-        expiresAt: { gt: new Date() },
-      },
+      where: includeInactive
+        ? { organizationId: orgId }
+        : {
+            organizationId: orgId,
+            status: 'PENDING',
+            expiresAt: { gt: new Date() },
+          },
       orderBy: { createdAt: 'desc' },
     });
     return rows.map(toInvitation);
@@ -134,39 +194,30 @@ export class TeamService {
       data: { status: 'REVOKED' },
     });
   }
-}
 
-type MembershipWithUser = Prisma.MembershipGetPayload<{
-  include: { user: true };
-}>;
+  // resend an invitation
 
-function toMember(row: MembershipWithUser): Member {
-  return {
-    id: row.id,
-    userId: row.userId,
-    email: row.user.email,
-    firstName: row.user.firstName,
-    lastName: row.user.lastName,
-    role: row.role,
-    status: row.status,
-    joinedAt: row.createdAt.toISOString(),
-  };
-}
+  async resendInvitation(orgId: string, id: string): Promise<Invitation> {
+    const existing = await this.prisma.client.invitation.findFirst({
+      where: { id, organizationId: orgId, status: 'PENDING' },
+      select: { id: true },
+    });
+    if (!existing) {
+      throw new NotFoundException(TEAM_MESSAGES.invitation_invalid);
+    }
 
-function toInvitation(row: {
-  id: string;
-  email: string;
-  role: Invitation['role'];
-  status: Invitation['status'];
-  expiresAt: Date;
-  createdAt: Date;
-}): Invitation {
-  return {
-    id: row.id,
-    email: row.email,
-    role: row.role,
-    status: row.status,
-    expiresAt: row.expiresAt.toISOString(),
-    createdAt: row.createdAt.toISOString(),
-  };
+    const raw = randomToken();
+    const invite = await this.prisma.client.invitation.update({
+      where: { id: existing.id },
+      data: {
+        token: sha256(raw),
+        expiresAt: new Date(Date.now() + INVITATION_TTL_DAYS * 86_400_000),
+      },
+      include: INVITE_CONTEXT,
+    });
+
+    await this.sendInviteEmail(invite, raw);
+
+    return toInvitation(invite);
+  }
 }
