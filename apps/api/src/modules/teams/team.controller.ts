@@ -5,13 +5,19 @@ import {
   Get,
   HttpCode,
   Param,
+  Patch,
   Post,
   Query,
   UseGuards,
 } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { z } from 'zod';
-import { InviteMemberSchema, type InviteMemberInput } from 'shared-types';
+import {
+  InviteMemberSchema,
+  UpdateMemberRoleSchema,
+  type InviteMemberInput,
+  type UpdateMemberRoleInput,
+} from 'shared-types';
 import { SessionGuard } from '../../common/guards/session.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -74,5 +80,29 @@ export class TeamController {
     @Param('id', UuidPipe) id: string,
   ) {
     return this.team.resendInvitation(orgId, id);
+  }
+
+  @Patch('members/:id/role')
+  @Roles('ADMIN')
+  updateMemberRole(
+    @CurrentOrg() orgId: string,
+    @CurrentUser() userId: string,
+    @Param('id', UuidPipe) id: string,
+    @Body(new ZodValidationPipe(UpdateMemberRoleSchema))
+    body: UpdateMemberRoleInput,
+  ) {
+    return this.team.updateMemberRole(orgId, userId, id, body.role);
+  }
+
+  // Suspends the membership (never deletes) and logs them out everywhere.
+  @Delete('members/:id')
+  @Roles('ADMIN')
+  @HttpCode(204)
+  async removeMember(
+    @CurrentOrg() orgId: string,
+    @CurrentUser() userId: string,
+    @Param('id', UuidPipe) id: string,
+  ) {
+    await this.team.removeMember(orgId, userId, id);
   }
 }
