@@ -19,6 +19,7 @@ import { SessionService } from './session/session.service';
 import { MailService } from '../../mail/mail.service';
 import { hashPassword } from '../../common/utils/password.util';
 import { sha256 } from '../../common/utils/token.util';
+import { uniqueSlug } from '../../common/utils/slug.util';
 import { toSessionUser } from './auth.mapper';
 import { REDIS_KEY, ROLE_LABEL } from '../../common/constants/constants.config';
 import {
@@ -255,6 +256,7 @@ export class OnboardingService {
         const organization = await tx.organization.create({
           data: {
             organizationName: input.organizationName,
+            slug: uniqueSlug(input.organizationName), // required, unique; suffix avoids collisions
             organizationEmail: pending.email,
           },
         });

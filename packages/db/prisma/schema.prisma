@@ -1,11 +1,6 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
-  provider = "prisma-client"
-  output   = "../generated/prisma"
+  provider     = "prisma-client"
+  output       = "../generated/prisma"
   moduleFormat = "cjs"
 }
 
@@ -22,6 +17,10 @@ datasource db {
  * 1 project has many environments, apiTokens
  * 1 environment has many services
  * 1 service has many deployments
+ * 1 service has 0..1 githubRepoUrl (repo lives on the SERVICE, not the project —
+ * two services may share one repo or have their own)
+ * 1 environment has many environmentVariables; 1 service has many serviceVariables
+ * (service-level overrides environment-level on the same key)
  * 1 service runs on 0..1 server (via serverId — assigned after creation, not on the
  * project-creation form); 1 server runs many services, from any project in the org
  * 1 server belongs to 1 organization (not locked to a single project — a server
@@ -90,16 +89,28 @@ enum MembershipStatus {
 enum InvitationStatus {
   PENDING
   ACCEPTED
-  EXPIRED 
+  EXPIRED
   REVOKED
   DECLINED
 }
 
 enum DeploymentStatus {
-  PENDING
-  IN_PROGRESS
+  QUEUED 
+  BUILDING
+  DEPLOYING 
+  HEALTH_CHECK 
   SUCCESS
-  FAILED
+  GATE_FAILED 
+  ROLLED_BACK 
+  FAILED 
+  CANCELLED
+}
+
+enum ServiceType {
+  APPLICATION 
+  WORKER 
+  DATABASE
+  COMPOSE
 }
 
 enum ServiceStatus {
@@ -200,8 +211,11 @@ model Organization {
   id                   String                @id @default(uuid())
   organizationName     String
   organizationEmail    String                @unique
+  slug                 String                @unique
+  deployCounter        Int                   @default(0)
   createdAt            DateTime              @default(now())
   updatedAt            DateTime              @updatedAt
+  deployments          Deployment[]
   memberships          Membership[]
   projects             Project[]
   sshKeys              SshKey[]
@@ -231,13 +245,8 @@ model NotificationChannel {
 model Project {
   id                 String        @id @default(uuid())
   projectName        String
-  // URL-safe identifier shown on project cards (e.g. "argus" -> /argus).
-  // Generated from projectName at creation in the app layer; unique per org.
   slug               String
   projectDescription String?
-  // One repo per project; environments differ by branch, not by repo.
-  // Optional so a project can be created before its repo is connected.
-  githubRepoUrl      String?
   organizationId     String
   organization       Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   environments       Environment[]
@@ -250,17 +259,15 @@ model Project {
 }
 
 model Environment {
-  id              String    @id @default(uuid())
+  id              String                @id @default(uuid())
   environmentName String
-  // Default branch deployed to this environment (e.g. "main" for production,
-  // "develop" for staging). Deployment.branch records what a deploy actually shipped.
   branch          String?
   projectId       String
-  // Denormalized from Project so the composite FK below can prove same-org.
   organizationId  String
-  project         Project   @relation(fields: [projectId, organizationId], references: [id, organizationId], onDelete: Cascade)
+  project         Project               @relation(fields: [projectId, organizationId], references: [id, organizationId], onDelete: Cascade)
   services        Service[]
-  createdAt       DateTime  @default(now())
+  variables       EnvironmentVariable[]
+  createdAt       DateTime              @default(now())
 
   @@unique([projectId, environmentName])
   @@unique([id, organizationId])
@@ -268,33 +275,66 @@ model Environment {
 }
 
 model Service {
-  id             String        @id @default(uuid())
+  id             String            @id @default(uuid())
   serviceName    String
+  type           ServiceType       @default(APPLICATION)
+  githubRepoUrl  String?
+  branch         String?
   image          String?
   port           Int?
-  status         ServiceStatus @default(NOT_DEPLOYED)
+  status         ServiceStatus     @default(NOT_DEPLOYED)
   environmentId  String
-  // Denormalized from Environment (which proves it against Project). Also makes
-  // org-scoped dashboard queries a single join instead of four.
   organizationId String
-  environment    Environment   @relation(fields: [environmentId, organizationId], references: [id, organizationId], onDelete: Cascade)
-  // Which server this service runs on. Nullable because assignment is a follow-up
-  // step after project creation. Restrict: a server that still has services can't
-  // be deleted — the app prompts the user to remove or move them first.
+  environment    Environment       @relation(fields: [environmentId, organizationId], references: [id, organizationId], onDelete: Cascade)
   serverId       String?
-  server         Server?       @relation(fields: [serverId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  server         Server?           @relation(fields: [serverId, organizationId], references: [id, organizationId], onDelete: Restrict)
   deployments    Deployment[]
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
+  variables      ServiceVariable[]
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
 
   @@unique([environmentId, serviceName])
+  @@unique([id, organizationId])
   @@index([serverId])
+  @@index([organizationId])
+}
+
+model EnvironmentVariable {
+  id             String      @id @default(uuid())
+  key            String
+  valueEncrypted String
+  isSecret       Boolean     @default(true)
+  environmentId  String
+  organizationId String
+  environment    Environment @relation(fields: [environmentId, organizationId], references: [id, organizationId], onDelete: Cascade)
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  @@unique([environmentId, key])
+  @@index([organizationId])
+}
+
+model ServiceVariable {
+  id             String   @id @default(uuid())
+  key            String
+  valueEncrypted String
+  isSecret       Boolean  @default(true)
+  serviceId      String
+  organizationId String
+  service        Service  @relation(fields: [serviceId, organizationId], references: [id, organizationId], onDelete: Cascade)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([serviceId, key])
   @@index([organizationId])
 }
 
 model Deployment {
   id               String              @id @default(uuid())
-  deploymentStatus DeploymentStatus    @default(PENDING)
+  number           Int
+  organizationId   String
+  organization     Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  deploymentStatus DeploymentStatus    @default(QUEUED)
   deploymentType   DeploymentType      @default(MANUAL)
   branch           String?
   commitSha        String?
@@ -304,11 +344,11 @@ model Deployment {
   createdAt        DateTime            @default(now())
   updatedAt        DateTime            @updatedAt
 
+  @@unique([organizationId, number])
   @@index([serviceId, createdAt])
+  @@index([organizationId, createdAt])
 }
 
-// Audit trail of state transitions within one deployment
-// (e.g. PENDING -> IN_PROGRESS -> SUCCESS), not just a timestamp log.
 model DeploymentHistory {
   id           String           @id @default(uuid())
   deploymentId String
@@ -327,15 +367,14 @@ model Server {
   serverPort            Int
   serverSSHUsername     String
   serverType            ServerType          @default(DEPLOY)
-  // Starts OFFLINE until the first successful SSH handshake proves it reachable.
   status                ServerStatus        @default(OFFLINE)
-  // Last successful SSH heartbeat or metrics poll. Drives the connected/idle/offline badge.
   lastSeenAt            DateTime?
   serverSshKeyId        String
   serverSshKey          SshKey              @relation(fields: [serverSshKeyId, organizationId], references: [id, organizationId], onDelete: Restrict)
   serverLocation        String?
+  provider              String?
   dockerCleanupEnabled  Boolean             @default(false)
-  dockerCleanupInterval Int?                @default(30) // in days
+  dockerCleanupInterval Int?                @default(30)
   organizationId        String
   organization          Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   services              Service[]
@@ -426,10 +465,7 @@ model ServerTraefik {
 model SshKey {
   id                  String       @id @default(uuid())
   sshKeyName          String
-  // Public half. Shown to the user to append to authorized_keys on their host.
   publicKey           String
-  // Private half, encrypted at the application layer (e.g. AES-256-GCM with a
-  // master key from env) BEFORE it reaches Prisma. Never stored or logged in plaintext.
   privateKeyEncrypted String
   servers             Server[]
   organizationId      String
@@ -444,9 +480,7 @@ model SshKey {
 model ApiToken {
   id             String        @id @default(uuid())
   apiName        String
-  // SHA-256 of the raw token. The raw token is shown once at creation and never stored.
   tokenHash      String        @unique
-  // Leading chars of the raw token (e.g. "wdn_a1b2c3") for display in the tokens table.
   tokenPrefix    String
   apiTokenScope  ApiTokenScope @default(READ)
   organizationId String
@@ -468,10 +502,6 @@ model AuditLog {
   action           String
   entityType       String
   entityId         String
-  // Actor. Exactly one of performedById / apiTokenId is set for a user- or
-  // token-initiated action; both null = system action (cron, automated deploy).
-  // Nullable + SetNull so the row survives deletion of the user or token; the
-  // snapshot fields keep it readable afterwards.
   performedById    String?
   performedBy      User?        @relation(fields: [performedById], references: [id], onDelete: SetNull)
   performedByEmail String?

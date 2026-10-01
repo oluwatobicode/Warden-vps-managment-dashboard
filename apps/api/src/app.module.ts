@@ -7,7 +7,7 @@ import { ConfigModule } from '@nestjs/config';
 import { validateEnv } from './config/env.validation';
 import { AuthModule } from './modules/auth/auth.module';
 import { TeamModule } from './modules/teams/team.module';
-import { Throttle, ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { RATE_LIMIT } from './common/constants/constants.config';
 import { GENERIC_MESSAGES } from './common/constants/messages.config';
 import { APP_GUARD } from '@nestjs/core';

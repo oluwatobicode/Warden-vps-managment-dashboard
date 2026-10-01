@@ -55,7 +55,7 @@ export const TEAM_MESSAGES = {
   member_not_found: 'Member not found',
   cannot_remove_last_admin: 'An organization must keep at least one admin',
   cannot_change_own_role: 'You cannot change your own role',
-  already_in_another_org: 'This member belongs to another organization already',
+  already_in_another_org: 'This member belongs to anther organization already',
 } as const;
 
 export const PROJECT_MESSAGES = {
