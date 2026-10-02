@@ -30,7 +30,6 @@ export type OAuthOnboardingInput = z.infer<typeof OAuthOnboardingSchema>;
 export const RoleSchema = z.enum([
   "ADMIN",
   "DEVELOPER",
-  "DEPLOYER",
   "DEV_OPS",
   "VIEWER",
 ]);

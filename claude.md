@@ -76,9 +76,18 @@ warden/
 
 ## The permission model
 
-Roles (`Role` enum on `Membership`, per-org — not global on `User`): `ADMIN` (org administrator: team, servers, keys, org settings, org deletion), `DEV_OPS`, `DEPLOYER`, `DEVELOPER`, `VIEWER` (default for new memberships — least privilege). Separate `PlatformRole` enum (`OWNER`) exists on `User` for the platform operator's own account — unrelated to org role, nullable, not something every user carries.
+Roles (`Role` enum on `Membership`, per-org — not global on `User`), four of them, decided 2026-10-02. The line between each pair is "can this break something that isn't yours":
 
-**Open, not yet resolved:** the exact permission boundary between `DEPLOYER` and `DEV_OPS` (e.g. does `DEV_OPS` get SSH key/server management that `DEPLOYER` doesn't?). Do not silently assume a split — this needs a decision before it's baked into route guards.
+| | `VIEWER` | `DEVELOPER` | `DEV_OPS` | `ADMIN` |
+|---|---|---|---|---|
+| View everything | yes | yes | yes | yes |
+| Add/edit services and variables; deploy; rollback | | yes | yes | yes |
+| Create/delete projects and environments; servers, SSH keys, Traefik | | | yes | yes |
+| Team, invitations, roles, API tokens, notifications, org settings, org deletion | | | | yes |
+
+`VIEWER` is the default for new memberships. `DEPLOYER` was removed (2026-10-02): "can deploy" is a permission `DEVELOPER` has, not a job title. In code this is one `@Roles(...)` per controller class with per-route overrides. Separate `PlatformRole` enum (`OWNER`) exists on `User` for the platform operator's own account — unrelated to org role, nullable, not something every user carries.
+
+**API shape (decided 2026-10-02): flat controllers, not nested URLs.** `/projects`, `/environments`, `/services` are each top-level; a child names its parent in the body (`environmentId`) and lists filter by query (`GET /services?environmentId=…`). The composite FKs already guarantee cross-org integrity, so each handler needs only the one org-scoped lookup. No `/projects/:id/environments/:id/services/:id` chains.
 
 **Non-negotiable tenancy rule:** every org-scoped query filters by `organizationId` resolved from the authenticated session — never trust an `organizationId` passed in a request body. The database backs this up: `Environment`, `Service`, `Server`, `SshKey` and `ApiToken` carry `organizationId`, and their cross-model relations are **composite foreign keys on `(id, organizationId)`**, so Postgres itself rejects a Service pointing at another org's Server, a Server using another org's key, or a token scoped to another org's project. When creating an `Environment` or `Service`, set `organizationId` from the session explicitly; a wrong value fails with P2003 instead of silently succeeding. `AuditLog` is the one exception (single-column FKs to `User`/`ApiToken` with `SetNull`) because a composite FK with `SetNull` would try to null `organizationId` — audit rows are server-written from session context, never from request input, so app-level enforcement is acceptable there.
 
@@ -122,7 +131,6 @@ Schema covers: auth (`User`, `AuthProvider`, platform role), org structure (`Org
 - **OAuth onboarding state:** new GitHub/Google users still need the org-name step. Preferred: hold the OAuth identity in Redis until onboarding completes, then create `User` + `Organization` + `Membership` together (no orphan users). Not yet confirmed.
 
 - **Traefik dynamic config editing:** raw text editor with validate-before-apply, or a structured form limited to safe fields? Unresolved — a bad direct edit can break live routing.
-- **`DEPLOYER` vs `DEV_OPS` permission split:** unresolved, see permission model above.
 - **Metrics history window:** Phase 1 ships 24h only. 7d/30d/all-time are deferred until the 24h collection pipeline (recurring poll + storage) is proven — don't build retention tiers for data collection that doesn't exist yet.
 - **GitHub/Google OAuth users setting an optional password as a fallback login:** not decided.
 

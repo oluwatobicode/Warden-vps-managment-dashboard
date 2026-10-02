@@ -64,6 +64,8 @@ export const PROJECT_MESSAGES = {
   deleted: 'Project deleted',
   not_found: 'Project not found',
   slug_taken: 'A project with this name already exists in your organization',
+  has_assigned_services:
+    "Unassign this project's services from their servers before deleting it",
 } as const;
 
 export const ENVIRONMENT_MESSAGES = {

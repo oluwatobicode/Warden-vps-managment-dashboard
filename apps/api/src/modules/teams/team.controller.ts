@@ -25,9 +25,9 @@ import { CurrentOrg } from '../../common/decorators/current-org.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { RATE_LIMIT, throttle } from '../../common/constants/constants.config';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
+import { UuidPipe } from '../../common/pipes/uuid.pipe';
 import { TeamService } from './team.service';
 
-const UuidPipe = new ZodValidationPipe(z.string().uuid());
 const AllFlag = z
   .string()
   .optional()

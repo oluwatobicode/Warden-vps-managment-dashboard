@@ -69,7 +69,6 @@ export const INVITATION_TTL_DAYS = 7;
 export const ROLE_LABEL: Record<string, string> = {
   ADMIN: 'Admin',
   DEV_OPS: 'DevOps',
-  DEPLOYER: 'Deployer',
   DEVELOPER: 'Developer',
   VIEWER: 'Viewer',
 } as const;

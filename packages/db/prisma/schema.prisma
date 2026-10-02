@@ -71,7 +71,6 @@ datasource db {
 enum Role {
   ADMIN
   DEVELOPER
-  DEPLOYER
   DEV_OPS
   VIEWER
 }

@@ -122,7 +122,6 @@ export class TeamService {
       throw new BadRequestException(TEAM_MESSAGES.cannot_change_own_role);
     }
 
-    // Does this change take an admin away? (demotion, or removal of an admin)
     const removesAdmin =
       target.role === 'ADMIN' &&
       target.status === 'ACTIVE' &&
@@ -152,9 +151,6 @@ export class TeamService {
     inviterUserId: string,
     input: InviteMemberInput,
   ): Promise<Invitation> {
-    // 0. Housekeeping: a PENDING invite for this email whose expiry has passed
-    //    is marked EXPIRED so the history tells the truth. Both conditions
-    //    matter — without them this would stamp accepted/declined/live rows too.
     await this.prisma.client.invitation.updateMany({
       where: {
         organizationId: orgId,
@@ -274,7 +270,7 @@ export class TeamService {
     return toInvitation(invite);
   }
 
-  /** PATCH /team/members/:id/role */
+  // update a member role
   async updateMemberRole(
     orgId: string,
     callerUserId: string,
@@ -301,6 +297,7 @@ export class TeamService {
     return toMember(updated);
   }
 
+  // remove a member
   async removeMember(
     orgId: string,
     callerUserId: string,
@@ -312,7 +309,7 @@ export class TeamService {
       membershipId,
     );
 
-    if (member.status === 'SUSPENDED') return; // idempotent
+    if (member.status === 'SUSPENDED') return;
 
     const updated = await this.prisma.client.membership.update({
       where: { id: member.id },
@@ -320,10 +317,8 @@ export class TeamService {
       include: { organization: { select: { organizationName: true } } },
     });
 
-    // Out immediately, not at their next login.
     await this.sessions.destroyAll(member.userId);
 
-    // Tell them. Best-effort: the removal stands whether or not this sends.
     try {
       const remover = await this.prisma.client.user.findUnique({
         where: { id: callerUserId },

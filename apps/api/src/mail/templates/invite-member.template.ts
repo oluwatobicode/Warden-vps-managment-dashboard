@@ -11,8 +11,8 @@ import {
 } from './layout';
 
 /**
- * Shows the role *name* only. The permission boundary between roles is not
- * finalised (DEPLOYER vs DEV_OPS), so no permission copy is promised here.
+ * Shows the role *name* only. Permission copy lives in the app, not the email,
+ * so the template never goes stale when the role matrix changes.
  * Invitations are org-wide; there is no per-project scoping in the schema.
  */
 export interface InviteMemberTemplateInput {

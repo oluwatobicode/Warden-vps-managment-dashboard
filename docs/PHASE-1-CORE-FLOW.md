@@ -141,8 +141,7 @@ Clicking a server opens its detail view:
 ### Team & roles
 
 - Invite by name + email.
-- Roles: `viewer` (default), `developer`, `deployer`, `devops`, `admin`. `admin` manages the team, servers, SSH keys, org settings and can delete the organisation.
-- ⚠️ **Open decision, not resolved for Phase 1**: the exact permission boundary between `deployer` and `devops` isn't defined yet (e.g. does `devops` get SSH key/server management that `deployer` doesn't?). Needs deciding before this maps onto real auth guards.
+- Roles: `viewer` (default), `developer`, `devops`, `admin`. Viewer reads; developer adds services and variables and deploys; devops also manages projects, environments, servers and keys; admin also manages the team, tokens, notifications and the organisation itself.
 
 ### API tokens
 
@@ -166,7 +165,7 @@ Clicking a server opens its detail view:
 ## Open decisions (unresolved, tracked here so they aren't silently assumed)
 
 - [ ] Traefik dynamic config: raw editor with validation, or structured safe-fields form?
-- [ ] Exact permission split between `deployer` and `devops` roles
+- [x] Role split decided 2026-10-02: four roles, `deployer` removed (see claude.md permission table)
 - [ ] Whether GitHub/Google OAuth users can also set an optional password as a fallback login method
 - [ ] Cookie `SameSite` policy (depends on whether frontend and API share a site in production)
 - [x] Mail provider for magic links: Resend (console fallback when no API key)
