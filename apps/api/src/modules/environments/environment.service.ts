@@ -48,7 +48,6 @@ export class EnvironmentService {
         e instanceof Prisma.PrismaClientKnownRequestError &&
         e.code === 'P2002'
       ) {
-        // Unique (projectId, environmentName) fired: a 409, not a 404 — the row WAS found.
         throw new ConflictException(ENVIRONMENT_MESSAGES.name_taken);
       }
       throw e;
@@ -60,11 +59,11 @@ export class EnvironmentService {
     projectId: string,
   ): Promise<Environment[]> {
     const rows = await this.prisma.client.environment.findMany({
-      where: { organizationId: orgId, projectId }, // projectId = what was asked; orgId = tenancy
+      where: { organizationId: orgId, projectId },
       include: WITH_SERVICE_COUNT,
       orderBy: { createdAt: 'asc' },
     });
-    return rows.map(toEnvironment); // findMany never returns null, so no check needed
+    return rows.map(toEnvironment);
   }
 
   async getEnvironment(orgId: string, id: string) {
@@ -85,7 +84,6 @@ export class EnvironmentService {
     await this.assertExists(orgId, id);
 
     try {
-      // Prisma skips undefined fields, so a body with only `branch` leaves the name alone.
       const updated = await this.prisma.client.environment.update({
         where: { id },
         data: input,
@@ -97,19 +95,12 @@ export class EnvironmentService {
         e instanceof Prisma.PrismaClientKnownRequestError &&
         e.code === 'P2002'
       ) {
-        // Renamed into a sibling's name.
         throw new ConflictException(ENVIRONMENT_MESSAGES.name_taken);
       }
       throw e;
     }
   }
 
-  /**
-   * Cascade removes the environment's services — unless one is still assigned
-   * to a server (Restrict → P2003). And a project must keep at least one
-   * environment: zero environments can hold no services, which is a broken
-   * project. Same shape as the last-admin rule in team.
-   */
   async deleteEnvironment(orgId: string, id: string): Promise<void> {
     const env = await this.prisma.client.environment.findFirst({
       where: { id, organizationId: orgId },
