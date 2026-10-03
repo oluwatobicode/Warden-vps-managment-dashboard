@@ -74,6 +74,9 @@ export const ENVIRONMENT_MESSAGES = {
   deleted: 'Environment deleted',
   not_found: 'Environment not found',
   name_taken: 'This project already has an environment with that name',
+  last_environment: 'A project must have at least one environment',
+  has_assigned_services:
+    "Unassign this environment's services from their servers before deleting it",
 } as const;
 
 export const SERVICE_MESSAGES = {
@@ -93,7 +96,6 @@ export const SERVER_MESSAGES = {
   deleted: 'Server deleted',
   not_found: 'Server not found',
   duplicate_address: 'A server with this IP and port is already registered',
-  // Restrict on Service -> Server. Interpolate the count in the service layer.
   has_services:
     'This server still runs {count} service(s). Remove or move them first',
   ssh_key_wrong_org: 'That SSH key does not belong to your organization',

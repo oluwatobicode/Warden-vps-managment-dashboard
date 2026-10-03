@@ -12,6 +12,7 @@ import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { RATE_LIMIT } from './common/constants/constants.config';
 import { GENERIC_MESSAGES } from './common/constants/messages.config';
 import { APP_GUARD } from '@nestjs/core';
+import { EnvironmentModule } from './modules/environments/environment.module';
 
 @Module({
   imports: [
@@ -36,6 +37,7 @@ import { APP_GUARD } from '@nestjs/core';
     AuthModule,
     TeamModule,
     ProjectModule,
+    EnvironmentModule,
   ],
   controllers: [AppController],
   providers: [AppService, { provide: APP_GUARD, useClass: ThrottlerGuard }],
