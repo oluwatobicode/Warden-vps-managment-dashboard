@@ -13,6 +13,7 @@ import { RATE_LIMIT } from './common/constants/constants.config';
 import { GENERIC_MESSAGES } from './common/constants/messages.config';
 import { APP_GUARD } from '@nestjs/core';
 import { EnvironmentModule } from './modules/environments/environment.module';
+import { ServiceModule } from './modules/services/service.module';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { EnvironmentModule } from './modules/environments/environment.module';
     TeamModule,
     ProjectModule,
     EnvironmentModule,
+    ServiceModule,
   ],
   controllers: [AppController],
   providers: [AppService, { provide: APP_GUARD, useClass: ThrottlerGuard }],

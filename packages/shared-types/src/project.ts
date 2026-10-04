@@ -1,12 +1,12 @@
 import { z } from "zod";
-import { environmentName } from "./field.js";
+import { slugName } from "./field.js";
 
 export const CreateProjectSchema = z.object({
   projectName: z.string().trim().min(2).max(80),
   projectDescription: z.string().trim().max(500).optional(),
 
   environments: z
-    .array(environmentName)
+    .array(slugName)
     .min(1, "At least one environment is required")
     .refine((names) => new Set(names).size === names.length, {
       message: "Environment names must be unique",

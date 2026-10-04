@@ -88,6 +88,8 @@ export const SERVICE_MESSAGES = {
   server_assigned: 'Service assigned to server',
   server_unassigned: 'Service removed from server',
   server_wrong_org: 'That server does not belong to your organization',
+  type_not_available: 'This service type is not available yet',
+  has_server: 'Unassign this service from its server before deleting it',
 } as const;
 
 export const SERVER_MESSAGES = {
