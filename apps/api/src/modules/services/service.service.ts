@@ -17,22 +17,14 @@ import {
   SERVICE_MESSAGES,
 } from '../../common/constants/messages.config';
 
-/**
- * A Service is one deployable thing (argus-api, argus-cron). It lives in an
- * environment, comes from a repo or image, and later runs on a server.
- * Server assignment lives in the servers module — here serverId is read-only.
- */
 @Injectable()
 export class ServiceService {
   constructor(private readonly prisma: PrismaService) {}
 
-  /** POST /services */
   async createService(
     orgId: string,
     input: CreateServiceInput,
   ): Promise<Service> {
-    // The environment must be ours. The composite FK would reject a foreign
-    // one anyway, but as a 500 — this makes it a clean 404.
     const env = await this.prisma.client.environment.findFirst({
       where: { id: input.environmentId, organizationId: orgId },
       select: { id: true },
@@ -49,7 +41,7 @@ export class ServiceService {
           port: input.port,
           image: input.image,
           environmentId: input.environmentId,
-          organizationId: orgId, // from the session, never the body
+          organizationId: orgId,
         },
       });
       return toService(row);
@@ -58,14 +50,12 @@ export class ServiceService {
         e instanceof Prisma.PrismaClientKnownRequestError &&
         e.code === 'P2002'
       ) {
-        // @@unique([environmentId, serviceName])
         throw new ConflictException(SERVICE_MESSAGES.name_taken);
       }
       throw e;
     }
   }
 
-  /** GET /services?environmentId= */
   async listServices(orgId: string, environmentId: string): Promise<Service[]> {
     const rows = await this.prisma.client.service.findMany({
       where: { environmentId, organizationId: orgId },
@@ -74,20 +64,17 @@ export class ServiceService {
     return rows.map(toService);
   }
 
-  /** GET /services/:id */
+  // get a service
   async getService(orgId: string, id: string): Promise<Service> {
     const row = await this.prisma.client.service.findFirst({
       where: { id, organizationId: orgId },
     });
+
     if (!row) throw new NotFoundException(SERVICE_MESSAGES.not_found);
     return toService(row);
   }
 
-  /**
-   * PATCH /services/:id. The port rule depends on the type, and the body
-   * doesn't carry the type — so merge body onto the row and re-run the same
-   * rules the create schema used. `null` clears, `undefined` keeps.
-   */
+  // update service
   async updateService(
     orgId: string,
     id: string,
@@ -138,11 +125,7 @@ export class ServiceService {
     }
   }
 
-  /**
-   * DELETE /services/:id. Postgres allows deleting a service that's on a
-   * server (Restrict is on the SERVER side) — but that's how you orphan a
-   * running container. Refuse until it's unassigned; that's a rule, not a catch.
-   */
+  // delete service
   async deleteService(orgId: string, id: string): Promise<void> {
     const row = await this.prisma.client.service.findFirst({
       where: { id, organizationId: orgId },
@@ -155,7 +138,6 @@ export class ServiceService {
   }
 }
 
-// ── Mapper ──────────────────────────────────────────────────────────────────
 function toService(row: Prisma.ServiceGetPayload<object>): Service {
   return {
     id: row.id,

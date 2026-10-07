@@ -1,0 +1,23 @@
+{
+  "name": "warden-crypto",
+  "version": "1.0.0",
+  "description": "AES-256-GCM encrypt/decrypt with versioned keys, and the KeyProvider contract for wrapping per-org data keys. No Warden knowledge, no runtime deps.",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "license": "ISC",
+  "devDependencies": {
+    "@types/node": "^26.6.4",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.3"
+  }
+}
