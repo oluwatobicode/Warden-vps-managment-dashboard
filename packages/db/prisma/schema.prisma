@@ -94,20 +94,20 @@ enum InvitationStatus {
 }
 
 enum DeploymentStatus {
-  QUEUED 
+  QUEUED
   BUILDING
-  DEPLOYING 
-  HEALTH_CHECK 
+  DEPLOYING
+  HEALTH_CHECK
   SUCCESS
-  GATE_FAILED 
-  ROLLED_BACK 
-  FAILED 
+  GATE_FAILED
+  ROLLED_BACK
+  FAILED
   CANCELLED
 }
 
 enum ServiceType {
-  APPLICATION 
-  WORKER 
+  APPLICATION
+  WORKER
   DATABASE
   COMPOSE
 }
@@ -214,6 +214,7 @@ model Organization {
   deployCounter        Int                   @default(0)
   createdAt            DateTime              @default(now())
   updatedAt            DateTime              @updatedAt
+  dataKeyWrapped       String?
   deployments          Deployment[]
   memberships          Membership[]
   projects             Project[]
