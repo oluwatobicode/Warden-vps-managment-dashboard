@@ -10,6 +10,14 @@ export const envSchema = z.object({
 
   CORS_ORIGIN: z.string().default(''),
   APP_URL: z.string().default(''),
+  // 32-byte master key (KEK) as 64 hex chars. Wraps every org's data key.
+  // Must match the worker's. Generate with: openssl rand -hex 32
+  MASTER_KEY: z
+    .string()
+    .regex(
+      /^[0-9a-fA-F]{64}$/,
+      'MASTER_KEY must be 64 hex characters (openssl rand -hex 32)',
+    ),
   JWT_ACCESS_SECRET: z.string().min(1, 'JWT_ACCESS_SECRET is required'),
   JWT_ACCESS_TTL: z.string().min(1).default('15m'),
   JWT_REFRESH_SECRET: z.string().min(1, 'JWT_REFRESH_SECRET is required'),
