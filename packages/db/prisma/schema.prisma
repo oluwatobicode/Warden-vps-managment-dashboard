@@ -465,6 +465,7 @@ model ServerTraefik {
 model SshKey {
   id                  String       @id @default(uuid())
   sshKeyName          String
+  fingerprint String
   publicKey           String
   privateKeyEncrypted String
   servers             Server[]
@@ -474,6 +475,7 @@ model SshKey {
   lastUsedAt          DateTime?
 
   @@unique([id, organizationId])
+  @@unique([organizationId, sshKeyName])
   @@index([organizationId])
 }
 
