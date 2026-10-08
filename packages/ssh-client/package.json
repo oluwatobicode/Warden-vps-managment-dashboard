@@ -1,10 +1,19 @@
 {
   "name": "ssh-client",
   "version": "1.0.0",
-  "main": "dist/index.js",
+  "description": "ssh2 wrapper: OpenSSH key generation/parsing/fingerprints now; connection pooling, exec and sftp later.",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
   "scripts": {
-    "build": "tsc",
-    "dev": "tsc --watch"
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsc --watch",
+    "test": "vitest run"
   },
   "license": "ISC",
   "dependencies": {
@@ -13,6 +22,7 @@
   "devDependencies": {
     "@types/node": "^22.20.2",
     "@types/ssh2": "^1.15.6",
-    "typescript": "^7.0.2"
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.3"
   }
 }
