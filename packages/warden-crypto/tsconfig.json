@@ -12,6 +12,6 @@
     "skipLibCheck": true,
     "moduleDetection": "force"
   },
-  "include": ["src/**/*"],
+  "include": ["src/**/*", "../../apps/api/src/crypto.constants.ts"],
   "exclude": ["src/**/*.test.ts"]
 }

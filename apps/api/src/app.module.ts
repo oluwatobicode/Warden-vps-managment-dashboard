@@ -14,6 +14,7 @@ import { GENERIC_MESSAGES } from './common/constants/messages.config';
 import { APP_GUARD } from '@nestjs/core';
 import { EnvironmentModule } from './modules/environments/environment.module';
 import { ServiceModule } from './modules/services/service.module';
+import { WardenCryptoModule } from './modules/warden-crypto/warden-crypto.module';
 
 @Module({
   imports: [
@@ -35,6 +36,7 @@ import { ServiceModule } from './modules/services/service.module';
 
     PrismaModule,
     RedisModule,
+    WardenCryptoModule,
     AuthModule,
     TeamModule,
     ProjectModule,

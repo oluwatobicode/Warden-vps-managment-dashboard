@@ -1,5 +1,6 @@
 import {
   ConflictException,
+  Inject,
   Injectable,
   Logger,
   UnauthorizedException,
@@ -27,6 +28,8 @@ import {
   TEAM_MESSAGES,
 } from '../../common/constants/messages.config';
 import type { PendingSignupRecord } from './auth.service';
+import { KEY_PROVIDER } from '../../common/constants/warden-crypto.constants';
+import { type KeyProvider } from 'warden-crypto';
 
 type SignupResult = {
   user: SessionUser;
@@ -48,6 +51,7 @@ export class OnboardingService {
     private readonly redis: RedisService,
     private readonly sessions: SessionService,
     private readonly mail: MailService,
+    @Inject(KEY_PROVIDER) private readonly keys: KeyProvider,
     config: ConfigService,
   ) {
     this.appUrl = config.getOrThrow<string>('APP_URL');
@@ -243,6 +247,8 @@ export class OnboardingService {
   ): Promise<SignupResult> {
     let created;
     try {
+      const { wrapped } = await this.keys.generateWrappedDek();
+
       created = await this.prisma.client.$transaction(async (tx) => {
         const user = await tx.user.create({
           data: {
@@ -258,6 +264,7 @@ export class OnboardingService {
             organizationName: input.organizationName,
             slug: uniqueSlug(input.organizationName), // required, unique; suffix avoids collisions
             organizationEmail: pending.email,
+            dataKeyWrapped: wrapped,
           },
         });
 
