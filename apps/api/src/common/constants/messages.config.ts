@@ -95,6 +95,7 @@ export const SERVICE_MESSAGES = {
 export const SERVER_MESSAGES = {
   created: 'Server added successfully',
   updated: 'Server updated',
+  name_taken: 'An SSH key with this name already exists',
   deleted: 'Server deleted',
   not_found: 'Server not found',
   duplicate_address: 'A server with this IP and port is already registered',
