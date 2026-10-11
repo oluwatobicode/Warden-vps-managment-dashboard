@@ -10,5 +10,18 @@ services:
   redis:
     image: redis:7
     ports: ["6380:6379"]
+  # A pretend VPS for developing test-connection and deploys: just an SSH
+  # server, reachable at 127.0.0.1:2222 as user "warden". Key-only login, the
+  # trusted public keys come from infra/ssh-target/authorized_keys.
+  ssh-target:
+    image: lscr.io/linuxserver/openssh-server:latest
+    ports: ["2222:2222"]
+    environment:
+      USER_NAME: warden
+      PUBLIC_KEY_FILE: /keys/authorized_keys
+      PASSWORD_ACCESS: "false"
+      SUDO_ACCESS: "false"
+    volumes:
+      - ./ssh-target:/keys:ro
 volumes:
   pgdata:

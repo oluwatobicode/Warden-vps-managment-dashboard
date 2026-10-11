@@ -23,8 +23,6 @@ import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import { UuidPipe } from '../../common/pipes/uuid.pipe';
 import { ServerService } from './servers.service';
 
-// Servers are infrastructure (role table in claude.md): everyone reads,
-// DEV_OPS and ADMIN write.
 @Controller('servers')
 @UseGuards(SessionGuard, RolesGuard)
 export class ServerController {

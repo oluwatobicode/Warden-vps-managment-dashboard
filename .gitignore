@@ -7,3 +7,6 @@ dist/
 *.tsbuildinfo
 # personal decision log, not for the public repo yet
 docs/DECISIONS.md
+
+# local SSH test target — test keys, not for the repo
+infra/ssh-target/
