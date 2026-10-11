@@ -95,7 +95,6 @@ export const SERVICE_MESSAGES = {
 export const SERVER_MESSAGES = {
   created: 'Server added successfully',
   updated: 'Server updated',
-  name_taken: 'An SSH key with this name already exists',
   deleted: 'Server deleted',
   not_found: 'Server not found',
   duplicate_address: 'A server with this IP and port is already registered',
@@ -114,6 +113,7 @@ export const SSH_KEY_MESSAGES = {
   not_found: 'SSH key not found',
   invalid_key: 'That is not a valid SSH private key',
   in_use: 'This key is still used by {count} server(s). Reassign them first',
+  name_taken: 'An SSH key with this name already exists',
 } as const;
 
 export const API_TOKEN_MESSAGES = {

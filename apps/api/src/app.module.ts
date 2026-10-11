@@ -14,6 +14,8 @@ import { GENERIC_MESSAGES } from './common/constants/messages.config';
 import { APP_GUARD } from '@nestjs/core';
 import { EnvironmentModule } from './modules/environments/environment.module';
 import { ServiceModule } from './modules/services/service.module';
+import { SshKeyModule } from './modules/ssh-keys/ssh-keys.module';
+import { ServerModule } from './modules/servers/servers.module';
 import { WardenCryptoModule } from './modules/warden-crypto/warden-crypto.module';
 
 @Module({
@@ -42,6 +44,8 @@ import { WardenCryptoModule } from './modules/warden-crypto/warden-crypto.module
     ProjectModule,
     EnvironmentModule,
     ServiceModule,
+    SshKeyModule,
+    ServerModule,
   ],
   controllers: [AppController],
   providers: [AppService, { provide: APP_GUARD, useClass: ThrottlerGuard }],
