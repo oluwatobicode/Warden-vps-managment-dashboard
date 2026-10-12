@@ -22,6 +22,8 @@ import { CurrentOrg } from '../../common/decorators/current-org.decorator';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import { UuidPipe } from '../../common/pipes/uuid.pipe';
 import { ServerService } from './servers.service';
+import { Throttle } from '@nestjs/throttler';
+import { RATE_LIMIT, throttle } from '../../common/constants/constants.config';
 
 @Controller('servers')
 @UseGuards(SessionGuard, RolesGuard)
@@ -55,6 +57,14 @@ export class ServerController {
     @Body(new ZodValidationPipe(UpdateServerSchema)) body: UpdateServerInput,
   ) {
     return this.servers.updateServer(orgId, id, body);
+  }
+
+  @Throttle(throttle(RATE_LIMIT.login))
+  @Post(':id/test')
+  @Roles('ADMIN', 'DEV_OPS')
+  @HttpCode(200)
+  test(@CurrentOrg() orgId: string, @Param('id', UuidPipe) id: string) {
+    return this.servers.testConnection(orgId, id);
   }
 
   @Delete(':id')

@@ -5,6 +5,9 @@ import {
 } from '@nestjs/common';
 import { Prisma } from 'db';
 import type {
+  ConnectionStep,
+  ConnectionStepName,
+  ConnectionTest,
   CreateServerInput,
   Server,
   UpdateServerInput,
@@ -14,10 +17,15 @@ import {
   SERVER_MESSAGES,
   SSH_KEY_MESSAGES,
 } from '../../common/constants/messages.config';
-
+import { OrgKeyService } from '../warden-crypto/org-key.service';
+import { decrypt } from 'warden-crypto';
+import { SshError, withSsh } from 'ssh-client';
 @Injectable()
 export class ServerService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly orgKey: OrgKeyService,
+  ) {}
 
   //create a server
   async createServer(orgId: string, input: CreateServerInput): Promise<Server> {
@@ -125,6 +133,83 @@ export class ServerService {
     }
   }
 
+  //   test connection
+
+  async testConnection(orgId: string, id: string): Promise<ConnectionTest> {
+    const row = await this.prisma.client.server.findFirst({
+      where: { id, organizationId: orgId },
+      include: {
+        serverSshKey: { select: { id: true, privateKeyEncrypted: true } },
+      },
+    });
+    if (!row) throw new NotFoundException(SERVER_MESSAGES.not_found);
+
+    const dek = await this.orgKey.getDek(orgId);
+    const privateKey = decrypt(row.serverSshKey.privateKeyEncrypted, {
+      v1: dek,
+    });
+
+    let steps: ConnectionStep[];
+    try {
+      const result = await withSsh(
+        {
+          host: row.serverIp,
+          port: row.serverPort,
+          username: row.serverSSHUsername,
+          privateKey,
+        },
+        async (run) => ({
+          system: await run('uname -sr'),
+          docker: await run("docker version --format '{{.Server.Version}}'"),
+        }),
+      );
+
+      const dockerOk = result.docker.code === 0;
+      steps = [
+        { name: 'reach', ok: true },
+        { name: 'login', ok: true, detail: `as ${row.serverSSHUsername}` },
+        { name: 'system', ok: true, detail: result.system.stdout.trim() },
+        {
+          name: 'docker',
+          ok: dockerOk,
+          detail: dockerOk
+            ? `Docker ${result.docker.stdout.trim()}`
+            : 'not installed, or this user has no permission',
+        },
+      ];
+    } catch (e) {
+      const kind = e instanceof SshError ? e.kind : 'unknown';
+      steps =
+        kind === 'auth_failed'
+          ? failedAt(
+              'login',
+              'key refused (check authorized_keys and username)',
+            )
+          : kind === 'timeout'
+            ? failedAt('reach', 'timed out')
+            : kind === 'unreachable'
+              ? failedAt('reach', 'unreachable (check IP, port, firewall)')
+              : failedAt('reach', 'connection failed');
+    }
+
+    const ok = steps.find((s) => s.name === 'login')?.ok ?? false;
+    const now = new Date();
+    await this.prisma.client.server.update({
+      where: { id: row.id },
+      data: ok
+        ? { status: 'CONNECTED', lastSeenAt: now }
+        : { status: 'OFFLINE' },
+    });
+    if (ok) {
+      await this.prisma.client.sshKey.update({
+        where: { id: row.serverSshKey.id },
+        data: { lastUsedAt: now },
+      });
+    }
+
+    return { ok, steps };
+  }
+
   //  helpers
 
   private async findOrThrow(orgId: string, id: string) {
@@ -182,4 +267,16 @@ function toServer(row: ServerRow): Server {
     lastSeenAt: row.lastSeenAt?.toISOString() ?? null,
     createdAt: row.createdAt.toISOString(),
   };
+}
+
+const STEP_ORDER: ConnectionStepName[] = ['reach', 'login', 'system', 'docker'];
+function failedAt(at: ConnectionStepName, detail: string): ConnectionStep[] {
+  const i = STEP_ORDER.indexOf(at);
+  return STEP_ORDER.map((name, j) =>
+    j < i
+      ? { name, ok: true }
+      : j === i
+        ? { name, ok: false, detail }
+        : { name, ok: false, detail: 'skipped' },
+  );
 }
