@@ -109,6 +109,8 @@ Schema covers: auth (`User`, `AuthProvider`, platform role), org structure (`Org
 
 **Team membership decisions (2026-09-30):** removing a member sets `Membership.status = SUSPENDED` and destroys their sessions — never a hard delete. Because `Membership` is unique on `(userId, organizationId)`, re-inviting a suspended person must reactivate the existing row, not create one. `Invitation` has its own `InvitationStatus` enum (`PENDING | ACCEPTED | EXPIRED | REVOKED`); "one pending invite per email per org" is enforced in the service, not by a unique constraint, so expired invites can be re-sent.
 
+**Service placement rules (2026-10-12):** `PATCH /services/:id/server` assigns or (with `null`) unassigns. Only `DEPLOY` servers run services. A service whose status isn't `NOT_DEPLOYED` or `FAILED` can't be moved off its server — its container would be orphaned. Deleting a service with a server, or a server with services, is refused.
+
 **Every FK column is indexed** (Postgres and Prisma don't do this automatically); time-series children index `(serverId, createdAt)`. Keep that rule when adding models.
 
 **Explicitly deferred, not in the schema:** Argus integration, billing/plan, branding.

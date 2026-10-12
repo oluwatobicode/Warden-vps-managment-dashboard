@@ -7,6 +7,7 @@ import {
 import { Prisma } from 'db';
 import {
   serviceTypeIssues,
+  type AssignServerInput,
   type CreateServiceInput,
   type Service,
   type UpdateServiceInput,
@@ -14,6 +15,7 @@ import {
 import { PrismaService } from '../../prisma/prisma.service';
 import {
   ENVIRONMENT_MESSAGES,
+  SERVER_MESSAGES,
   SERVICE_MESSAGES,
 } from '../../common/constants/messages.config';
 
@@ -120,6 +122,53 @@ export class ServiceService {
         e.code === 'P2002'
       ) {
         throw new ConflictException(SERVICE_MESSAGES.name_taken);
+      }
+      throw e;
+    }
+  }
+
+  // assign a service to a server
+  async assignServer(
+    orgId: string,
+    id: string,
+    input: AssignServerInput,
+  ): Promise<Service> {
+    const current = await this.prisma.client.service.findFirst({
+      where: { id, organizationId: orgId },
+    });
+    if (!current) throw new NotFoundException(SERVICE_MESSAGES.not_found);
+
+    if (input.serverId === current.serverId) return toService(current);
+
+    const mayBeRunning =
+      current.status !== 'NOT_DEPLOYED' && current.status !== 'FAILED';
+    if (current.serverId && mayBeRunning) {
+      throw new ConflictException(SERVICE_MESSAGES.service_running);
+    }
+
+    if (input.serverId) {
+      const server = await this.prisma.client.server.findFirst({
+        where: { id: input.serverId, organizationId: orgId },
+        select: { serverType: true },
+      });
+      if (!server) throw new NotFoundException(SERVER_MESSAGES.not_found);
+      if (server.serverType !== 'DEPLOY') {
+        throw new BadRequestException(SERVICE_MESSAGES.server_not_deploy);
+      }
+    }
+
+    try {
+      const row = await this.prisma.client.service.update({
+        where: { id: current.id },
+        data: { serverId: input.serverId },
+      });
+      return toService(row);
+    } catch (e) {
+      if (
+        e instanceof Prisma.PrismaClientKnownRequestError &&
+        e.code === 'P2003'
+      ) {
+        throw new ConflictException(SERVICE_MESSAGES.server_wrong_org);
       }
       throw e;
     }

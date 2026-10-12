@@ -90,6 +90,8 @@ export const SERVICE_MESSAGES = {
   server_wrong_org: 'That server does not belong to your organization',
   type_not_available: 'This service type is not available yet',
   has_server: 'Unassign this service from its server before deleting it',
+  server_not_deploy: 'Services can only run on DEPLOY servers',
+  service_running: 'Stop this service before moving it to another server',
 } as const;
 
 export const SERVER_MESSAGES = {

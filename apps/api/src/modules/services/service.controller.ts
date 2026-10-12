@@ -15,6 +15,8 @@ import {
   UpdateServiceSchema,
   type CreateServiceInput,
   type UpdateServiceInput,
+  AssignServerSchema,
+  type AssignServerInput,
 } from 'shared-types';
 import { SessionGuard } from '../../common/guards/session.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -61,6 +63,17 @@ export class ServiceController {
     @Body(new ZodValidationPipe(UpdateServiceSchema)) body: UpdateServiceInput,
   ) {
     return this.services.updateService(orgId, id, body);
+  }
+
+  // Developers own their services (role table), so they may place them too.
+  @Patch(':id/server')
+  @Roles('ADMIN', 'DEV_OPS', 'DEVELOPER')
+  assignServer(
+    @CurrentOrg() orgId: string,
+    @Param('id', UuidPipe) id: string,
+    @Body(new ZodValidationPipe(AssignServerSchema)) body: AssignServerInput,
+  ) {
+    return this.services.assignServer(orgId, id, body);
   }
 
   @Delete(':id')

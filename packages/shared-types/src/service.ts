@@ -85,6 +85,14 @@ export const UpdateServiceSchema = z.object({
 });
 export type UpdateServiceInput = z.infer<typeof UpdateServiceSchema>;
 
+// PATCH /services/:id/server — `nullable`, not `optional`: the field must be
+// present. A server id assigns; null takes the service off its server.
+// An empty body is a mistake, not an unassign.
+export const AssignServerSchema = z.object({
+  serverId: z.string().uuid().nullable(),
+});
+export type AssignServerInput = z.infer<typeof AssignServerSchema>;
+
 export const ServiceSchema = z.object({
   id: z.string(),
   serviceName: z.string(),
