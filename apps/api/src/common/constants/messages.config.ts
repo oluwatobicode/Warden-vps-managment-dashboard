@@ -1,3 +1,5 @@
+import { isKeyObject } from 'node:util/types';
+
 export const GENERIC_MESSAGES = {
   not_found: 'Resource not found',
   forbidden: 'You do not have permission to perform this action',
@@ -140,4 +142,9 @@ export const DEPLOYMENT_MESSAGES = {
   not_found: 'Deployment not found',
   already_in_progress: 'A deployment is already in progress for this service',
   no_server: 'Assign this service to a server before deploying',
+} as const;
+
+export const VARIABLE_MESSAGES = {
+  not_found: 'Variable not found',
+  key_taken: 'A variable with this name already exists here',
 } as const;

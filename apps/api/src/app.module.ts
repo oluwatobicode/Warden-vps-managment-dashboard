@@ -16,6 +16,7 @@ import { EnvironmentModule } from './modules/environments/environment.module';
 import { ServiceModule } from './modules/services/service.module';
 import { SshKeyModule } from './modules/ssh-keys/ssh-keys.module';
 import { ServerModule } from './modules/servers/servers.module';
+import { VariableModule } from './modules/variables/variable.module';
 import { WardenCryptoModule } from './modules/warden-crypto/warden-crypto.module';
 
 @Module({
@@ -46,6 +47,7 @@ import { WardenCryptoModule } from './modules/warden-crypto/warden-crypto.module
     ServiceModule,
     SshKeyModule,
     ServerModule,
+    VariableModule,
   ],
   controllers: [AppController],
   providers: [AppService, { provide: APP_GUARD, useClass: ThrottlerGuard }],
