@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { RoleSchema } from "./auth.js";
 
 export const ApiTokenScopeSchema = z.enum(["READ", "DEPLOY", "ADMIN"]);
 export type ApiTokenScope = z.infer<typeof ApiTokenScopeSchema>;
@@ -26,4 +27,13 @@ export type ApiToken = z.infer<typeof ApiTokenSchema>;
 export const CreatedApiTokenSchema = ApiTokenSchema.extend({
   token: z.string(),
 });
+
 export type CreatedApiToken = z.infer<typeof CreatedApiTokenSchema>;
+
+export const ApiTokenWhoamiSchema = z.object({
+  tokenId: z.string(),
+  organizationId: z.string(),
+  role: RoleSchema,
+});
+
+export type ApiTokenWhoami = z.infer<typeof ApiTokenWhoamiSchema>;

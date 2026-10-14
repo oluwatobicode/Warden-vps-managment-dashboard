@@ -6,6 +6,7 @@ import {
   HttpCode,
   Param,
   Post,
+  Req,
   UseGuards,
 } from '@nestjs/common';
 import { SessionGuard } from '../../common/guards/session.guard';
@@ -14,8 +15,14 @@ import { Roles } from '../../common/decorators/roles.decorator';
 import { CurrentOrg } from '../../common/decorators/current-org.decorator';
 import { ApiTokenService } from './api-token.service';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
-import { type CreateApiTokenInput, CreateApiTokenSchema } from 'shared-types';
+import {
+  type ApiTokenWhoami,
+  type CreateApiTokenInput,
+  CreateApiTokenSchema,
+} from 'shared-types';
 import { UuidPipe } from '../../common/pipes/uuid.pipe';
+import { ApiTokenGuard } from '../../common/guards/api-token.guard';
+import type { AuthenticatedRequest } from '../../common/types/request';
 
 @Controller('api-tokens')
 @UseGuards(SessionGuard, RolesGuard)
@@ -41,5 +48,18 @@ export class ApiTokenController {
   @HttpCode(204)
   async revoke(@CurrentOrg() orgId: string, @Param('id', UuidPipe) id: string) {
     await this.apiToken.revokeToken(orgId, id);
+  }
+}
+
+@Controller('api-tokens')
+@UseGuards(ApiTokenGuard)
+export class ApiTokenWhoamiController {
+  @Get('whoami')
+  whoami(@Req() req: AuthenticatedRequest): ApiTokenWhoami {
+    return {
+      tokenId: req.apiTokenId!,
+      organizationId: req.session!.organizationId,
+      role: req.session!.role,
+    };
   }
 }

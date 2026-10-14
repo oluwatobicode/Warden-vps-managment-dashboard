@@ -8,6 +8,8 @@ export interface AuthenticatedRequest extends Request {
   // set by SessionGuard
   session?: SessionRecord;
   sid?: string;
+  // set by ApiTokenGuard (alongside session)
+  apiTokenId?: string;
   // set by OnboardingGuard
   pending?: PendingSignupRecord;
   pendingId?: string;
