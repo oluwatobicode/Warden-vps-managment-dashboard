@@ -7,3 +7,4 @@ export * from "./service.js";
 export * from "./ssh-key.js";
 export * from "./server.js";
 export * from "./variable.js";
+export * from "./api-token.js";
