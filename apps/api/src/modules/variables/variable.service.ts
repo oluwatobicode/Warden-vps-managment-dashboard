@@ -138,7 +138,7 @@ export class VariableService {
     id: string,
   ): Promise<RevealedVariable> {
     const row = await this.findEnvironmentVariable(orgId, id);
-
+    // TODO(audit log): record that this user revealed this key.
     return {
       key: row.key,
       value: decrypt(row.valueEncrypted, {

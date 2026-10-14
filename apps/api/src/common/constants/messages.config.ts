@@ -1,5 +1,3 @@
-import { isKeyObject } from 'node:util/types';
-
 export const GENERIC_MESSAGES = {
   not_found: 'Resource not found',
   forbidden: 'You do not have permission to perform this action',

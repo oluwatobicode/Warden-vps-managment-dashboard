@@ -63,7 +63,12 @@ export const ServerSchema = z.object({
 
 export type Server = z.infer<typeof ServerSchema>;
 
-export const ConnectionStepNameSchema = z.enum(["reach", "login", "system", "docker"]);
+export const ConnectionStepNameSchema = z.enum([
+  "reach",
+  "login",
+  "system",
+  "docker",
+]);
 export type ConnectionStepName = z.infer<typeof ConnectionStepNameSchema>;
 
 export const ConnectionStepSchema = z.object({
@@ -74,8 +79,6 @@ export const ConnectionStepSchema = z.object({
 
 export type ConnectionStep = z.infer<typeof ConnectionStepSchema>;
 
-// POST /servers/:id/test — one line per step, like the design's modal.
-// `ok` is true when LOGIN worked (Docker missing is a finding, not a failure).
 export const ConnectionTestSchema = z.object({
   ok: z.boolean(),
   steps: z.array(ConnectionStepSchema),
