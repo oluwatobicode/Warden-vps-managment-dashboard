@@ -132,6 +132,9 @@ export const NOTIFICATION_MESSAGES = {
   channel_updated: 'Notification channel updated',
   channel_deleted: 'Notification channel deleted',
   channel_not_found: 'Notification channel not found',
+  name_taken: 'A notification channel with this name already exists',
+  wrong_field_for_type: 'That field does not apply to this channel type',
+  invalid_webhook: 'That is not a valid webhook URL for this channel type',
   test_sent: 'Test notification sent',
 } as const;
 

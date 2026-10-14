@@ -233,13 +233,14 @@ model NotificationChannel {
   type            NotificationChannelType
   name            String
   enabled         Boolean                 @default(true)
-  webhookUrl      String?
+  webhookUrlEncrypted String?
   emailRecipients String[]
   events          String[]
   createdAt       DateTime                @default(now())
   updatedAt       DateTime                @updatedAt
 
   @@index([organizationId])
+  @@unique([organizationId, name])
 }
 
 model Project {

@@ -243,6 +243,9 @@ importers:
       jose:
         specifier: ^6.2.12
         version: 6.2.12
+      notifier:
+        specifier: workspace:*
+        version: link:../../packages/notifier
       reflect-metadata:
         specifier: ^0.2.2
         version: 0.2.2
@@ -443,6 +446,25 @@ importers:
       typescript:
         specifier: ^7.0.2
         version: 7.0.2
+
+  packages/notifier:
+    dependencies:
+      shared-types:
+        specifier: workspace:*
+        version: link:../shared-types
+    devDependencies:
+      '@types/node':
+        specifier: ^22.20.2
+        version: 22.20.2
+      tsx:
+        specifier: ^4.23.13
+        version: 4.23.13
+      typescript:
+        specifier: ^7.0.2
+        version: 7.0.2
+      vitest:
+        specifier: ^5.0.3
+        version: 5.0.3(@types/node@22.20.2)(vite@8.2.2(@types/node@22.20.2)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.13)(yaml@2.9.0))
 
   packages/shared-types:
     dependencies:

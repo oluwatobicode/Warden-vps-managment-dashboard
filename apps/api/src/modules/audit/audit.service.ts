@@ -24,15 +24,8 @@ export class AuditService {
 
   constructor(private readonly prisma: PrismaService) {}
 
-  /**
-   * Write one audit line. NEVER throws: if the write fails the real action
-   * has already succeeded, so we only warn. Call it AFTER the action's own
-   * write, so a failed action leaves no line.
-   */
   async record(actor: Actor, entry: AuditEntry): Promise<void> {
     try {
-      // Snapshot the email / token name onto the row so the line stays
-      // readable after the user or token is deleted (their FKs SetNull).
       const [user, token] = await Promise.all([
         actor.userId
           ? this.prisma.client.user.findUnique({
@@ -69,15 +62,10 @@ export class AuditService {
     }
   }
 
-  /**
-   * Newest first, one page at a time. Fetch limit + 1: if the extra row
-   * exists there is another page, and the last row we return is the cursor.
-   * A cursor (not ?page=N) because new rows keep arriving at the top.
-   */
   async list(orgId: string, query: ListAuditLogsQuery): Promise<AuditLogPage> {
     const rows = await this.prisma.client.auditLog.findMany({
       where: { organizationId: orgId },
-      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }], // id breaks same-ms ties
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
       take: query.limit + 1,
       ...(query.cursor && { cursor: { id: query.cursor }, skip: 1 }),
     });
