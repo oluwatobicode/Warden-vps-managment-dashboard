@@ -3,12 +3,18 @@ import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { OnboardingService } from './onboarding.service';
 import { GithubService } from './github.service';
+import { PasswordResetService } from './password-reset.service';
 import { SessionModule } from './session/session.module';
 import { MailModule } from '../../mail/mail.module';
 
 @Module({
   imports: [SessionModule, MailModule],
   controllers: [AuthController],
-  providers: [AuthService, OnboardingService, GithubService],
+  providers: [
+    AuthService,
+    OnboardingService,
+    GithubService,
+    PasswordResetService,
+  ],
 })
 export class AuthModule {}

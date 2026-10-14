@@ -20,6 +20,10 @@ export const AUTH_MESSAGES = {
   oauth_state_invalid: 'Sign-in could not be completed. Please try again',
   oauth_email_missing: 'Your provider account has no verified email address',
   oauth_account_linked: 'Account linked successfully',
+  reset_code_sent:
+    'If an account with a password exists for that email, a reset code has been sent',
+  reset_code_invalid: 'This code is invalid or has expired',
+  password_reset: 'Password updated. Sign in with your new password',
 } as const;
 
 export const LOGIN_MESSAGES = {

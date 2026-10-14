@@ -1,9 +1,6 @@
 import { esc, font, heading, palette, paragraph, shell, strong } from 'notifier';
 
-/**
- * Six-digit reset code. The template is ready; the reset flow that issues
- * and verifies the code does not exist yet, so nothing calls this until it does.
- */
+/** Six-digit reset code, sent by PasswordResetService (POST /auth/forgot-password). */
 export interface ResetPasswordOtpTemplateInput {
   email: string;
   code: string;

@@ -13,6 +13,18 @@ export const LoginSchema = z.object({
 });
 export type LoginInput = z.infer<typeof LoginSchema>;
 
+// POST /auth/forgot-password
+export const ForgotPasswordSchema = z.object({ email });
+export type ForgotPasswordInput = z.infer<typeof ForgotPasswordSchema>;
+
+// POST /auth/reset-password
+export const ResetPasswordSchema = z.object({
+  email,
+  code: z.string().trim().regex(/^\d{6}$/, "Enter the 6-digit code"),
+  newPassword: password,
+});
+export type ResetPasswordInput = z.infer<typeof ResetPasswordSchema>;
+
 export const EmailOnboardingSchema = z.object({
   firstName: z.string().trim().min(1).max(80),
   lastName: z.string().trim().min(1).max(80),

@@ -32,6 +32,10 @@ import {
   type MagicLinkVerify,
   OAuthCallbackSchema,
   type OAuthCallback,
+  ForgotPasswordSchema,
+  type ForgotPasswordInput,
+  ResetPasswordSchema,
+  type ResetPasswordInput,
 } from 'shared-types';
 import { AuthService } from './auth.service';
 import { SessionService } from './session/session.service';
@@ -41,6 +45,7 @@ import {
   throttle,
 } from '../../common/constants/constants.config';
 import { OnboardingService } from './onboarding.service';
+import { PasswordResetService } from './password-reset.service';
 import { OnboardingGuard } from '../../common/guards/onboarding.guard';
 import type { AuthenticatedRequest } from '../../common/types/request';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
@@ -67,6 +72,7 @@ export class AuthController {
   constructor(
     private readonly auth: AuthService,
     private readonly onboarding: OnboardingService,
+    private readonly passwordReset: PasswordResetService,
     private readonly sessions: SessionService,
     config: ConfigService,
   ) {
@@ -201,6 +207,30 @@ export class AuthController {
     setAccessCookie(res, tokens.accessToken, this.isProd);
     setRefreshCookie(res, tokens.refreshToken, this.isProd);
     return { message: LOGIN_MESSAGES.login_success };
+  }
+
+  // Forgot password, step 1. Same answer whether or not the email has an
+  // account. The service also caps codes per email (3/hour).
+  @Throttle(throttle(RATE_LIMIT.magicLink))
+  @Post('forgot-password')
+  @HttpCode(200)
+  async forgotPassword(
+    @Body(new ZodValidationPipe(ForgotPasswordSchema)) body: ForgotPasswordInput,
+  ) {
+    await this.passwordReset.request(body.email);
+    return { message: AUTH_MESSAGES.reset_code_sent };
+  }
+
+  // Step 2. Doesn't log the user in: every session is ended, and they sign in
+  // with the new password.
+  @Throttle(throttle(RATE_LIMIT.login))
+  @Post('reset-password')
+  @HttpCode(200)
+  async resetPassword(
+    @Body(new ZodValidationPipe(ResetPasswordSchema)) body: ResetPasswordInput,
+  ) {
+    await this.passwordReset.reset(body.email, body.code, body.newPassword);
+    return { message: AUTH_MESSAGES.password_reset };
   }
 
   @Post('logout')

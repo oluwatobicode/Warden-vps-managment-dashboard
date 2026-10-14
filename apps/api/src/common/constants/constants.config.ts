@@ -25,6 +25,15 @@ export const TTL_SECONDS = {
   magicLink: 15 * 60, // magic:{hash}, single use
   pendingSignup: 30 * 60, // pending:{id}, between verify and onboarding
   oauthState: 10 * 60, // oauth-state:{state}, CSRF guard for the callback
+  passwordReset: 10 * 60, // pwreset:{email}, the 6-digit code
+  passwordResetRequests: 60 * 60, // pwreset-requests:{email}, the per-email window
+} as const;
+
+// Forgot password. A 6-digit code has 1,000,000 values, so the per-code attempt
+// cap is what makes guessing hopeless: 3 codes/hour × 5 tries = 15 guesses/hour.
+export const PASSWORD_RESET = {
+  maxAttempts: 5, // wrong codes before the code is destroyed
+  maxRequestsPerWindow: 3, // codes per email per passwordResetRequests window
 } as const;
 
 export const SESSION_SLIDE_THRESHOLD_SECONDS = 6 * 24 * 60 * 60;
@@ -39,6 +48,9 @@ export const REDIS_KEY = {
   magicLink: (tokenHash: string) => `${PREFIX}:magic:${tokenHash}`,
   pendingSignup: (id: string) => `${PREFIX}:pending:${id}`,
   oauthState: (state: string) => `${PREFIX}:oauth-state:${state}`,
+  passwordReset: (email: string) => `${PREFIX}:pwreset:${email}`,
+  passwordResetAttempts: (email: string) => `${PREFIX}:pwreset-attempts:${email}`,
+  passwordResetRequests: (email: string) => `${PREFIX}:pwreset-requests:${email}`,
 } as const;
 
 // JWT

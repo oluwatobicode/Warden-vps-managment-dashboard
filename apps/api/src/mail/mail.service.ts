@@ -76,7 +76,7 @@ export class MailService {
     });
   }
 
-  /** Template only for now — no reset flow issues codes yet. */
+  /** Sent by PasswordResetService. */
   async sendPasswordResetCode(
     input: Input<ResetPasswordOtpTemplateInput>,
   ): Promise<void> {
