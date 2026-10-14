@@ -67,6 +67,30 @@
   }
 }
 
+/*
+ * One knob for the size of the whole UI. Components use the design's pixel
+ * sizes; zoom scales all of them together. --ui-scale must match, because a
+ * zoomed element's 100dvh is zoomed too: full-height layouts divide by it.
+ */
+:root {
+  --ui-scale: 1.125;
+  --page-x: clamp(20px, 4vw, 56px);
+  zoom: var(--ui-scale);
+}
+@media (min-width: 1600px) {
+  :root {
+    --ui-scale: 1.25;
+  }
+}
+
+/* Viewport height that stays true under zoom: use these, never h-dvh/min-h-dvh. */
+@utility h-screen-ui {
+  height: calc(100dvh / var(--ui-scale));
+}
+@utility min-h-screen-ui {
+  min-height: calc(100dvh / var(--ui-scale));
+}
+
 @layer base {
   body {
     @apply bg-canvas font-sans text-body antialiased;

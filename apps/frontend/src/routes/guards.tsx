@@ -13,7 +13,7 @@ export function RequireAuth() {
   if (isLoading) return <FullPageSpinner />;
   if (isError) {
     return (
-      <div className="grid min-h-dvh place-items-center p-6 text-center">
+      <div className="grid min-h-screen-ui place-items-center p-6 text-center">
         <div className="flex flex-col items-center gap-4">
           <p className="text-sm text-muted-warm">
             Can't reach Warden right now.

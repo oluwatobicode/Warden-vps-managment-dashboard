@@ -35,7 +35,7 @@ export function ProjectLayout() {
   if (project.isError || environments.isError) {
     const missing = apiStatus(project.error) === 404;
     return (
-      <div className="grid min-h-dvh place-items-center p-6 text-center">
+      <div className="grid min-h-screen-ui place-items-center p-6 text-center">
         <div className="flex flex-col items-center gap-4">
           <p className="text-sm text-muted-warm">{missing ? "This project doesn't exist, or it isn't in your organization." : apiMessage(project.error ?? environments.error)}</p>
           <ButtonLink variant="secondary" to="/projects">All projects</ButtonLink>
@@ -59,7 +59,7 @@ export function ProjectLayout() {
   ];
 
   return (
-    <div className="flex h-dvh gap-[13px] overflow-hidden p-4">
+    <div className="flex h-screen-ui gap-[13px] overflow-hidden p-4">
       <aside className="flex w-[252px] shrink-0 flex-col gap-3.5 overflow-y-auto rounded-[22px] border border-divider bg-ink py-[13px]">
         <div className="px-3">
           <div className="mt-2 flex items-center gap-2.5 rounded-[18px] border border-navb bg-raised px-3 py-[11px]">

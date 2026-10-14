@@ -146,6 +146,14 @@ If a task looks like it needs one of these, stop and ask before scaffolding it.
 
 - **Dev setup: Vite proxy vs CORS.** The api has no CORS enabled. Either proxy `/api` → `http://localhost:3000` in `vite.config.ts` (same origin, cookies just work), or enable CORS with credentials on the api. Proxy is the simpler dev choice; production depends on the open cookie-policy item in `/CLAUDE.md`.
 
+## UI scale (2026-10-15)
+
+Components use the design's pixel sizes; `:root { zoom: var(--ui-scale) }` in `index.css` scales the whole UI (1.125, or 1.25 on screens 1600px+). Change the size there, not per component. Because zoom also scales `100dvh`, **never use `h-dvh` / `min-h-dvh`**: use `h-screen-ui` / `min-h-screen-ui` (they divide by the scale). Page side padding is `var(--page-x)`.
+
+## Logging out / session end
+
+Always go through `forgetSession(queryClient)` in `api/queryClient.ts`: it sets `["auth","me"]` to null on the existing query, then removes everything else. Never `queryClient.clear()`: it deletes the query the auth context is subscribed to and leaves the old user on screen.
+
 ## `shared-types` in Vite (resolved 2026-10-14)
 
 `shared-types` is built as CommonJS (repo rule). Vite only converts CJS for packages it pre-bundles and skips linked workspace packages by default, so the browser got raw `exports.x`. Fixed with `optimizeDeps: { include: ["shared-types"] }` in `vite.config.ts`; named imports (`import { LoginSchema } from "shared-types"`) verified in dev and in `vite build`.

@@ -7,7 +7,7 @@ export const ApiTokenExpirySchema = z.enum(["30d", "90d", "1y", "never"]);
 export type ApiTokenExpiry = z.infer<typeof ApiTokenExpirySchema>;
 
 export const CreateApiTokenSchema = z.object({
-  apiName: z.string().trim().min(1).max(80),
+  apiName: z.string().trim().min(1, "Give the token a name").max(80, "Use at most 80 characters"),
   apiTokenScope: ApiTokenScopeSchema.default("READ"),
   expiresIn: ApiTokenExpirySchema.default("90d"),
 });

@@ -8,15 +8,15 @@ import { z } from "zod";
 export const variableKey = z
   .string()
   .trim()
-  .min(1)
-  .max(128)
+  .min(1, "Enter a key")
+  .max(128, "Use at most 128 characters")
   .regex(/^[A-Z_][A-Z0-9_]*$/, {
     message: "Use UPPER_SNAKE_CASE, e.g. DATABASE_URL",
   });
 
 // A required string on INPUT (empty is legal; not trimmed — a trailing space
 // can be deliberate). `null` only ever appears on OUTPUT, meaning "masked".
-const variableValue = z.string().max(16_000);
+const variableValue = z.string().max(16_000, "Values can be up to 16,000 characters");
 
 // POST /environment-variables — every service in the environment receives it.
 export const CreateEnvironmentVariableSchema = z.object({

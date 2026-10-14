@@ -29,7 +29,7 @@ export function Modal({ open, onClose, title, description, children, footer, wid
         role="dialog"
         aria-modal="true"
         aria-labelledby="modal-title"
-        className={`${width} max-h-[calc(100dvh-114px)] max-w-full overflow-y-auto rounded-2xl border border-track bg-card shadow-[0_32px_80px_rgba(0,0,0,.6)]`}
+        className={`${width} max-h-[calc(100dvh/var(--ui-scale)-114px)] max-w-full overflow-y-auto rounded-2xl border border-track bg-card shadow-[0_32px_80px_rgba(0,0,0,.6)]`}
       >
         <div className="border-b border-cb px-[22px] py-5">
           <h3 id="modal-title" className="text-lg font-bold tracking-[-0.3px] text-strong">

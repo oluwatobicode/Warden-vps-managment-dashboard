@@ -23,7 +23,7 @@ export type ServiceStatus = z.infer<typeof ServiceStatusSchema>;
 const githubRepoUrl = z
   .string()
   .trim()
-  .url()
+  .url("Enter a full URL, e.g. https://github.com/acme/api")
   .refine(
     (u) => {
       try {
@@ -35,9 +35,13 @@ const githubRepoUrl = z
     { message: "Only github.com repositories are supported" },
   );
 
-const branch = z.string().trim().min(1).max(100);
-const port = z.number().int().min(1).max(65535);
-const image = z.string().trim().min(1).max(200);
+const branch = z.string().trim().min(1, "Enter a branch").max(100, "Use at most 100 characters");
+const port = z
+  .number({ error: "Enter a port number" })
+  .int("Enter a whole number")
+  .min(1, "Ports run from 1 to 65535")
+  .max(65535, "Ports run from 1 to 65535");
+const image = z.string().trim().min(1, "Enter an image").max(200, "Use at most 200 characters");
 
 // What the type allows. Written once, used by create (here) and by the API's
 // update path (which has to merge the body with the existing row first).

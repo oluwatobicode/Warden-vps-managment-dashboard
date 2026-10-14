@@ -7,7 +7,7 @@ export const CreateEnvironmentSchema = z.object({
   environmentName: slugName,
   // Default branch services in this environment deploy from (e.g. "main").
   // Optional: a team may not have decided yet. Services can override it.
-  branch: z.string().trim().min(1).max(100).optional(),
+  branch: z.string().trim().min(1, "Enter a branch").max(100, "Use at most 100 characters").optional(),
 });
 export type CreateEnvironmentInput = z.infer<typeof CreateEnvironmentSchema>;
 

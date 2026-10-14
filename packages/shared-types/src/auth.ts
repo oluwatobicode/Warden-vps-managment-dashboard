@@ -9,7 +9,7 @@ export type MagicLinkVerify = z.infer<typeof MagicLinkVerifySchema>;
 
 export const LoginSchema = z.object({
   email,
-  password: z.string().min(1).max(72),
+  password: z.string().min(1, "Enter your password").max(72, "Use at most 72 characters"),
 });
 export type LoginInput = z.infer<typeof LoginSchema>;
 
@@ -26,10 +26,14 @@ export const ResetPasswordSchema = z.object({
 export type ResetPasswordInput = z.infer<typeof ResetPasswordSchema>;
 
 export const EmailOnboardingSchema = z.object({
-  firstName: z.string().trim().min(1).max(80),
-  lastName: z.string().trim().min(1).max(80),
+  firstName: z.string().trim().min(1, "Enter your first name").max(80, "Use at most 80 characters"),
+  lastName: z.string().trim().min(1, "Enter your last name").max(80, "Use at most 80 characters"),
   password,
-  organizationName: z.string().trim().min(2).max(80),
+  organizationName: z
+    .string()
+    .trim()
+    .min(2, "Use at least 2 characters")
+    .max(80, "Use at most 80 characters"),
 });
 
 export type EmailOnboardingInput = z.infer<typeof EmailOnboardingSchema>;

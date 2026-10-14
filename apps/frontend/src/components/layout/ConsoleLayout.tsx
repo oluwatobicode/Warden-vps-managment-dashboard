@@ -1,5 +1,4 @@
-import { NavLink, Outlet, useNavigate } from "react-router";
-import toast from "react-hot-toast";
+import { NavLink, Outlet } from "react-router";
 import { useAuth } from "../../features/auth/hooks/useAuth";
 import { useLogout } from "../../features/auth/hooks/useLogout";
 import { ROLE_LABEL } from "../../utils/roles";
@@ -14,19 +13,12 @@ const TABS = [
 export function ConsoleLayout() {
   const { user } = useAuth();
   const logout = useLogout();
-  const navigate = useNavigate();
 
-  const onLogout = () =>
-    logout.mutate(undefined, {
-      onSettled: () => {
-        navigate("/login", { replace: true });
-        toast.success("Logged out");
-      },
-    });
+  const onLogout = () => logout.mutate();
 
   return (
-    <div className="flex min-h-dvh flex-col px-[clamp(20px,6vw,96px)] pt-7 pb-12">
-      <header className="grid grid-cols-[1fr_auto_1fr] items-center gap-5">
+    <div className="flex min-h-screen-ui flex-col pt-7 pb-12">
+      <header className="grid grid-cols-[1fr_auto_1fr] items-center gap-5 px-[var(--page-x)]">
         <div className="flex items-center gap-[13px] justify-self-start rounded-2xl border border-cb bg-ink py-3.5 pr-[22px] pl-4">
           <span className="grid size-10 shrink-0 place-items-center rounded-[11px] bg-good-s text-[13px] font-bold text-good">
             {initials(user?.organization.name ?? "")}
@@ -63,8 +55,11 @@ export function ConsoleLayout() {
         </button>
       </header>
 
+      {/* Full width on purpose: the line runs edge to edge, the content doesn't. */}
       <div className="mt-[26px] mb-11 h-px bg-cb" />
-      <Outlet />
+      <div className="flex flex-1 flex-col px-[var(--page-x)]">
+        <Outlet />
+      </div>
     </div>
   );
 }

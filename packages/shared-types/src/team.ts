@@ -23,8 +23,8 @@ export type InviteMemberInput = z.infer<typeof InviteMemberSchema>;
 
 export const AcceptInviteSchema = z.object({
   token: z.string().min(1),
-  firstName: z.string().trim().min(1).max(80),
-  lastName: z.string().trim().min(1).max(80),
+  firstName: z.string().trim().min(1, "Enter your first name").max(80, "Use at most 80 characters"),
+  lastName: z.string().trim().min(1, "Enter your last name").max(80, "Use at most 80 characters"),
   password,
 });
 export type AcceptInviteInput = z.infer<typeof AcceptInviteSchema>;

@@ -22,9 +22,12 @@ export function unwrap<T>(res: AxiosResponse<ApiEnvelope<T>>): T {
 }
 
 // /auth/* routes (login, refresh, signup, verify, reset…) answer 401 for their
-// own reasons: refreshing would be wrong or a loop. /auth/me is the exception,
-// it's a normal logged-in call.
-const skipsRefresh = (url: string) => url.startsWith("/auth/") && url !== "/auth/me";
+// own reasons: refreshing would be wrong or a loop. The exceptions are the two
+// logged-in calls: /auth/me, and /auth/logout (after 15 minutes the access
+// token has expired; without a refresh the logout would 401 and the session
+// would live on in Redis).
+const LOGGED_IN_AUTH = ["/auth/me", "/auth/logout"];
+const skipsRefresh = (url: string) => url.startsWith("/auth/") && !LOGGED_IN_AUTH.includes(url);
 
 // One refresh at a time: if five requests 401 together, they all wait on
 // the same POST /auth/refresh instead of firing five (the refresh token is

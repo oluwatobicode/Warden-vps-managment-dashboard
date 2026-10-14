@@ -4,7 +4,7 @@ import { WardenMark } from "../ui/WardenMark";
 /** Login / signup / reset: centred card on the canvas with faint infra line art. */
 export function AuthLayout({ children, footer }: { children: ReactNode; footer?: ReactNode }) {
   return (
-    <div className="relative flex min-h-dvh flex-col items-center justify-center gap-[22px] px-6 py-10">
+    <div className="relative flex min-h-screen-ui flex-col items-center justify-center gap-[22px] px-6 py-10">
       <Backdrop />
       <div className="relative">
         <WardenMark />

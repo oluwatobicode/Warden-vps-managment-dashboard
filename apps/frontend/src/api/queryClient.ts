@@ -12,9 +12,19 @@ import { apiStatus } from "../utils/apiMessage";
 function endSessionOn401(error: unknown) {
   if (apiStatus(error) !== 401) return;
   if (!queryClient.getQueryData(authKeys.me)) return;
-  queryClient.clear();
-  queryClient.setQueryData(authKeys.me, null);
+  forgetSession(queryClient);
   toast.error("Your session has expired. Please sign in again", { id: "session-expired" });
+}
+
+/**
+ * Mark the user logged out and drop every other cached response.
+ * Order matters: set "me" to null on the EXISTING query first, so the auth
+ * context (which is subscribed to it) sees the change. clear() would delete
+ * that query and leave the context holding the old, logged-in user.
+ */
+export function forgetSession(client: QueryClient) {
+  client.setQueryData(authKeys.me, null);
+  client.removeQueries({ predicate: (q) => q.queryKey[0] !== "auth" });
 }
 
 export const queryClient = new QueryClient({

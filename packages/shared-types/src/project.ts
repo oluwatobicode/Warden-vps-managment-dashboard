@@ -3,8 +3,12 @@ import { slugName } from "./field.js";
 import { ServiceStatusSchema } from "./service.js";
 
 export const CreateProjectSchema = z.object({
-  projectName: z.string().trim().min(2).max(80),
-  projectDescription: z.string().trim().max(500).optional(),
+  projectName: z
+    .string()
+    .trim()
+    .min(2, "Use at least 2 characters")
+    .max(80, "Use at most 80 characters"),
+  projectDescription: z.string().trim().max(500, "Use at most 500 characters").optional(),
 
   environments: z
     .array(slugName)

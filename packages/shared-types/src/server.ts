@@ -6,24 +6,28 @@ export type ServerType = z.infer<typeof ServerTypeSchema>;
 export const ServerStatusSchema = z.enum(["CONNECTED", "IDLE", "OFFLINE"]);
 export type ServerStatus = z.infer<typeof ServerStatusSchema>;
 
-const serverIp = z.union([z.ipv4(), z.ipv6(), z.hostname()]);
-const serverPort = z.number().int().min(1).max(65535);
+const serverIp = z.union([z.ipv4(), z.ipv6(), z.hostname()], { error: "Enter an IP address or hostname" });
+const serverPort = z
+  .number({ error: "Enter a port number" })
+  .int("Enter a whole number")
+  .min(1, "Ports run from 1 to 65535")
+  .max(65535, "Ports run from 1 to 65535");
 const serverSSHUsername = z
   .string()
   .trim()
-  .min(1)
-  .max(32)
+  .min(1, "Enter the SSH user")
+  .max(32, "Use at most 32 characters")
   .regex(/^[a-z_][a-z0-9_-]*$/, {
     message: "Use a Linux username: lowercase letters, digits, _ or -",
   });
-const label = z.string().trim().min(1).max(60);
+const label = z.string().trim().min(1, "Required").max(60, "Use at most 60 characters");
 
 export const CreateServerSchema = z.object({
   serverName: slugName,
   serverIp,
   serverPort: serverPort.default(22),
   serverSSHUsername,
-  serverSshKeyId: z.string().uuid(),
+  serverSshKeyId: z.string().uuid("Pick an SSH key"),
   serverType: ServerTypeSchema.default("DEPLOY"),
   provider: label.optional(),
   serverLocation: label.optional(),

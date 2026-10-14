@@ -66,7 +66,7 @@ const events = z
   .min(1, "Pick at least one event")
   .refine((a) => new Set(a).size === a.length, "Each event only once");
 
-const name = z.string().trim().min(1).max(60);
+const name = z.string().trim().min(1, "Give the channel a name").max(60, "Use at most 60 characters");
 
 const webhookUrl = (type: "SLACK" | "DISCORD") =>
   z
@@ -79,7 +79,10 @@ const webhookUrl = (type: "SLACK" | "DISCORD") =>
           : "Must be a Discord webhook (https://discord.com/api/webhooks/…)",
     });
 
-const emailRecipients = z.array(email).min(1).max(20);
+const emailRecipients = z
+  .array(email)
+  .min(1, "Add at least one email address")
+  .max(20, "Up to 20 recipients");
 
 export const CreateNotificationChannelSchema = z.discriminatedUnion("type", [
   z.object({

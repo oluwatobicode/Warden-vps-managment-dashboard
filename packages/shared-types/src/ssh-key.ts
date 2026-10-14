@@ -9,7 +9,7 @@ export const CreateSshKeySchema = z.discriminatedUnion("mode", [
   z.object({
     mode: z.literal("import"),
     sshKeyName: slugName,
-    privateKey: z.string().trim().min(1).max(16_000),
+    privateKey: z.string().trim().min(1, "Paste the private key").max(16_000, "That is too long for a private key"),
   }),
 ]);
 export type CreateSshKeyInput = z.infer<typeof CreateSshKeySchema>;
