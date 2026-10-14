@@ -9,6 +9,8 @@ import { ConfigService } from '@nestjs/config';
 import { Prisma, Role } from 'db';
 import type { Invitation, InviteMemberInput, Member } from 'shared-types';
 import { PrismaService } from '../../prisma/prisma.service';
+import { AuditService } from '../audit/audit.service';
+import type { Actor } from '../../common/types/actor';
 import { MailService } from '../../mail/mail.service';
 import { SessionService } from '../auth/session/session.service';
 import { TEAM_MESSAGES } from '../../common/constants/messages.config';
@@ -73,6 +75,7 @@ export class TeamService {
     private readonly prisma: PrismaService,
     private readonly mail: MailService,
     private readonly sessions: SessionService,
+    private readonly audit: AuditService,
     config: ConfigService,
   ) {
     this.appUrl = config.getOrThrow<string>('APP_URL');
@@ -147,10 +150,12 @@ export class TeamService {
   //  list Invitations
 
   async inviteMember(
-    orgId: string,
-    inviterUserId: string,
+    actor: Actor,
     input: InviteMemberInput,
   ): Promise<Invitation> {
+    const orgId = actor.organizationId;
+    // Team routes are cookie-only (SessionGuard), so there is always a person.
+    const inviterUserId = actor.userId!;
     await this.prisma.client.invitation.updateMany({
       where: {
         organizationId: orgId,
@@ -209,6 +214,14 @@ export class TeamService {
       throw e;
     }
 
+    // After the email: an invite whose email failed was deleted, so no line.
+    await this.audit.record(actor, {
+      action: 'invitation.created',
+      entityType: 'invitation',
+      entityId: invite.id,
+      metadata: { email: invite.email, role: invite.role },
+    });
+
     return toInvitation(invite);
   }
 
@@ -230,10 +243,11 @@ export class TeamService {
   }
 
   // Revoke a pending invitation
-  async revokeInvitation(orgId: string, id: string): Promise<void> {
+  async revokeInvitation(actor: Actor, id: string): Promise<void> {
+    const orgId = actor.organizationId;
     const invite = await this.prisma.client.invitation.findFirst({
       where: { id, organizationId: orgId, status: 'PENDING' },
-      select: { id: true },
+      select: { id: true, email: true },
     });
     if (!invite) {
       throw new NotFoundException(TEAM_MESSAGES.invitation_invalid);
@@ -241,6 +255,12 @@ export class TeamService {
     await this.prisma.client.invitation.update({
       where: { id: invite.id },
       data: { status: 'REVOKED' },
+    });
+    await this.audit.record(actor, {
+      action: 'invitation.revoked',
+      entityType: 'invitation',
+      entityId: invite.id,
+      metadata: { email: invite.email },
     });
   }
 
@@ -272,11 +292,12 @@ export class TeamService {
 
   // update a member role
   async updateMemberRole(
-    orgId: string,
-    callerUserId: string,
+    actor: Actor,
     membershipId: string,
     role: Role,
   ): Promise<Member> {
+    const orgId = actor.organizationId;
+    const callerUserId = actor.userId!; // cookie-only route: always a person
     const member = await this.assertCanAlterMember(
       orgId,
       callerUserId,
@@ -294,15 +315,21 @@ export class TeamService {
 
     await this.sessions.destroyAll(member.userId);
 
+    // After the same-role early return above, so a no-op writes no line.
+    await this.audit.record(actor, {
+      action: 'member.role_changed',
+      entityType: 'member',
+      entityId: member.id,
+      metadata: { email: member.user.email, from: member.role, to: role },
+    });
+
     return toMember(updated);
   }
 
   // remove a member
-  async removeMember(
-    orgId: string,
-    callerUserId: string,
-    membershipId: string,
-  ): Promise<void> {
+  async removeMember(actor: Actor, membershipId: string): Promise<void> {
+    const orgId = actor.organizationId;
+    const callerUserId = actor.userId!; // cookie-only route: always a person
     const member = await this.assertCanAlterMember(
       orgId,
       callerUserId,
@@ -318,6 +345,14 @@ export class TeamService {
     });
 
     await this.sessions.destroyAll(member.userId);
+
+    // After the already-suspended early return, so a no-op writes no line.
+    await this.audit.record(actor, {
+      action: 'member.removed',
+      entityType: 'member',
+      entityId: member.id,
+      metadata: { email: member.user.email, role: member.role },
+    });
 
     try {
       const remover = await this.prisma.client.user.findUnique({

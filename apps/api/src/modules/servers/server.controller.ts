@@ -19,6 +19,8 @@ import { SessionGuard } from '../../common/guards/session.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { CurrentOrg } from '../../common/decorators/current-org.decorator';
+import { CurrentActor } from '../../common/decorators/current-actor.decorator';
+import type { Actor } from '../../common/types/actor';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import { UuidPipe } from '../../common/pipes/uuid.pipe';
 import { ServerService } from './servers.service';
@@ -43,10 +45,10 @@ export class ServerController {
   @Post()
   @Roles('ADMIN', 'DEV_OPS')
   create(
-    @CurrentOrg() orgId: string,
+    @CurrentActor() actor: Actor,
     @Body(new ZodValidationPipe(CreateServerSchema)) body: CreateServerInput,
   ) {
-    return this.servers.createServer(orgId, body);
+    return this.servers.createServer(actor, body);
   }
 
   @Patch(':id')
@@ -70,7 +72,10 @@ export class ServerController {
   @Delete(':id')
   @Roles('ADMIN', 'DEV_OPS')
   @HttpCode(204)
-  async remove(@CurrentOrg() orgId: string, @Param('id', UuidPipe) id: string) {
-    await this.servers.deleteServer(orgId, id);
+  async remove(
+    @CurrentActor() actor: Actor,
+    @Param('id', UuidPipe) id: string,
+  ) {
+    await this.servers.deleteServer(actor, id);
   }
 }

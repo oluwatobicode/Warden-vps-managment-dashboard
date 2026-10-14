@@ -19,6 +19,8 @@ import { SessionGuard } from '../../common/guards/session.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { CurrentOrg } from '../../common/decorators/current-org.decorator';
+import { CurrentActor } from '../../common/decorators/current-actor.decorator';
+import type { Actor } from '../../common/types/actor';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import { UuidPipe } from '../../common/pipes/uuid.pipe';
 import { ProjectService } from './project.service';
@@ -41,10 +43,10 @@ export class ProjectController {
   @Post()
   @Roles('ADMIN', 'DEV_OPS')
   create(
-    @CurrentOrg() orgId: string,
+    @CurrentActor() actor: Actor,
     @Body(new ZodValidationPipe(CreateProjectSchema)) body: CreateProjectInput,
   ) {
-    return this.projects.createProject(orgId, body);
+    return this.projects.createProject(actor, body);
   }
 
   @Patch(':id')
@@ -60,7 +62,10 @@ export class ProjectController {
   @Delete(':id')
   @Roles('ADMIN', 'DEV_OPS')
   @HttpCode(204)
-  async remove(@CurrentOrg() orgId: string, @Param('id', UuidPipe) id: string) {
-    await this.projects.deleteProject(orgId, id);
+  async remove(
+    @CurrentActor() actor: Actor,
+    @Param('id', UuidPipe) id: string,
+  ) {
+    await this.projects.deleteProject(actor, id);
   }
 }

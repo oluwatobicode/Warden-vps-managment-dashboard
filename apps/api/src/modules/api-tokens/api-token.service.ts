@@ -1,5 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { AuditService } from '../audit/audit.service';
+import type { Actor } from '../../common/types/actor';
 import {
   API_TOKEN,
   API_TOKEN_EXPIRY_DAYS,
@@ -15,11 +17,16 @@ import { API_TOKEN_MESSAGES } from '../../common/constants/messages.config';
 
 @Injectable()
 export class ApiTokenService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly audit: AuditService,
+  ) {}
+
   async createToken(
-    orgId: string,
+    actor: Actor,
     input: CreateApiTokenInput,
   ): Promise<CreatedApiToken> {
+    const orgId = actor.organizationId;
     const raw = `${API_TOKEN.prefix}${randomToken()}`;
 
     const days = API_TOKEN_EXPIRY_DAYS[input.expiresIn];
@@ -38,6 +45,18 @@ export class ApiTokenService {
       },
     });
 
+    // Never log `raw`: the audit log is not a place for secrets.
+    await this.audit.record(actor, {
+      action: 'api_token.created',
+      entityType: 'api_token',
+      entityId: row.id,
+      metadata: {
+        name: row.apiName,
+        scope: row.apiTokenScope,
+        expiresIn: input.expiresIn,
+      },
+    });
+
     return { ...toApiToken(row), token: raw };
   }
 
@@ -49,7 +68,8 @@ export class ApiTokenService {
     return rows.map(toApiToken);
   }
 
-  async revokeToken(orgId: string, id: string): Promise<void> {
+  async revokeToken(actor: Actor, id: string): Promise<void> {
+    const orgId = actor.organizationId;
     const findToken = await this.prisma.client.apiToken.findFirst({
       where: { id, organizationId: orgId },
     });
@@ -59,6 +79,13 @@ export class ApiTokenService {
     }
 
     await this.prisma.client.apiToken.delete({ where: { id: findToken.id } });
+
+    await this.audit.record(actor, {
+      action: 'api_token.revoked',
+      entityType: 'api_token',
+      entityId: findToken.id,
+      metadata: { name: findToken.apiName },
+    });
   }
 }
 

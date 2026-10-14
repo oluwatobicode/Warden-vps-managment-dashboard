@@ -9,6 +9,8 @@ import type { CreateSshKeyInput, SshKey } from 'shared-types';
 import { fingerprint, generateKeyPair, parsePrivateKey } from 'ssh-client';
 import { encrypt } from 'warden-crypto';
 import { PrismaService } from '../../prisma/prisma.service';
+import { AuditService } from '../audit/audit.service';
+import type { Actor } from '../../common/types/actor';
 import { OrgKeyService } from '../warden-crypto/org-key.service';
 import { SSH_KEY_MESSAGES } from '../../common/constants/messages.config';
 
@@ -17,9 +19,11 @@ export class SshKeyService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly orgKeys: OrgKeyService,
+    private readonly audit: AuditService,
   ) {}
 
-  async createSshKey(orgId: string, input: CreateSshKeyInput): Promise<SshKey> {
+  async createSshKey(actor: Actor, input: CreateSshKeyInput): Promise<SshKey> {
+    const orgId = actor.organizationId;
     let publicKey: string;
     let privateKey: string;
     if (input.mode === 'generate') {
@@ -52,6 +56,13 @@ export class SshKeyService {
         include: WITH_SERVER_COUNT,
       });
 
+      await this.audit.record(actor, {
+        action: 'ssh_key.created',
+        entityType: 'ssh_key',
+        entityId: row.id,
+        metadata: { name: row.sshKeyName, fingerprint: row.fingerprint },
+      });
+
       return toSshKey(row);
     } catch (e) {
       if (
@@ -73,7 +84,8 @@ export class SshKeyService {
     return rows.map(toSshKey);
   }
 
-  async deleteSshKey(orgId: string, id: string): Promise<void> {
+  async deleteSshKey(actor: Actor, id: string): Promise<void> {
+    const orgId = actor.organizationId;
     const row = await this.prisma.client.sshKey.findFirst({
       where: { id, organizationId: orgId },
       include: WITH_SERVER_COUNT,
@@ -88,6 +100,12 @@ export class SshKeyService {
 
     try {
       await this.prisma.client.sshKey.delete({ where: { id: row.id } });
+      await this.audit.record(actor, {
+        action: 'ssh_key.deleted',
+        entityType: 'ssh_key',
+        entityId: row.id,
+        metadata: { name: row.sshKeyName, fingerprint: row.fingerprint },
+      });
     } catch (e) {
       if (
         e instanceof Prisma.PrismaClientKnownRequestError &&

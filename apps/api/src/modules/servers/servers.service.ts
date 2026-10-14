@@ -13,6 +13,8 @@ import type {
   UpdateServerInput,
 } from 'shared-types';
 import { PrismaService } from '../../prisma/prisma.service';
+import { AuditService } from '../audit/audit.service';
+import type { Actor } from '../../common/types/actor';
 import {
   SERVER_MESSAGES,
   SSH_KEY_MESSAGES,
@@ -25,10 +27,12 @@ export class ServerService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly orgKey: OrgKeyService,
+    private readonly audit: AuditService,
   ) {}
 
   //create a server
-  async createServer(orgId: string, input: CreateServerInput): Promise<Server> {
+  async createServer(actor: Actor, input: CreateServerInput): Promise<Server> {
+    const orgId = actor.organizationId;
     await this.assertKeyInOrg(orgId, input.serverSshKeyId);
 
     try {
@@ -45,6 +49,12 @@ export class ServerService {
           organizationId: orgId,
         },
         include: SERVER_DETAIL,
+      });
+      await this.audit.record(actor, {
+        action: 'server.created',
+        entityType: 'server',
+        entityId: row.id,
+        metadata: { name: row.serverName, host: row.serverIp },
       });
       return toServer(row);
     } catch (e) {
@@ -109,7 +119,8 @@ export class ServerService {
     }
   }
 
-  async deleteServer(orgId: string, id: string): Promise<void> {
+  async deleteServer(actor: Actor, id: string): Promise<void> {
+    const orgId = actor.organizationId;
     const row = await this.findOrThrow(orgId, id);
     const hasServices = (n: number) =>
       new ConflictException(
@@ -119,6 +130,12 @@ export class ServerService {
 
     try {
       await this.prisma.client.server.delete({ where: { id: row.id } });
+      await this.audit.record(actor, {
+        action: 'server.deleted',
+        entityType: 'server',
+        entityId: row.id,
+        metadata: { name: row.serverName, host: row.serverIp },
+      });
     } catch (e) {
       if (
         e instanceof Prisma.PrismaClientKnownRequestError &&

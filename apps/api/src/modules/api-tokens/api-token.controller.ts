@@ -13,6 +13,8 @@ import { SessionGuard } from '../../common/guards/session.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { CurrentOrg } from '../../common/decorators/current-org.decorator';
+import { CurrentActor } from '../../common/decorators/current-actor.decorator';
+import type { Actor } from '../../common/types/actor';
 import { ApiTokenService } from './api-token.service';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import {
@@ -32,11 +34,11 @@ export class ApiTokenController {
 
   @Post()
   create(
-    @CurrentOrg() orgId: string,
+    @CurrentActor() actor: Actor,
     @Body(new ZodValidationPipe(CreateApiTokenSchema))
     body: CreateApiTokenInput,
   ) {
-    return this.apiToken.createToken(orgId, body);
+    return this.apiToken.createToken(actor, body);
   }
 
   @Get()
@@ -46,8 +48,11 @@ export class ApiTokenController {
 
   @Delete(':id')
   @HttpCode(204)
-  async revoke(@CurrentOrg() orgId: string, @Param('id', UuidPipe) id: string) {
-    await this.apiToken.revokeToken(orgId, id);
+  async revoke(
+    @CurrentActor() actor: Actor,
+    @Param('id', UuidPipe) id: string,
+  ) {
+    await this.apiToken.revokeToken(actor, id);
   }
 }
 

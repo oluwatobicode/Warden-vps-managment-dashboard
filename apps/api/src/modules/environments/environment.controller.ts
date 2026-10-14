@@ -13,6 +13,8 @@ import {
 import { SessionGuard } from '../../common/guards/session.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { CurrentOrg } from '../../common/decorators/current-org.decorator';
+import { CurrentActor } from '../../common/decorators/current-actor.decorator';
+import type { Actor } from '../../common/types/actor';
 import { EnvironmentService } from './environment.service';
 import { UuidPipe } from '../../common/pipes/uuid.pipe';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -45,11 +47,11 @@ export class EnvironmentController {
   @Post()
   @Roles('ADMIN', 'DEV_OPS')
   create(
-    @CurrentOrg() orgId: string,
+    @CurrentActor() actor: Actor,
     @Body(new ZodValidationPipe(CreateEnvironmentSchema))
     body: CreateEnvironmentInput,
   ) {
-    return this.environments.createEnvironment(orgId, body);
+    return this.environments.createEnvironment(actor, body);
   }
 
   @Patch(':id')
@@ -66,7 +68,10 @@ export class EnvironmentController {
   @Delete(':id')
   @Roles('ADMIN', 'DEV_OPS')
   @HttpCode(204)
-  async remove(@CurrentOrg() orgId: string, @Param('id', UuidPipe) id: string) {
-    await this.environments.deleteEnvironment(orgId, id);
+  async remove(
+    @CurrentActor() actor: Actor,
+    @Param('id', UuidPipe) id: string,
+  ) {
+    await this.environments.deleteEnvironment(actor, id);
   }
 }

@@ -4,6 +4,8 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { AuditService } from '../audit/audit.service';
+import type { Actor } from '../../common/types/actor';
 import {
   Environment,
   UpdateEnvironmentInput,
@@ -17,12 +19,16 @@ import { Prisma } from 'db';
 
 @Injectable()
 export class EnvironmentService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly audit: AuditService,
+  ) {}
 
   async createEnvironment(
-    orgId: string,
+    actor: Actor,
     input: CreateEnvironmentInput,
   ): Promise<Environment> {
+    const orgId = actor.organizationId;
     const project = await this.prisma.client.project.findFirst({
       where: { id: input.projectId, organizationId: orgId },
     });
@@ -40,6 +46,13 @@ export class EnvironmentService {
           organizationId: orgId,
         },
         include: WITH_SERVICE_COUNT,
+      });
+
+      await this.audit.record(actor, {
+        action: 'environment.created',
+        entityType: 'environment',
+        entityId: created.id,
+        metadata: { name: created.environmentName, projectId: created.projectId },
       });
 
       return toEnvironment(created);
@@ -101,10 +114,11 @@ export class EnvironmentService {
     }
   }
 
-  async deleteEnvironment(orgId: string, id: string): Promise<void> {
+  async deleteEnvironment(actor: Actor, id: string): Promise<void> {
+    const orgId = actor.organizationId;
     const env = await this.prisma.client.environment.findFirst({
       where: { id, organizationId: orgId },
-      select: { projectId: true },
+      select: { projectId: true, environmentName: true },
     });
     if (!env) throw new NotFoundException(ENVIRONMENT_MESSAGES.not_found);
 
@@ -117,6 +131,12 @@ export class EnvironmentService {
 
     try {
       await this.prisma.client.environment.delete({ where: { id } });
+      await this.audit.record(actor, {
+        action: 'environment.deleted',
+        entityType: 'environment',
+        entityId: id,
+        metadata: { name: env.environmentName, projectId: env.projectId },
+      });
     } catch (e) {
       if (
         e instanceof Prisma.PrismaClientKnownRequestError &&

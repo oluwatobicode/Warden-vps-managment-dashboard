@@ -15,6 +15,8 @@ import type {
 } from 'shared-types';
 import { decrypt, encrypt } from 'warden-crypto';
 import { PrismaService } from '../../prisma/prisma.service';
+import { AuditService } from '../audit/audit.service';
+import type { Actor } from '../../common/types/actor';
 import { OrgKeyService } from '../warden-crypto/org-key.service';
 import {
   ENVIRONMENT_MESSAGES,
@@ -27,6 +29,7 @@ export class VariableService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly orgKeys: OrgKeyService,
+    private readonly audit: AuditService,
   ) {}
 
   private async seal(orgId: string, value: string): Promise<string> {
@@ -134,11 +137,18 @@ export class VariableService {
   }
 
   async revealEnvironmentVariable(
-    orgId: string,
+    actor: Actor,
     id: string,
   ): Promise<RevealedVariable> {
+    const orgId = actor.organizationId;
     const row = await this.findEnvironmentVariable(orgId, id);
-    // TODO(audit log): record that this user revealed this key.
+    // The NAME is logged, never the value.
+    await this.audit.record(actor, {
+      action: 'variable.revealed',
+      entityType: 'variable',
+      entityId: row.id,
+      metadata: { key: row.key, scope: 'environment' },
+    });
     return {
       key: row.key,
       value: decrypt(row.valueEncrypted, {
@@ -209,11 +219,18 @@ export class VariableService {
   }
 
   async revealServiceVariable(
-    orgId: string,
+    actor: Actor,
     id: string,
   ): Promise<RevealedVariable> {
+    const orgId = actor.organizationId;
     const row = await this.findServiceVariable(orgId, id);
-    // TODO(audit log): record that this user revealed this key.
+    // The NAME is logged, never the value.
+    await this.audit.record(actor, {
+      action: 'variable.revealed',
+      entityType: 'variable',
+      entityId: row.id,
+      metadata: { key: row.key, scope: 'service' },
+    });
     return {
       key: row.key,
       value: decrypt(row.valueEncrypted, {

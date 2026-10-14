@@ -20,6 +20,8 @@ import { SessionGuard } from '../../common/guards/session.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { CurrentOrg } from '../../common/decorators/current-org.decorator';
+import { CurrentActor } from '../../common/decorators/current-actor.decorator';
+import type { Actor } from '../../common/types/actor';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import { UuidPipe } from '../../common/pipes/uuid.pipe';
 import { VariableService } from './variable.service';
@@ -51,8 +53,11 @@ export class EnvironmentVariableController {
 
   @Get(':id/reveal')
   @Roles('ADMIN', 'DEV_OPS', 'DEVELOPER')
-  reveal(@CurrentOrg() orgId: string, @Param('id', UuidPipe) id: string) {
-    return this.variables.revealEnvironmentVariable(orgId, id);
+  reveal(
+    @CurrentActor() actor: Actor,
+    @Param('id', UuidPipe) id: string,
+  ) {
+    return this.variables.revealEnvironmentVariable(actor, id);
   }
 
   @Patch(':id')

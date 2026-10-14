@@ -11,18 +11,24 @@ import type {
   UpdateProjectInput,
 } from 'shared-types';
 import { PrismaService } from '../../prisma/prisma.service';
+import { AuditService } from '../audit/audit.service';
+import type { Actor } from '../../common/types/actor';
 import { slugify } from '../../common/utils/slug.util';
 import { PROJECT_MESSAGES } from '../../common/constants/messages.config';
 
 @Injectable()
 export class ProjectService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly audit: AuditService,
+  ) {}
 
   /** POST /projects */
   async createProject(
-    orgId: string,
+    actor: Actor,
     input: CreateProjectInput,
   ): Promise<ProjectDetail> {
+    const orgId = actor.organizationId;
     const slug = slugify(input.projectName);
 
     const taken = await this.prisma.client.project.findFirst({
@@ -63,6 +69,13 @@ export class ProjectService {
       throw e;
     }
 
+    await this.audit.record(actor, {
+      action: 'project.created',
+      entityType: 'project',
+      entityId: project.id,
+      metadata: { name: project.projectName },
+    });
+
     return this.getProject(orgId, project.id);
   }
 
@@ -100,10 +113,22 @@ export class ProjectService {
     return this.getProject(orgId, id);
   }
 
-  async deleteProject(orgId: string, id: string): Promise<void> {
-    await this.assertExists(orgId, id);
+  async deleteProject(actor: Actor, id: string): Promise<void> {
+    const orgId = actor.organizationId;
+    // Read the name BEFORE the row is gone, for the audit line.
+    const project = await this.prisma.client.project.findFirst({
+      where: { id, organizationId: orgId },
+      select: { projectName: true },
+    });
+    if (!project) throw new NotFoundException(PROJECT_MESSAGES.not_found);
     try {
       await this.prisma.client.project.delete({ where: { id } });
+      await this.audit.record(actor, {
+        action: 'project.deleted',
+        entityType: 'project',
+        entityId: id,
+        metadata: { name: project.projectName },
+      });
     } catch (e) {
       if (
         e instanceof Prisma.PrismaClientKnownRequestError &&
