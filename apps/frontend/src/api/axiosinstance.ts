@@ -21,8 +21,10 @@ export function unwrap<T>(res: AxiosResponse<ApiEnvelope<T>>): T {
   return res.data.data;
 }
 
-// These answer 401 for their own reasons; refreshing would be wrong or a loop.
-const NO_REFRESH = ["/auth/refresh", "/auth/login", "/auth/logout"];
+// /auth/* routes (login, refresh, signup, verify, reset…) answer 401 for their
+// own reasons: refreshing would be wrong or a loop. /auth/me is the exception,
+// it's a normal logged-in call.
+const skipsRefresh = (url: string) => url.startsWith("/auth/") && url !== "/auth/me";
 
 // One refresh at a time: if five requests 401 together, they all wait on
 // the same POST /auth/refresh instead of firing five (the refresh token is
@@ -39,7 +41,7 @@ axiosInstance.interceptors.response.use(
       error.response?.status === 401 &&
       original &&
       !original._retried &&
-      !NO_REFRESH.some((p) => url.startsWith(p));
+      !skipsRefresh(url);
     if (!retryable) return Promise.reject(error);
 
     original._retried = true;
