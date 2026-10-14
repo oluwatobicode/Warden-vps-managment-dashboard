@@ -57,3 +57,15 @@ axiosInstance.interceptors.response.use(
     return axiosInstance(original);
   },
 );
+
+// Shorthands so every hook reads as "GET this, get back that".
+export const api = {
+  get: async <T>(url: string, params?: Record<string, string>) =>
+    unwrap(await axiosInstance.get<ApiEnvelope<T>>(url, { params })),
+  post: async <T>(url: string, body?: unknown) => unwrap(await axiosInstance.post<ApiEnvelope<T>>(url, body)),
+  patch: async <T>(url: string, body: unknown) => unwrap(await axiosInstance.patch<ApiEnvelope<T>>(url, body)),
+  /** DELETE answers 204 with no body. */
+  delete: async (url: string) => {
+    await axiosInstance.delete(url);
+  },
+};

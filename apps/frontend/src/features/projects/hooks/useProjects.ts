@@ -1,6 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { CreateProjectInput, Project, ProjectDetail } from "shared-types";
-import { axiosInstance, unwrap } from "../../../api/axiosinstance";
+import type {
+  CreateProjectInput,
+  Project,
+  ProjectDetail,
+  UpdateProjectInput,
+} from "shared-types";
+import { api, axiosInstance, unwrap } from "../../../api/axiosinstance";
 import type { ApiEnvelope } from "../../../types/api";
 
 export const projectKeys = {
@@ -39,6 +44,35 @@ export function useCreateProject() {
     onSuccess: (project) => {
       queryClient.setQueryData(projectKeys.detail(project.id), project);
       return queryClient.invalidateQueries({ queryKey: projectKeys.all });
+    },
+  });
+}
+
+export function useUpdateProject(id: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: UpdateProjectInput) =>
+      api.patch<ProjectDetail>(`/projects/${id}`, input),
+    onSuccess: (project) => {
+      queryClient.setQueryData(projectKeys.detail(id), project);
+      return queryClient.invalidateQueries({
+        queryKey: projectKeys.all,
+        exact: true,
+      });
+    },
+  });
+}
+
+export function useDeleteProject(id: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.delete(`/projects/${id}`),
+    onSuccess: () => {
+      queryClient.removeQueries({ queryKey: projectKeys.detail(id) });
+      return queryClient.invalidateQueries({
+        queryKey: projectKeys.all,
+        exact: true,
+      });
     },
   });
 }

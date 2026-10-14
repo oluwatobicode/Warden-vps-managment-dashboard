@@ -13,8 +13,12 @@ export function Input({ label, error, mono = false, className = "", id, ...rest 
   const inputId = id ?? autoId;
   const errorId = `${inputId}-error`;
   return (
-    <label htmlFor={inputId} className="flex flex-col gap-2">
-      <span className="text-xs text-label">{label}</span>
+    // The error sits OUTSIDE the <label>, so the field's accessible name stays
+    // just the label ("Key"), and the error is read as its description.
+    <div className="flex flex-col gap-2">
+      <label htmlFor={inputId} className="text-xs text-label">
+        {label}
+      </label>
       <input
         id={inputId}
         aria-invalid={error ? true : undefined}
@@ -29,6 +33,6 @@ export function Input({ label, error, mono = false, className = "", id, ...rest 
           {error}
         </span>
       )}
-    </label>
+    </div>
   );
 }

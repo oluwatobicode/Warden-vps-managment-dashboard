@@ -1,4 +1,5 @@
 import type { ComponentProps } from "react";
+import { Link, type LinkProps } from "react-router";
 import { Spinner } from "./Spinner";
 
 type Variant = "primary" | "secondary" | "ghost" | "danger";
@@ -44,4 +45,9 @@ export function Button({
       {children}
     </button>
   );
+}
+
+/** A link that looks like a Button. Never put a <button> inside a <Link>. */
+export function ButtonLink({ variant = "primary", size = "md", className = "", ...rest }: LinkProps & { variant?: Variant; size?: Size }) {
+  return <Link className={`inline-flex items-center justify-center gap-2 font-semibold transition-colors ${VARIANT[variant]} ${SIZE[size]} ${className}`} {...rest} />;
 }
