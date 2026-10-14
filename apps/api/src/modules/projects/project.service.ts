@@ -15,6 +15,7 @@ import { AuditService } from '../audit/audit.service';
 import type { Actor } from '../../common/types/actor';
 import { slugify } from '../../common/utils/slug.util';
 import { PROJECT_MESSAGES } from '../../common/constants/messages.config';
+import { rollupStatus } from './status-rollup';
 
 @Injectable()
 export class ProjectService {
@@ -149,15 +150,19 @@ export class ProjectService {
   }
 }
 
+// Each service's status (not just a count): the count is the list's length,
+// and the statuses feed the worst-status-wins rollup.
+const SERVICE_STATUSES = { services: { select: { status: true } } } as const;
+
 const PROJECT_COUNTS = {
   _count: { select: { environments: true } },
-  environments: { select: { _count: { select: { services: true } } } },
+  environments: { select: SERVICE_STATUSES },
 } satisfies Prisma.ProjectInclude;
 
 const PROJECT_DETAIL = {
   _count: { select: { environments: true } },
   environments: {
-    include: { _count: { select: { services: true } } },
+    include: SERVICE_STATUSES,
     orderBy: { createdAt: 'asc' },
   },
 } satisfies Prisma.ProjectInclude;
@@ -170,13 +175,15 @@ type ProjectWithDetail = Prisma.ProjectGetPayload<{
 }>;
 
 function toProject(row: ProjectWithCounts | ProjectWithDetail): Project {
+  const services = row.environments.flatMap((e) => e.services);
   return {
     id: row.id,
     projectName: row.projectName,
     slug: row.slug,
     projectDescription: row.projectDescription,
     environmentCount: row._count.environments,
-    serviceCount: row.environments.reduce((n, e) => n + e._count.services, 0),
+    serviceCount: services.length,
+    status: rollupStatus(services.map((s) => s.status)),
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };
@@ -189,7 +196,8 @@ function toProjectDetail(row: ProjectWithDetail): ProjectDetail {
       id: e.id,
       environmentName: e.environmentName,
       branch: e.branch,
-      serviceCount: e._count.services,
+      serviceCount: e.services.length,
+      status: rollupStatus(e.services.map((s) => s.status)),
       createdAt: e.createdAt.toISOString(),
     })),
   };

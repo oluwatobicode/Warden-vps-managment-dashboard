@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { slugName } from "./field.js";
+import { ServiceStatusSchema } from "./service.js";
 
 export const CreateProjectSchema = z.object({
   projectName: z.string().trim().min(2).max(80),
@@ -25,6 +26,8 @@ export const EnvironmentSchema = z.object({
   environmentName: z.string(),
   branch: z.string().nullable(),
   serviceCount: z.number().int(),
+  // worst status of this environment's services
+  status: ServiceStatusSchema,
   createdAt: z.iso.datetime(),
 });
 export type Environment = z.infer<typeof EnvironmentSchema>;
@@ -36,6 +39,8 @@ export const ProjectSchema = z.object({
   projectDescription: z.string().nullable(),
   environmentCount: z.number().int(),
   serviceCount: z.number().int(),
+  // worst status across every service in every environment
+  status: ServiceStatusSchema,
   createdAt: z.iso.datetime(),
   updatedAt: z.iso.datetime(),
 });

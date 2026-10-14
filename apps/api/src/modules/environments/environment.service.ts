@@ -16,6 +16,7 @@ import {
   PROJECT_MESSAGES,
 } from '../../common/constants/messages.config';
 import { Prisma } from 'db';
+import { rollupStatus } from '../projects/status-rollup';
 
 @Injectable()
 export class EnvironmentService {
@@ -45,7 +46,7 @@ export class EnvironmentService {
           projectId: input.projectId,
           organizationId: orgId,
         },
-        include: WITH_SERVICE_COUNT,
+        include: WITH_SERVICE_STATUSES,
       });
 
       await this.audit.record(actor, {
@@ -73,7 +74,7 @@ export class EnvironmentService {
   ): Promise<Environment[]> {
     const rows = await this.prisma.client.environment.findMany({
       where: { organizationId: orgId, projectId },
-      include: WITH_SERVICE_COUNT,
+      include: WITH_SERVICE_STATUSES,
       orderBy: { createdAt: 'asc' },
     });
     return rows.map(toEnvironment);
@@ -82,7 +83,7 @@ export class EnvironmentService {
   async getEnvironment(orgId: string, id: string) {
     const row = await this.prisma.client.environment.findFirst({
       where: { id, organizationId: orgId },
-      include: WITH_SERVICE_COUNT,
+      include: WITH_SERVICE_STATUSES,
     });
 
     if (!row) throw new NotFoundException(ENVIRONMENT_MESSAGES.not_found);
@@ -100,7 +101,7 @@ export class EnvironmentService {
       const updated = await this.prisma.client.environment.update({
         where: { id },
         data: input,
-        include: WITH_SERVICE_COUNT,
+        include: WITH_SERVICE_STATUSES,
       });
       return toEnvironment(updated);
     } catch (e) {
@@ -158,12 +159,14 @@ export class EnvironmentService {
   }
 }
 
-const WITH_SERVICE_COUNT = {
-  _count: { select: { services: true } },
+// Statuses, not just a count: the count is the list's length, and the
+// statuses feed the worst-status-wins rollup.
+const WITH_SERVICE_STATUSES = {
+  services: { select: { status: true } },
 } satisfies Prisma.EnvironmentInclude;
 
 type EnvironmentRow = Prisma.EnvironmentGetPayload<{
-  include: typeof WITH_SERVICE_COUNT;
+  include: typeof WITH_SERVICE_STATUSES;
 }>;
 
 function toEnvironment(row: EnvironmentRow): Environment {
@@ -171,7 +174,8 @@ function toEnvironment(row: EnvironmentRow): Environment {
     id: row.id,
     environmentName: row.environmentName,
     branch: row.branch,
-    serviceCount: row._count.services,
+    serviceCount: row.services.length,
+    status: rollupStatus(row.services.map((s) => s.status)),
     createdAt: row.createdAt.toISOString(),
   };
 }
