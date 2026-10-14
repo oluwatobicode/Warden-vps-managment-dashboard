@@ -26,25 +26,55 @@ export function LoginForm() {
   const onSubmit = (input: LoginInput) =>
     login.mutate(input, {
       onSuccess: () => {
-        toast.dismiss(); // clear any "Invalid email or password" from a failed try
+        toast.dismiss();
         navigate(from, { replace: true });
       },
-      // "Invalid email or password" / "suspended" come from the API, already worded for users.
+
       onError: (e) => applyApiIssues(e, setError) || toast.error(apiMessage(e)),
     });
 
   return (
     <>
-      <h1 className="m-0 text-[26px] font-bold tracking-[-0.6px] text-strong">Welcome back</h1>
-      <p className="mt-[9px] text-[13px] text-muted-warm">Sign in to your deploy control plane.</p>
+      <h1 className="m-0 text-[26px] font-bold tracking-[-0.6px] text-strong">
+        Welcome back
+      </h1>
+      <p className="mt-[9px] text-[13px] text-muted-warm">
+        Sign in to your deploy control plane.
+      </p>
 
-      <form onSubmit={handleSubmit(onSubmit)} noValidate className="mt-6 flex flex-col gap-3.5">
-        <Input label="Work email" type="email" autoComplete="email" placeholder="you@company.dev" error={errors.email?.message} {...register("email")} />
-        <Input label="Password" type="password" autoComplete="current-password" placeholder="Your password" error={errors.password?.message} {...register("password")} />
-        <Link to="/forgot-password" className="self-end text-xs text-link hover:text-[#8bb8f8]">
+      <form
+        onSubmit={handleSubmit(onSubmit)}
+        noValidate
+        className="mt-6 flex flex-col gap-3.5"
+      >
+        <Input
+          label="Work email"
+          type="email"
+          autoComplete="email"
+          placeholder="you@company.dev"
+          error={errors.email?.message}
+          {...register("email")}
+        />
+        <Input
+          label="Password"
+          type="password"
+          autoComplete="current-password"
+          placeholder="Your password"
+          error={errors.password?.message}
+          {...register("password")}
+        />
+        <Link
+          to="/forgot-password"
+          className="self-end text-xs text-link hover:text-[#8bb8f8]"
+        >
           Forgot password?
         </Link>
-        <Button type="submit" size="lg" loading={login.isPending} className="mt-2">
+        <Button
+          type="submit"
+          size="lg"
+          loading={login.isPending}
+          className="mt-2"
+        >
           Sign in
         </Button>
       </form>

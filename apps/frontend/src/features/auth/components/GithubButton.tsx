@@ -1,10 +1,6 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { GithubIcon } from "@hugeicons/core-free-icons";
 
-/**
- * A full-page navigation, not an axios call: GitHub's login page must load in
- * the browser, and the API sets the cookies on the way back.
- */
 export function GithubButton() {
   return (
     <a

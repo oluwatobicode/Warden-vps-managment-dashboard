@@ -8,6 +8,8 @@ import ForgotPasswordPage from "../pages/ForgotPasswordPage";
 import InvitePage from "../pages/InvitePage";
 import NotFoundPage from "../pages/NotFoundPage";
 import ConsolePlaceholder from "../pages/ConsolePlaceholder";
+import ProjectsPage from "../pages/ProjectsPage";
+import ProjectPlaceholder from "../pages/ProjectPlaceholder";
 import { RedirectIfAuthed, RequireAuth } from "./guards";
 
 export const router = createBrowserRouter([
@@ -32,16 +34,15 @@ export const router = createBrowserRouter([
         children: [
           { index: true, element: <Navigate to="/projects" replace /> },
           { path: "home", element: <ConsolePlaceholder title="Home" /> },
-          {
-            path: "projects",
-            element: <ConsolePlaceholder title="Projects" />,
-          },
+          { path: "projects", element: <ProjectsPage /> },
           {
             path: "settings",
             element: <ConsolePlaceholder title="Settings" />,
           },
         ],
       },
+
+      { path: "projects/:projectId", element: <ProjectPlaceholder /> },
     ],
   },
   { path: "*", element: <NotFoundPage /> },

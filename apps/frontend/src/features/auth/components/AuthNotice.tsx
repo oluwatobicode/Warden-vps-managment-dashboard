@@ -9,7 +9,6 @@ const TILE: Record<Tone, string> = {
   crit: "border-crit-border bg-crit-s text-crit",
 };
 
-/** Centred icon + title + text: "Check your inbox", "Link expired", "Declined". */
 export function AuthNotice({
   icon,
   tone = "brand",
@@ -23,10 +22,14 @@ export function AuthNotice({
 }) {
   return (
     <div className="flex flex-col items-center text-center">
-      <span className={`grid size-[52px] place-items-center rounded-[15px] border ${TILE[tone]}`}>
+      <span
+        className={`grid size-[52px] place-items-center rounded-[15px] border ${TILE[tone]}`}
+      >
         <HugeiconsIcon icon={icon} size={24} strokeWidth={1.7} />
       </span>
-      <h1 className="mt-5 text-2xl font-bold tracking-[-0.5px] text-strong">{title}</h1>
+      <h1 className="mt-5 text-2xl font-bold tracking-[-0.5px] text-strong">
+        {title}
+      </h1>
       {children}
     </div>
   );
