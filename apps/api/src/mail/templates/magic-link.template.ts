@@ -1,4 +1,4 @@
-import { button, esc, heading, paragraph, shell, strong, urlFallback } from './layout';
+import { button, esc, heading, paragraph, shell, strong, urlFallback } from 'notifier';
 
 /**
  * One email covers both sign-in and sign-up: the /auth/magic-link route

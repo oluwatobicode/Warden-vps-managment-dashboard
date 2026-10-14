@@ -8,7 +8,7 @@ import {
   shell,
   strong,
   urlFallback,
-} from './layout';
+} from 'notifier';
 
 /**
  * Shows the role *name* only. Permission copy lives in the app, not the email,

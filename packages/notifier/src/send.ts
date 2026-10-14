@@ -63,12 +63,13 @@ export function sendEmail(
   to: string[],
   subject: string,
   text: string,
+  html?: string,
 ): Promise<NotifyResult> {
   if (!config.apiKey)
     return Promise.resolve({ ok: false, reason: "not_configured" });
   return post(
     "https://api.resend.com/emails",
-    { from: config.from, to, subject, text },
+    { from: config.from, to, subject, text, ...(html && { html }) },
     { authorization: `Bearer ${config.apiKey}` },
   );
 }

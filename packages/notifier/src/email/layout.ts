@@ -14,6 +14,7 @@ export const palette = {
   buttonText: '#0a0a0a',
   success: '#22c55e',
   danger: '#f87171',
+  warning: '#fbbf24',
 } as const;
 
 // System stacks only. Email clients rarely load web fonts (Gmail never does),

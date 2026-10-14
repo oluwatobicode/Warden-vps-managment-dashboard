@@ -1,4 +1,4 @@
-import { esc, font, heading, palette, paragraph, shell, strong } from './layout';
+import { esc, font, heading, palette, paragraph, shell, strong } from 'notifier';
 
 /**
  * Six-digit reset code. The template is ready; the reset flow that issues

@@ -15,7 +15,13 @@ import {
   type RevealedWebhook,
   type UpdateNotificationChannelInput,
 } from 'shared-types';
-import { sendDiscord, sendEmail, sendSlack, type EmailConfig } from 'notifier';
+import {
+  renderTestMessage,
+  sendDiscord,
+  sendEmail,
+  sendSlack,
+  type EmailConfig,
+} from 'notifier';
 import { decrypt, encrypt } from 'warden-crypto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
@@ -168,19 +174,29 @@ export class NotificationService {
   /** Disabled channels can still be tested: "disabled" only stops real alerts. */
   async test(orgId: string, id: string): Promise<NotificationTestResult> {
     const ch = await this.findOrThrow(orgId, id);
-    const text = `✅ Test from Warden: notifications for "${ch.name}" are working.`;
+    const org = await this.prisma.client.organization.findUniqueOrThrow({
+      where: { id: orgId },
+      select: { organizationName: true },
+    });
+    const msg = renderTestMessage({
+      channelName: ch.name,
+      organizationName: org.organizationName,
+    });
 
     if (ch.type === 'EMAIL') {
       return sendEmail(
         this.emailConfig,
         ch.emailRecipients,
-        'Warden test notification',
-        text,
+        msg.subject,
+        msg.text,
+        msg.html,
       );
     }
     // SLACK/DISCORD rows are always created with a URL
     const url = await this.unseal(orgId, ch.webhookUrlEncrypted!);
-    return ch.type === 'SLACK' ? sendSlack(url, text) : sendDiscord(url, text);
+    return ch.type === 'SLACK'
+      ? sendSlack(url, msg.text)
+      : sendDiscord(url, msg.text);
   }
 
   private async seal(orgId: string, url: string): Promise<string> {

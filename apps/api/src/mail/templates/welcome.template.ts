@@ -1,4 +1,4 @@
-import { badge, button, esc, font, heading, palette, paragraph, shell, strong } from './layout';
+import { badge, button, esc, font, heading, palette, paragraph, shell, strong } from 'notifier';
 
 export interface WelcomeTemplateInput {
   firstName: string;

@@ -1,4 +1,4 @@
-import { badge, bulletList, detailsPanel, esc, formatDateTime, heading, palette, paragraph, shell, strong } from './layout';
+import { badge, bulletList, detailsPanel, esc, formatDateTime, heading, palette, paragraph, shell, strong } from 'notifier';
 
 /**
  * Copy states only what removal actually does today: the membership is

@@ -155,20 +155,21 @@ enum NotificationChannelType {
 }
 
 model User {
-  id              String        @id @default(uuid())
-  firstName       String
-  lastName        String
-  email           String        @unique
-  passwordHashed  String?
-  authProcess     AuthProvider  @default(EMAIL)
-  googleAccountId String?       @unique
-  githubAccountId String?       @unique
-  platformRole    PlatformRole?
-  memberships     Membership[]
-  auditLogs       AuditLog[]
-  setInvitations  Invitation[]
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
+  id                   String        @id @default(uuid())
+  firstName            String
+  lastName             String
+  email                String        @unique
+  passwordHashed       String?
+  authProcess          AuthProvider  @default(EMAIL)
+  googleAccountId      String?       @unique
+  githubAccountId      String?       @unique
+  platformRole         PlatformRole?
+  memberships          Membership[]
+  auditLogs            AuditLog[]
+  setInvitations       Invitation[]
+  deploymentsTriggered Deployment[]
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
 }
 
 model Invitation {
@@ -214,7 +215,7 @@ model Organization {
   deployCounter        Int                   @default(0)
   createdAt            DateTime              @default(now())
   updatedAt            DateTime              @updatedAt
-  dataKeyWrapped       String 
+  dataKeyWrapped       String
   deployments          Deployment[]
   memberships          Membership[]
   projects             Project[]
@@ -227,20 +228,20 @@ model Organization {
 }
 
 model NotificationChannel {
-  id              String                  @id @default(uuid())
-  organizationId  String
-  organization    Organization            @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  type            NotificationChannelType
-  name            String
-  enabled         Boolean                 @default(true)
+  id                  String                  @id @default(uuid())
+  organizationId      String
+  organization        Organization            @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  type                NotificationChannelType
+  name                String
+  enabled             Boolean                 @default(true)
   webhookUrlEncrypted String?
-  emailRecipients String[]
-  events          String[]
-  createdAt       DateTime                @default(now())
-  updatedAt       DateTime                @updatedAt
+  emailRecipients     String[]
+  events              String[]
+  createdAt           DateTime                @default(now())
+  updatedAt           DateTime                @updatedAt
 
-  @@index([organizationId])
   @@unique([organizationId, name])
+  @@index([organizationId])
 }
 
 model Project {
@@ -339,6 +340,14 @@ model Deployment {
   deploymentType   DeploymentType      @default(MANUAL)
   branch           String?
   commitSha        String?
+  commitMessage    String?
+  // Who started it. SetNull keeps the deploy when the user is deleted; the
+  // name is a snapshot (also covers API tokens: "token: github-actions").
+  triggeredById    String?
+  triggeredBy      User?               @relation(fields: [triggeredById], references: [id], onDelete: SetNull)
+  triggeredByName  String?
+  startedAt        DateTime? // left the queue; createdAt is when it was queued
+  finishedAt       DateTime? // reached a final status
   serviceId        String
   service          Service             @relation(fields: [serviceId], references: [id], onDelete: Cascade)
   history          DeploymentHistory[]
@@ -346,6 +355,7 @@ model Deployment {
   updatedAt        DateTime            @updatedAt
 
   @@unique([organizationId, number])
+  @@index([triggeredById])
   @@index([serviceId, createdAt])
   @@index([organizationId, createdAt])
 }
@@ -406,10 +416,12 @@ model ServerMetrics {
 }
 
 model DockerCleanupLog {
-  id        String   @id @default(uuid())
-  serverId  String
-  server    Server   @relation(fields: [serverId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now())
+  id           String   @id @default(uuid())
+  serverId     String
+  server       Server   @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  success      Boolean  @default(true)
+  errorMessage String?
+  createdAt    DateTime @default(now())
 
   @@index([serverId, createdAt])
 }
@@ -466,7 +478,7 @@ model ServerTraefik {
 model SshKey {
   id                  String       @id @default(uuid())
   sshKeyName          String
-  fingerprint String
+  fingerprint         String
   publicKey           String
   privateKeyEncrypted String
   servers             Server[]

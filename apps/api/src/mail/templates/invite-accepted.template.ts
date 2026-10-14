@@ -1,4 +1,4 @@
-import { badge, button, detailsPanel, esc, formatDate, formatDateTime, heading, palette, paragraph, shell, strong } from './layout';
+import { badge, button, detailsPanel, esc, formatDate, formatDateTime, heading, palette, paragraph, shell, strong } from 'notifier';
 
 /** Sent to the inviter when their invite is accepted. */
 export interface InviteAcceptedTemplateInput {
