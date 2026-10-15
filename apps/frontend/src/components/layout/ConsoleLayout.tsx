@@ -9,7 +9,6 @@ const TABS = [
   { to: "/settings", label: "Settings" },
 ];
 
-/** Org card · Home / Projects / Settings · Logout, then the page. */
 export function ConsoleLayout() {
   const { user } = useAuth();
   const logout = useLogout();
@@ -24,8 +23,12 @@ export function ConsoleLayout() {
             {initials(user?.organization.name ?? "")}
           </span>
           <span className="flex min-w-0 flex-col gap-0.5">
-            <span className="truncate text-[12.5px] leading-tight font-semibold text-strong">{user?.organization.name}</span>
-            <span className="font-mono text-[10px] leading-tight text-sand">{user ? ROLE_LABEL[user.role] : ""}</span>
+            <span className="truncate text-[12.5px] leading-tight font-semibold text-strong">
+              {user?.organization.name}
+            </span>
+            <span className="font-mono text-[10px] leading-tight text-sand">
+              {user ? ROLE_LABEL[user.role] : ""}
+            </span>
           </span>
         </div>
 
@@ -36,7 +39,9 @@ export function ConsoleLayout() {
               to={t.to}
               className={({ isActive }) =>
                 `rounded-[20px] px-[18px] py-[9px] text-[12.5px] font-semibold transition-colors ${
-                  isActive ? "bg-nav text-strong" : "text-muted-warm hover:text-strong"
+                  isActive
+                    ? "bg-nav text-strong"
+                    : "text-muted-warm hover:text-strong"
                 }`
               }
             >
@@ -65,5 +70,10 @@ export function ConsoleLayout() {
 }
 
 function initials(name: string): string {
-  return name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]!.toUpperCase()).join("");
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0]!.toUpperCase())
+    .join("");
 }

@@ -215,7 +215,8 @@ export class AuthController {
   @Post('forgot-password')
   @HttpCode(200)
   async forgotPassword(
-    @Body(new ZodValidationPipe(ForgotPasswordSchema)) body: ForgotPasswordInput,
+    @Body(new ZodValidationPipe(ForgotPasswordSchema))
+    body: ForgotPasswordInput,
   ) {
     await this.passwordReset.request(body.email);
     return { message: AUTH_MESSAGES.reset_code_sent };
@@ -293,7 +294,7 @@ export class AuthController {
       res.redirect(this.appUrl + '?state=authenticated');
     } else {
       setPendingCookie(res, outcome.pendingId, this.isProd);
-      res.redirect(this.appUrl + '/onboarding?status=onboarding');
+      res.redirect(this.appUrl + '/onboarding?provider=GITHUB');
     }
   }
 }

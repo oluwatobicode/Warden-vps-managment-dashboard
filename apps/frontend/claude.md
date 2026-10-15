@@ -130,6 +130,9 @@ Frontend rules for roles:
 **Needs an endpoint that doesn't exist yet** — build only after the api side lands:
 
 - Home metric cards + recent deployments (1I dashboard)
+- Databases as a service: Postgres, MySQL, Redis (Phase 1, decided 2026-10-15; needs the worker job + api first)
+- Canvas view (decided 2026-10-15: shared layout saved on `Service`; needs the save endpoint first)
+- Account settings page and the optional password for GitHub users (gated by the emailed code)
 
 **Built 2026-10-15 (1G monitoring):** server cards show CPU/MEM/DISK and container counts; the server page has Resources (24h charts in plain SVG, no chart library; Docker disk donut) and Containers tabs, and a Run cleanup modal (live preview, then follows the worker job). Hooks in `features/servers/hooks/useMonitoring.ts`; data refreshes every 60s to match the worker's poll.
 
@@ -137,15 +140,16 @@ Frontend rules for roles:
 
 - Triggering a deploy, build, rollback, live deploy logs (Phase 2)
 - Google sign-in (parked)
-- Traefik config editor (open decision: raw editor vs structured form)
+- Traefik config editor: decided (raw editor AND form, each with a warning, plus validate-before-save and revert), but built after Phase 2 deploys install Traefik
 - Metrics history beyond 24h
 - Argus integration, billing, branding
 
 If a task looks like it needs one of these, stop and ask before scaffolding it.
 
-## Open questions (don't decide silently)
+## API address: dev vs production (decided 2026-10-15)
 
-- **Dev setup: Vite proxy vs CORS.** The api has no CORS enabled. Either proxy `/api` → `http://localhost:3000` in `vite.config.ts` (same origin, cookies just work), or enable CORS with credentials on the api. Proxy is the simpler dev choice; production depends on the open cookie-policy item in `/CLAUDE.md`.
+- **Dev:** the api has CORS enabled for `CORS_ORIGIN` with credentials; `VITE_API_URL=http://localhost:3000`. `localhost:5173` and `localhost:3000` are the same *site*, so `SameSite=Lax` cookies work.
+- **Production:** one origin through Traefik — the dashboard at `/`, the api at `/api` — so `VITE_API_URL=/api`, cookies `SameSite=Lax; Secure`, no CORS. See "Decisions made 2026-10-15" in `/CLAUDE.md`.
 
 ## UI scale (2026-10-15)
 
@@ -155,8 +159,12 @@ Components use the design's pixel sizes; `:root { zoom: var(--ui-scale) }` in `i
 
 Always go through `forgetSession(queryClient)` in `api/queryClient.ts`: it sets `["auth","me"]` to null on the existing query, then removes everything else. Never `queryClient.clear()`: it deletes the query the auth context is subscribed to and leaves the old user on screen.
 
-## `shared-types` in Vite (resolved 2026-10-14)
+## `shared-types` in Vite (changed 2026-10-15)
 
-`shared-types` is built as CommonJS (repo rule). Vite only converts CJS for packages it pre-bundles and skips linked workspace packages by default, so the browser got raw `exports.x`. Fixed with `optimizeDeps: { include: ["shared-types"] }` in `vite.config.ts`; named imports (`import { LoginSchema } from "shared-types"`) verified in dev and in `vite build`.
+Vite reads `shared-types` from its **TypeScript source**: `resolve.alias` in `vite.config.ts` points `"shared-types"` at `packages/shared-types/src/index.ts`, and `tsconfig.app.json` has the matching `paths` entry so the editor's types come from the same files. A schema or message change shows up on save — no `pnpm --filter shared-types build`, no `vite --force`. (Verified: editing a message in `field.ts` showed in the browser after a reload, with no rebuild.)
 
-**Catch:** Vite caches that converted copy. After rebuilding shared-types (`pnpm --filter shared-types build`), restart the dev server with `pnpm dev --force`, or the frontend keeps the old schemas.
+This doesn't break the repo's "consume the build" rule: that rule is for Node (api, worker), which can't run `.ts`. Vite compiles TS itself. The api and worker still need `pnpm --filter shared-types build` after a schema change.
+
+Side effect: zod is now bundled from its ES module build, so the production bundle dropped from 1,215 kB to 814 kB (gzip 310 → 241 kB).
+
+History: before this, the frontend used the CommonJS build via `optimizeDeps: { include: ["shared-types"] }`, and Vite's cache meant schema changes needed a `--force` restart.

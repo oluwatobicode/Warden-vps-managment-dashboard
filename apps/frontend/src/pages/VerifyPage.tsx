@@ -23,12 +23,8 @@ export default function VerifyPage() {
         .refetchQueries({ queryKey: authKeys.me })
         .then(() => navigate("/", { replace: true }));
     } else {
-      navigate("/onboarding", {
-        replace: true,
-        state: {
-          provider: verify.data.provider === "EMAIL" ? "EMAIL" : "OAUTH",
-        },
-      });
+      // In the URL, not router state: state is lost on reload.
+      navigate(`/onboarding?provider=${verify.data.provider}`, { replace: true });
     }
   }, [verify.data, navigate, queryClient]);
 

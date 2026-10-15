@@ -42,7 +42,7 @@ warden/
 ├── packages/
 │   ├── db/               # Prisma schema + client — single source of truth, shared by api + worker
 │   ├── ssh-client/         # ssh2 wrapper — connection pooling, exec, sftp
-│   ├── docker-client/       # dockerode wrapper — remote Docker daemon control
+│   ├── docker-client/       # Docker CLI wrappers + parsers, run over ssh-client's session
 │   └── shared-types/          # zod schemas + inferred types, shared across all three apps
 ├── infra/
 ├── docs/
@@ -101,7 +101,7 @@ The org creator's membership is created with role `ADMIN` in the same transactio
 
 Schema covers: auth (`User`, `AuthProvider`, platform role), org structure (`Organization`, `Membership`, `Invitation`), projects (`Project` → `Environment` → `Service` → `Deployment` → `DeploymentHistory`), servers (`Server` + `ServerMetrics`, `ServerContainer`, `ServerLogs`, `ServerTraefik`, `DockerCleanupLog`, `DockerDiskMetrics`), `SshKey`, `ApiToken` (org-scoped, optionally project-scoped), `NotificationChannel` (Slack/Email/Discord via one model with a type enum), `AuditLog`.
 
-**Schema decisions from the design pass (2026-10-01), all additive and migrated:** the GitHub repo lives on `Service` (`githubRepoUrl`, `branch`), NOT on `Project` — a project is a product, a service is one deployable thing from one repo, and two services may share a repo. `Service.type` is `APPLICATION | WORKER | DATABASE | COMPOSE`; only the first two are built in Phase 1, the others are reserved for the UI. Env vars are two models, `EnvironmentVariable` (environment-wide) and `ServiceVariable` (per-service, overrides on the same key), values encrypted at the app layer like SSH private keys, both carrying `organizationId` with composite FKs. `Deployment.number` is a per-org counter driven by `Organization.deployCounter` inside the deploy-creation transaction; `Deployment.organizationId` exists so the dashboard's recent-deploys query is one table. `Organization.slug` is generated at onboarding by `uniqueSlug()` (slugified name + 6-char suffix, so no retry loop). `DeploymentStatus` is the full pipeline: `QUEUED, BUILDING, DEPLOYING, HEALTH_CHECK, SUCCESS, GATE_FAILED, ROLLED_BACK, FAILED, CANCELLED`. `Server.provider` is a free-text display label.
+**Schema decisions from the design pass (2026-10-01), all additive and migrated:** the GitHub repo lives on `Service` (`githubRepoUrl`, `branch`), NOT on `Project` — a project is a product, a service is one deployable thing from one repo, and two services may share a repo. `Service.type` is `APPLICATION | WORKER | DATABASE | COMPOSE`. `APPLICATION` and `WORKER` are built in Phase 1; **`DATABASE` moved into Phase 1 on 2026-10-15** (see Decisions below); `COMPOSE` is still reserved for the UI. Env vars are two models, `EnvironmentVariable` (environment-wide) and `ServiceVariable` (per-service, overrides on the same key), values encrypted at the app layer like SSH private keys, both carrying `organizationId` with composite FKs. `Deployment.number` is a per-org counter driven by `Organization.deployCounter` inside the deploy-creation transaction; `Deployment.organizationId` exists so the dashboard's recent-deploys query is one table. `Organization.slug` is generated at onboarding by `uniqueSlug()` (slugified name + 6-char suffix, so no retry loop). `DeploymentStatus` is the full pipeline: `QUEUED, BUILDING, DEPLOYING, HEALTH_CHECK, SUCCESS, GATE_FAILED, ROLLED_BACK, FAILED, CANCELLED`. `Server.provider` is a free-text display label.
 
 **Cascade deletes are explicit and destructive by design for Phase 1:** deleting an `Organization` cascades through everything under it (projects, servers, keys, tokens, memberships, invitations, notification channels). No soft-delete, no grace period. This was a deliberate call, not a Prisma default left unexamined — revisit before this handles real customer infra if a grace period is wanted instead.
 
@@ -113,6 +113,8 @@ Schema covers: auth (`User`, `AuthProvider`, platform role), org structure (`Org
 
 **Every FK column is indexed** (Postgres and Prisma don't do this automatically); time-series children index `(serverId, createdAt)`. Keep that rule when adding models.
 
+**Server monitoring (1G, built 2026-10-15):** the worker polls every server every 60s (BullMQ job scheduler → one deduplicated `collect-server` job per server) over **one** SSH session: `/proc/stat` (twice, 1s apart), `/proc/loadavg`, `/proc/meminfo` (used = total − *available*), `df -B1 /`, and `docker ps`/`stats`/`system df` as JSON. Linux targets only. `ServerMetrics` = one row per poll (history); `ServerContainer` = **current state** (upserted, unique on `(serverId, dockerId)`, vanished containers deleted); `DockerDiskMetrics` every 10 min. Status: `CONNECTED` (containers running) / `IDLE` (reachable, nothing running or no Docker) / `OFFLINE` after **3** failed polls in a row. Per-server "already alerted" flags live in Redis (`monitor:*`), not columns. Metrics older than 7 days are pruned hourly; the UI shows 24h. Docker cleanup: the api previews live over SSH, the worker runs the prune as a job (`DockerCleanupLog` QUEUED → RUNNING → SUCCESS/FAILED); **never `image prune -a`, never `volume prune`**. `DekCache` in `warden-crypto` is the one DEK unwrap/cache used by both api and worker.
+
 **Explicitly deferred, not in the schema:** Argus integration, billing/plan, branding.
 
 ---
@@ -121,20 +123,26 @@ Schema covers: auth (`User`, `AuthProvider`, platform role), org structure (`Org
 
 - **Thin controllers/handlers, logic in services** — same principle regardless of which app: `api`'s Nest controllers stay thin, business logic and Prisma queries live in services.
 - **Validate at the edge.** Zod schemas (via `shared-types` where the shape crosses a process boundary — HTTP, WebSocket, or BullMQ job payload) validate before anything downstream trusts the data.
-- **CommonJS across `api`, `worker`, and all `packages/*`, including `packages/db`** (generator `moduleFormat = "cjs"`, built to `dist/` — apps consume the build, never the `.ts` source, because plain Node can't resolve TypeScript's `.js`→`.ts` mapping at runtime). `frontend` is the only ESM context (Vite's default). Don't mix `moduleResolution: "Node"` with `module: "NodeNext"` — TS7 requires them paired (`NodeNext`/`NodeNext` or matching CJS settings); this has broken builds before in this repo.
+- **CommonJS across `api`, `worker`, and all `packages/*`, including `packages/db`** (generator `moduleFormat = "cjs"`, built to `dist/` — the Node apps consume the build, never the `.ts` source, because plain Node can't resolve TypeScript's `.js`→`.ts` mapping at runtime). `frontend` is the only ESM context (Vite's default), and it is the one exception: Vite reads `shared-types` from its **source** (alias in `vite.config.ts`, matching `paths` in `tsconfig.app.json`, 2026-10-15), because Vite compiles TS itself. Don't mix `moduleResolution: "Node"` with `module: "NodeNext"` — TS7 requires them paired (`NodeNext`/`NodeNext` or matching CJS settings); this has broken builds before in this repo.
 - **One schema, one client.** `api` and `worker` both consume `packages/db` — never let either app manage its own separate Prisma client.
 - **Time-series data gets its own model**, never flattened onto the parent (e.g. `ServerMetrics` rows over time, not scalar `cpu`/`memory` fields directly on `Server`).
 
 ---
 
+## Decisions made 2026-10-15 (were open items)
+
+- **Cookie policy:** Warden is hosted on Tobi's own GCP server and manages itself (like Coolify). Production serves the dashboard and the API from **one origin** through Traefik — `/` → frontend, `/api` → API — so cookies are `SameSite=Lax`, `Secure` in production, and production needs no CORS. The refresh cookie's path must follow the prefix (`/api/auth/refresh`). Pick ONE of "Traefik strips `/api`" or "`setGlobalPrefix('api')`". No cookie-consent banner: only essential sign-in cookies are set; the landing footer says so.
+- **OAuth onboarding state:** already built — the GitHub callback stores a `pending:{id}` record in Redis (30 min), `OnboardingGuard` reads it, and onboarding deletes it after creating `User` + `Organization` + `Membership`. No orphan users.
+- **Traefik dynamic config editing:** BOTH a raw editor and a structured form, each with a warning box — plus refusing invalid config before saving and one-click revert to the previous version (`ServerTraefik` rows are the version history). Built after deploys install Traefik on servers.
+- **Optional password for GitHub/Google users:** yes, set from the account page, gated by the emailed 6-digit code (the forgot-password OTP flow) — never a plain "set password" form.
+- **Databases as a service (Phase 1):** PostgreSQL, MySQL and Redis, started with `docker run` by a worker job. Private Docker network only (never published to the internet by default), data in a named volume, generated password encrypted like variables, connection string offered as a variable.
+- **Canvas view:** one layout shared by the whole team, saved in the database (`canvasX`/`canvasY` on `Service`, so per environment), Railway-style. Lines between services: not decided (proposal: none now, automatic from connection variables once databases exist).
+- **Self-hosting (Phase 2 note):** when Warden deploys itself, rollback must not depend on the running dashboard (keep the previous image + a `warden rollback` script), and a separate updater container does the swap so the worker never kills itself mid-deploy.
+
 ## Open items (do not build past these without confirmation)
 
-- **Cookie policy:** `SameSite=Lax` if frontend and API share a site in production, otherwise `SameSite=None; Secure` + CORS with credentials. Depends on how Warden itself will be deployed — undecided.
-- **OAuth onboarding state:** new GitHub/Google users still need the org-name step. Preferred: hold the OAuth identity in Redis until onboarding completes, then create `User` + `Organization` + `Membership` together (no orphan users). Not yet confirmed.
-
-- **Traefik dynamic config editing:** raw text editor with validate-before-apply, or a structured form limited to safe fields? Unresolved — a bad direct edit can break live routing.
-- **Metrics history window:** Phase 1 ships 24h only. 7d/30d/all-time are deferred until the 24h collection pipeline (recurring poll + storage) is proven — don't build retention tiers for data collection that doesn't exist yet.
-- **GitHub/Google OAuth users setting an optional password as a fallback login:** not decided.
+- **Canvas edges:** see above.
+- **Metrics history window:** Phase 1 ships 24h only. The 24h collection pipeline now exists (1G); 7d/30d views stay deferred until it has run for real for a while. Raw rows are kept 7 days.
 
 ---
 

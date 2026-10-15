@@ -13,7 +13,9 @@ import { LastCleanup } from "./LastCleanup";
 function Stat({ label, value }: { label: string; value: string }) {
   return (
     <span className="flex flex-col gap-0.5">
-      <span className="text-[10px] tracking-[.04em] text-sand uppercase">{label}</span>
+      <span className="text-[10px] tracking-[.04em] text-sand uppercase">
+        {label}
+      </span>
       <span className="font-mono text-xs text-body">{value}</span>
     </span>
   );
@@ -46,8 +48,12 @@ function ResourceCard({
         <div className="flex min-w-0 flex-col gap-1">
           <h3 className="m-0 text-[13px] font-bold text-strong">{title}</h3>
           <span className="flex items-baseline gap-2">
-            <span className="font-mono text-[26px] font-semibold tracking-[-0.5px] text-strong">{pct(stat.current)}</span>
-            {detail && <span className="truncate text-[11.5px] text-sand">{detail}</span>}
+            <span className="font-mono text-[26px] font-semibold tracking-[-0.5px] text-strong">
+              {pct(stat.current)}
+            </span>
+            {detail && (
+              <span className="truncate text-[11.5px] text-sand">{detail}</span>
+            )}
           </span>
         </div>
         <span className="flex shrink-0 gap-5">
@@ -57,7 +63,14 @@ function ResourceCard({
         </span>
       </div>
       <div className="mt-4">
-        <MetricChart points={data.points} field={field} color={color} label={title} windowHours={data.windowHours} now={now} />
+        <MetricChart
+          points={data.points}
+          field={field}
+          color={color}
+          label={title}
+          windowHours={data.windowHours}
+          now={now}
+        />
       </div>
     </Card>
   );
@@ -67,14 +80,20 @@ function ResourceCard({
 export function ResourcesTab({ serverId }: { serverId: string }) {
   const metrics = useServerMetrics(serverId);
 
-  if (metrics.isPending) return <Skeleton className="mt-5 h-72 rounded-[18px]" />;
-  if (metrics.isError) return <p className="mt-5 text-sm text-crit">{apiMessage(metrics.error)}</p>;
+  if (metrics.isPending)
+    return <Skeleton className="mt-5 h-72 rounded-[18px]" />;
+  if (metrics.isError)
+    return (
+      <p className="mt-5 text-sm text-crit">{apiMessage(metrics.error)}</p>
+    );
   const m = metrics.data;
   if (!m.cpu || !m.memory || !m.disk) {
     return (
       <div className="mt-5">
         <EmptyState title="No readings yet">
-          Warden reads CPU, memory and disk from this server every minute. If nothing shows up after a couple of minutes, check the server is reachable with Test connection.
+          Warden reads CPU, memory and disk from this server every minute. If
+          nothing shows up after a couple of minutes, check the server is
+          reachable with Test connection.
         </EmptyState>
       </div>
     );
@@ -83,7 +102,9 @@ export function ResourcesTab({ serverId }: { serverId: string }) {
   return (
     <div className="mt-5 flex flex-col gap-3.5 pb-2">
       <p className="m-0 text-[11.5px] text-sand">
-        Last {m.windowHours} hours · updated {m.collectedAt ? timeAgo(m.collectedAt) : "never"} · readings every minute, charted as 5-minute averages
+        Last {m.windowHours} hours · updated{" "}
+        {m.collectedAt ? timeAgo(m.collectedAt) : "never"} · readings every
+        minute, charted as 5-minute averages
       </p>
       <ResourceCard
         title="CPU"
@@ -92,7 +113,14 @@ export function ResourcesTab({ serverId }: { serverId: string }) {
         color="var(--color-brand)"
         data={m}
         now={metrics.dataUpdatedAt}
-        extra={m.load && <Stat label="Load" value={`${m.load.one} · ${m.load.five} · ${m.load.fifteen}`} />}
+        extra={
+          m.load && (
+            <Stat
+              label="Load"
+              value={`${m.load.one.toFixed(2)} · ${m.load.five.toFixed(2)} · ${m.load.fifteen.toFixed(2)}`}
+            />
+          )
+        }
       />
       <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,340px),1fr))] gap-3.5">
         <ResourceCard
@@ -102,24 +130,36 @@ export function ResourcesTab({ serverId }: { serverId: string }) {
           field="memory"
           color="var(--color-good)"
           data={m}
-        now={metrics.dataUpdatedAt}
+          now={metrics.dataUpdatedAt}
         />
         <ResourceCard
           title="Disk"
           stat={m.disk}
           detail={`${formatBytes(m.disk.usedBytes)} of ${formatBytes(m.disk.totalBytes)}`}
           field="disk"
-          color={m.disk.current >= 90 ? "var(--color-crit)" : "var(--color-warn)"}
+          color={
+            m.disk.current >= 90 ? "var(--color-crit)" : "var(--color-warn)"
+          }
           data={m}
-        now={metrics.dataUpdatedAt}
+          now={metrics.dataUpdatedAt}
         />
       </div>
-      <Card title="Docker disk" sub={m.docker ? `Measured ${timeAgo(m.docker.collectedAt)} · checked every 10 minutes` : undefined}>
+      <Card
+        title="Docker disk"
+        sub={
+          m.docker
+            ? `Measured ${timeAgo(m.docker.collectedAt)} · checked every 10 minutes`
+            : undefined
+        }
+      >
         <div className="mt-4">
           {m.docker ? (
             <DockerDiskDonut docker={m.docker} />
           ) : (
-            <p className="m-0 text-xs text-sand">No Docker numbers yet. They appear within 10 minutes if Docker is installed and this SSH user can use it.</p>
+            <p className="m-0 text-xs text-sand">
+              No Docker numbers yet. They appear within 10 minutes if Docker is
+              installed and this SSH user can use it.
+            </p>
           )}
         </div>
         <LastCleanup serverId={serverId} />

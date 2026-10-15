@@ -10,7 +10,10 @@ import { Skeleton } from "../../components/ui/Skeleton";
 import { StatusPill } from "../../components/ui/StatusPill";
 import { Tabs } from "../../components/ui/Tabs";
 import { useAuth } from "../../features/auth/hooks/useAuth";
-import { useDeleteServer, useServer } from "../../features/servers/hooks/useServers";
+import {
+  useDeleteServer,
+  useServer,
+} from "../../features/servers/hooks/useServers";
 import { ConnectionTestModal } from "../../features/servers/components/ConnectionTestModal";
 import { EditServerForm } from "../../features/servers/components/EditServerForm";
 import { ResourcesTab } from "../../features/servers/components/ResourcesTab";
@@ -36,7 +39,12 @@ export default function ServerPage() {
   const canEdit = atLeast(user?.role, "DEV_OPS");
 
   if (server.isPending) return <Skeleton className="h-40" />;
-  if (server.isError) return <p className="text-sm text-crit">{apiMessage(server.error, "This server doesn't exist")}</p>;
+  if (server.isError)
+    return (
+      <p className="text-sm text-crit">
+        {apiMessage(server.error, "This server doesn't exist")}
+      </p>
+    );
   const s = server.data;
 
   const onDelete = () =>
@@ -53,25 +61,38 @@ export default function ServerPage() {
 
   return (
     <>
-      <Link to="/settings/servers" className="mb-4 inline-flex items-center gap-2 text-[11.5px] text-sand hover:text-strong">
+      <Link
+        to="/settings/servers"
+        className="mb-4 inline-flex items-center gap-2 text-[11.5px] text-sand hover:text-strong"
+      >
         <HugeiconsIcon icon={ArrowLeft01Icon} size={12} strokeWidth={1.5} />
         Remote servers
       </Link>
       <div className="flex items-start justify-between gap-6">
         <div className="min-w-0">
           <div className="flex items-center gap-3">
-            <h2 className="m-0 font-mono text-2xl font-semibold text-strong">{s.serverName}</h2>
+            <h2 className="m-0 font-mono text-2xl font-semibold text-strong">
+              {s.serverName}
+            </h2>
             <StatusPill status={s.status} />
           </div>
           <p className="mt-2.5 text-[12.5px] text-muted-warm">
-            {serverWhere(s)} · {s.serverType === "BUILD" ? "Build server" : "Deploy server"} · {s.serverSSHUsername}@{s.serverIp}:{s.serverPort} ·{" "}
-            {s.lastSeenAt ? `last reached ${timeAgo(s.lastSeenAt)}` : "never tested"}
+            {serverWhere(s)} ·{" "}
+            {s.serverType === "BUILD" ? "Build server" : "Deploy server"} ·{" "}
+            {s.serverSSHUsername}@{s.serverIp}:{s.serverPort} ·{" "}
+            {s.lastSeenAt
+              ? `last reached ${timeAgo(s.lastSeenAt)}`
+              : "never tested"}
           </p>
         </div>
         {canEdit && (
           <span className="flex shrink-0 gap-2">
-            <Button variant="secondary" onClick={() => setCleaning(true)}>Run cleanup</Button>
-            <Button variant="secondary" onClick={() => setTesting(true)}>Test connection</Button>
+            <Button variant="secondary" onClick={() => setCleaning(true)}>
+              Run cleanup
+            </Button>
+            <Button variant="secondary" onClick={() => setTesting(true)}>
+              Test connection
+            </Button>
           </span>
         )}
       </div>
@@ -81,7 +102,12 @@ export default function ServerPage() {
         onChange={setTab}
         tabs={[
           { id: "resources", label: "Resources" },
-          { id: "containers", label: s.containers.total ? `Containers · ${s.containers.total}` : "Containers" },
+          {
+            id: "containers",
+            label: s.containers.total
+              ? `Containers · ${s.containers.total}`
+              : "Containers",
+          },
           { id: "details", label: "Details" },
           ...(canEdit ? [{ id: "danger" as const, label: "Danger zone" }] : []),
         ]}
@@ -92,14 +118,19 @@ export default function ServerPage() {
 
       {tab === "details" && (
         <div className="mt-5 grid grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)] items-start gap-3.5 pb-2">
-          <Card title="Connection" sub="Changing the address, user or key sets the status back to Idle until you test again.">
+          <Card
+            title="Connection"
+            sub="Changing the address, user or key marks it Offline until Warden reaches it again, usually within a minute."
+          >
             <EditServerForm server={s} canEdit={canEdit} />
           </Card>
           <Card title="About">
             <div className="mt-3">
               <FactRow label="Services on it">{s.serviceCount}</FactRow>
               <FactRow label="SSH key">{s.sshKey.sshKeyName}</FactRow>
-              <FactRow label="Fingerprint">{s.sshKey.fingerprint.replace("SHA256:", "").slice(0, 16)}…</FactRow>
+              <FactRow label="Fingerprint">
+                {s.sshKey.fingerprint.replace("SHA256:", "").slice(0, 16)}…
+              </FactRow>
               <FactRow label="Added">{formatDate(s.createdAt)}</FactRow>
             </div>
           </Card>
@@ -114,13 +145,21 @@ export default function ServerPage() {
                 ? `${s.serverName} still runs ${s.serviceCount} service(s). Move or unassign them first; Warden won't leave containers behind.`
                 : `Removing ${s.serverName} stops Warden from managing it. Nothing on the host itself is touched.`
             }
-            action={<Button variant="danger" onClick={() => setDeleting(true)}>Remove server</Button>}
+            action={
+              <Button variant="danger" onClick={() => setDeleting(true)}>
+                Remove server
+              </Button>
+            }
           />
         </div>
       )}
 
-      {testing && <ConnectionTestModal server={s} onClose={() => setTesting(false)} />}
-      {cleaning && <CleanupModal server={s} onClose={() => setCleaning(false)} />}
+      {testing && (
+        <ConnectionTestModal server={s} onClose={() => setTesting(false)} />
+      )}
+      {cleaning && (
+        <CleanupModal server={s} onClose={() => setCleaning(false)} />
+      )}
       <ConfirmDialog
         open={deleting}
         onClose={() => setDeleting(false)}

@@ -11,6 +11,7 @@ interface UserLike {
 interface OrgLike {
   id: string;
   organizationName: string;
+  slug: string;
 }
 interface MembershipLike {
   role: SessionUser['role'];
@@ -31,7 +32,11 @@ export function toSessionUser(
     email: user.email,
     firstName: user.firstName,
     lastName: user.lastName,
-    organization: { id: organization.id, name: organization.organizationName },
+    organization: {
+      id: organization.id,
+      name: organization.organizationName,
+      slug: organization.slug,
+    },
     role: membership.role,
   };
 }
