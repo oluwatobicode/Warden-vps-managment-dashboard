@@ -13,7 +13,6 @@ import { useProjectContext } from "../../features/projects/hooks/useProjectConte
 import { useServices } from "../../features/services/hooks/useServices";
 import { useServers } from "../../features/servers/hooks/useServers";
 import { ServiceCard } from "../../features/services/components/ServiceCard";
-import { AddServiceModal } from "../../features/services/components/AddServiceModal";
 import { EnvironmentModal } from "../../features/environments/components/EnvironmentModal";
 import { apiMessage } from "../../utils/apiMessage";
 import { atLeast } from "../../utils/roles";
@@ -24,11 +23,10 @@ const GROUPS = [
 ] as const;
 
 export default function ProjectOverviewPage() {
-  const { project, environments, env, selectEnv, withEnv } = useProjectContext();
+  const { project, environments, env, selectEnv, withEnv, openAddService } = useProjectContext();
   const { user } = useAuth();
   const services = useServices(env?.id);
   const servers = useServers();
-  const [adding, setAdding] = useState(false);
   const [newEnv, setNewEnv] = useState(false);
 
   const serverName = useMemo(() => new Map((servers.data ?? []).map((s) => [s.id, s.serverName])), [servers.data]);
@@ -54,12 +52,6 @@ export default function ProjectOverviewPage() {
             <ButtonLink variant="secondary" to={withEnv(`/projects/${project.id}/settings`)}>
               Project settings
             </ButtonLink>
-            {canAddService && env && (
-              <Button onClick={() => setAdding(true)}>
-                <HugeiconsIcon icon={PlusSignCircleIcon} size={14} strokeWidth={1.5} />
-                Add service
-              </Button>
-            )}
           </>
         }
       />
@@ -114,7 +106,7 @@ export default function ProjectOverviewPage() {
           {env && services.data?.length === 0 && (
             <EmptyState
               title={`No services in ${env.environmentName}`}
-              action={canAddService && <Button onClick={() => setAdding(true)}>Add service</Button>}
+              action={canAddService && <Button onClick={openAddService}>Add service</Button>}
             >
               A service is one deployable thing from one repo or image: an API, a website, a queue worker.
             </EmptyState>
@@ -145,7 +137,6 @@ export default function ProjectOverviewPage() {
         </div>
       </div>
 
-      {env && <AddServiceModal open={adding} onClose={() => setAdding(false)} env={env} servicePath={servicePath} />}
       {newEnv && <EnvironmentModal projectId={project.id} onClose={() => setNewEnv(false)} onCreated={(e) => selectEnv(e.id)} />}
     </>
   );

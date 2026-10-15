@@ -7,6 +7,8 @@ export interface ProjectContext {
   env: Environment | undefined;
   selectEnv: (id: string) => void;
   withEnv: (path: string) => string;
+  /** Opens the Add service modal (owned by the layout, so the navbar can too). */
+  openAddService: () => void;
 }
 
 export const useProjectContext = () => useOutletContext<ProjectContext>();

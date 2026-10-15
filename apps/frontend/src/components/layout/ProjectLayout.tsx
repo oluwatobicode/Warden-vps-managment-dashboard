@@ -1,12 +1,18 @@
-import { useMemo } from "react";
-import { Link, NavLink, Outlet, useParams, useSearchParams } from "react-router";
+import { useEffect, useMemo, useState } from "react";
+import { Link, NavLink, Outlet, useMatch, useParams, useSearchParams } from "react-router";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowLeft01Icon, Home01Icon, Settings01Icon, SquareLock02Icon } from "@hugeicons/core-free-icons";
-import type { ServiceStatus } from "shared-types";
+import type { Environment, ProjectDetail, ServiceStatus } from "shared-types";
 import { useProject } from "../../features/projects/hooks/useProjects";
 import { useEnvironments } from "../../features/environments/hooks/useEnvironments";
 import { useAuth } from "../../features/auth/hooks/useAuth";
 import type { ProjectContext } from "../../features/projects/hooks/useProjectContext";
+import { useService } from "../../features/services/hooks/useServices";
+import { AddServiceModal } from "../../features/services/components/AddServiceModal";
+import { useJumpTargets } from "../../features/search/hooks/useJumpTargets";
+import { CommandPalette } from "../../features/search/components/CommandPalette";
+import { atLeast } from "../../utils/roles";
+import { ProjectNavbar } from "./ProjectNavbar";
 import { apiMessage, apiStatus } from "../../utils/apiMessage";
 import { FullPageSpinner } from "../ui/Spinner";
 import { ButtonLink } from "../ui/Button";
@@ -20,11 +26,10 @@ const DOT: Record<ServiceStatus, string> = {
   FAILED: "bg-crit",
 };
 
-/** Inside a project: sidebar (back, environment switcher, nav, user) + the page. */
+/** Inside a project: loads the project, then hands over to ProjectShell. */
 export function ProjectLayout() {
   const { projectId = "" } = useParams();
   const [params, setParams] = useSearchParams();
-  const { user } = useAuth();
   const project = useProject(projectId);
   const environments = useEnvironments(projectId);
 
@@ -49,9 +54,53 @@ export function ProjectLayout() {
       p.set("env", id);
       return p;
     });
+  return <ProjectShell project={project.data} envs={envs} env={env} selectEnv={selectEnv} />;
+}
+
+/**
+ * Sidebar (back, environment switcher, nav) + navbar (title, ⌘K, Add service,
+ * account) + the page. Owns the Add service modal so the navbar and the
+ * Overview page open the same one.
+ */
+function ProjectShell({
+  project,
+  envs,
+  env,
+  selectEnv,
+}: {
+  project: ProjectDetail;
+  envs: Environment[];
+  env: Environment | undefined;
+  selectEnv: (id: string) => void;
+}) {
+  const { user } = useAuth();
+  const [searching, setSearching] = useState(false);
+  const [adding, setAdding] = useState(false);
+  const targets = useJumpTargets({ project, env });
+  const base = `/projects/${project.id}`;
   const withEnv = (path: string) => (env ? `${path}?env=${env.id}` : path);
-  const context: ProjectContext = { project: project.data, environments: envs, env, selectEnv, withEnv };
-  const base = `/projects/${projectId}`;
+  const canAddService = atLeast(user?.role, "DEVELOPER") && !!env;
+  const openAddService = () => setAdding(true);
+  const context: ProjectContext = { project, environments: envs, env, selectEnv, withEnv, openAddService };
+
+  // ⌘K / Ctrl-K toggles the palette from anywhere in the project.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key.toLowerCase() !== "k" || !(e.metaKey || e.ctrlKey)) return;
+      e.preventDefault();
+      setSearching((open) => !open);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  // The navbar title is the current page; on a service page, its name.
+  const serviceMatch = useMatch("/projects/:projectId/services/:serviceId");
+  const service = useService(serviceMatch?.params.serviceId ?? "", !!serviceMatch);
+  const onVariables = useMatch("/projects/:projectId/variables");
+  const onSettings = useMatch("/projects/:projectId/settings");
+  const title = serviceMatch ? (service.data?.serviceName ?? "Service") : onVariables ? "Variables" : onSettings ? "Project settings" : "Overview";
+
   const nav = [
     { to: base, label: "Overview", icon: Home01Icon, end: true },
     { to: `${base}/variables`, label: "Variables", icon: SquareLock02Icon, end: false },
@@ -64,10 +113,10 @@ export function ProjectLayout() {
         <div className="px-3">
           <div className="mt-2 flex items-center gap-2.5 rounded-[18px] border border-navb bg-raised px-3 py-[11px]">
             <span className="grid size-[30px] shrink-0 place-items-center rounded-[9px] bg-nav font-display text-xs font-bold text-strong">
-              {project.data.projectName.slice(0, 2).toUpperCase()}
+              {project.projectName.slice(0, 2).toUpperCase()}
             </span>
             <span className="flex min-w-0 flex-col">
-              <span className="truncate text-[12.5px] font-medium text-white">{project.data.projectName}</span>
+              <span className="truncate text-[12.5px] font-medium text-white">{project.projectName}</span>
               <span className="truncate text-[10px] text-muted">{env ? env.environmentName : "no environments"}</span>
             </span>
           </div>
@@ -125,25 +174,20 @@ export function ProjectLayout() {
           </nav>
         </div>
 
-        <div className="mx-3 mt-auto flex flex-col gap-2.5">
-          <div className="flex items-center gap-2.5 border-t border-cb px-1 pt-[13px] pb-1.5">
-            <span className="grid size-8 shrink-0 place-items-center rounded-[10px] bg-[#18181b] text-[11.5px] font-semibold text-muted-warm">
-              {(user?.firstName[0] ?? "") + (user?.lastName[0] ?? "")}
-            </span>
-            <span className="flex min-w-0 flex-col gap-0.5">
-              <span className="truncate text-xs text-white">{user?.firstName} {user?.lastName}</span>
-              <span className="truncate text-[9.5px] text-muted">{user?.email}</span>
-            </span>
-          </div>
-          <p className="m-0 mb-0.5 pl-1 text-[9.5px] text-[#45454b]">Warden · self-hosted</p>
-        </div>
+        <p className="mx-3 mt-auto mb-0.5 border-t border-cb pt-[13px] pl-1 text-[9.5px] text-[#45454b]">Warden · self-hosted</p>
       </aside>
 
-      <main className="flex min-w-0 flex-1">
-        <div className="min-w-0 flex-1 overflow-y-auto rounded-[20px] border border-divider bg-surface px-[30px] py-[26px]">
-          <Outlet context={context} />
-        </div>
-      </main>
+      <div className="flex min-w-0 flex-1 flex-col gap-[13px]">
+        <ProjectNavbar title={title} onSearch={() => setSearching(true)} onAddService={canAddService ? openAddService : undefined} />
+        <main className="flex min-h-0 min-w-0 flex-1">
+          <div className="min-w-0 flex-1 overflow-y-auto rounded-[20px] border border-divider bg-surface px-[30px] py-[26px]">
+            <Outlet context={context} />
+          </div>
+        </main>
+      </div>
+
+      {searching && <CommandPalette targets={targets} onClose={() => setSearching(false)} />}
+      {env && <AddServiceModal open={adding} onClose={() => setAdding(false)} env={env} servicePath={(id) => withEnv(`${base}/services/${id}`)} />}
     </div>
   );
 }

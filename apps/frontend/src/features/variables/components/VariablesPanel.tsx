@@ -20,6 +20,7 @@ import {
   type VariableOwner,
 } from "../hooks/useVariables";
 import { VariableModal } from "./VariableModal";
+import { ImportEnvModal } from "./ImportEnvModal";
 
 const MASK = "••••••••••••••••••••";
 
@@ -39,6 +40,7 @@ export function VariablesPanel({
   const [revealed, setRevealed] = useState<Record<string, string>>({});
   const [modal, setModal] = useState<{ editing?: Variable } | null>(null);
   const [deleting, setDeleting] = useState<Variable | null>(null);
+  const [importing, setImporting] = useState(false);
 
   const toggleReveal = (v: Variable) => {
     if (revealed[v.id] !== undefined) {
@@ -75,12 +77,22 @@ export function VariablesPanel({
           {summary}
         </p>
         {canEdit && (
-          <Button
-            onClick={() => setModal({})}
-            className="px-[15px] py-2.5 text-xs"
-          >
-            Add variable
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="secondary"
+              onClick={() => setImporting(true)}
+              disabled={!vars.data}
+              className="px-[15px] py-2.5 text-xs"
+            >
+              Import .env
+            </Button>
+            <Button
+              onClick={() => setModal({})}
+              className="px-[15px] py-2.5 text-xs"
+            >
+              Add variable
+            </Button>
+          </div>
         )}
       </div>
 
@@ -193,6 +205,13 @@ export function VariablesPanel({
           owner={owner}
           editing={modal.editing}
           onClose={() => setModal(null)}
+        />
+      )}
+      {importing && vars.data && (
+        <ImportEnvModal
+          owner={owner}
+          existing={vars.data}
+          onClose={() => setImporting(false)}
         />
       )}
       <ConfirmDialog

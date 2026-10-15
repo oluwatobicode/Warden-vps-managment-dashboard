@@ -16,10 +16,11 @@ export function useServices(environmentId: string | undefined) {
   });
 }
 
-export function useService(id: string) {
+export function useService(id: string, enabled = true) {
   return useQuery({
     queryKey: serviceKeys.detail(id),
     queryFn: () => api.get<Service>(`/services/${id}`),
+    enabled: enabled && !!id,
   });
 }
 
