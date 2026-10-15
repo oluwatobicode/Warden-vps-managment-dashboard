@@ -3,6 +3,7 @@ import { RoleSchema } from "./auth.js";
 
 export const AuditActionSchema = z.enum([
   "variable.revealed",
+  "variable.imported",
   "invitation.created",
   "invitation.revoked",
   "member.role_changed",
@@ -11,6 +12,7 @@ export const AuditActionSchema = z.enum([
   "api_token.revoked",
   "server.created",
   "server.deleted",
+  "server.cleanup_run",
   "ssh_key.created",
   "ssh_key.deleted",
   "project.created",

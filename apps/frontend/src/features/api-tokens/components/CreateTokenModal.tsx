@@ -8,6 +8,7 @@ import { Alert02Icon, Tick02Icon } from "@hugeicons/core-free-icons";
 import { CreateApiTokenSchema, type CreateApiTokenInput } from "shared-types";
 import { Button } from "../../../components/ui/Button";
 import { CopyButton } from "../../../components/ui/CopyButton";
+import { CloseButton } from "../../../components/ui/CloseButton";
 import { Input } from "../../../components/ui/Input";
 import { Segmented } from "../../../components/ui/Segmented";
 import { applyApiIssues, apiMessage } from "../../../utils/apiMessage";
@@ -39,7 +40,10 @@ export function CreateTokenModal({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="fixed inset-0 z-60 grid place-items-center bg-black/75 p-6" onMouseDown={(e) => e.target === e.currentTarget && !token && onClose()}>
-      <div role="dialog" aria-modal="true" aria-labelledby="token-title" className="w-[520px] max-w-full rounded-[20px] border border-cb bg-surface px-7 py-[26px]">
+      <div role="dialog" aria-modal="true" aria-labelledby="token-title" className="relative w-[520px] max-w-full rounded-[20px] border border-cb bg-surface px-7 py-[26px]">
+        <div className="absolute top-3.5 right-3.5">
+          <CloseButton onClick={onClose} disabled={create.isPending} />
+        </div>
         {!token ? (
           <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-4">
             <div>

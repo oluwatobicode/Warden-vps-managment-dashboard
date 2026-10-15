@@ -15,6 +15,8 @@ import {
   UpdateVariableSchema,
   type CreateServiceVariableInput,
   type UpdateVariableInput,
+  BulkServiceVariablesSchema,
+  type BulkServiceVariablesInput,
 } from 'shared-types';
 import { SessionGuard } from '../../common/guards/session.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -57,6 +59,18 @@ export class ServiceVariableController {
     body: CreateServiceVariableInput,
   ) {
     return this.variables.createForService(orgId, body);
+  }
+
+  // One request, one transaction: the whole .env goes in, or none of it does.
+  @Post('bulk')
+  @Roles('ADMIN', 'DEV_OPS', 'DEVELOPER')
+  @HttpCode(200)
+  bulkImport(
+    @CurrentActor() actor: Actor,
+    @Body(new ZodValidationPipe(BulkServiceVariablesSchema))
+    body: BulkServiceVariablesInput,
+  ) {
+    return this.variables.importForService(actor, body);
   }
 
   @Get(':id/reveal')

@@ -125,6 +125,13 @@ enum ServerType {
   DEPLOY
 }
 
+enum CleanupStatus {
+  QUEUED
+  RUNNING
+  SUCCESS
+  FAILED
+}
+
 enum ServerStatus {
   CONNECTED
   IDLE
@@ -155,21 +162,22 @@ enum NotificationChannelType {
 }
 
 model User {
-  id                   String        @id @default(uuid())
+  id                   String             @id @default(uuid())
   firstName            String
   lastName             String
-  email                String        @unique
+  email                String             @unique
   passwordHashed       String?
-  authProcess          AuthProvider  @default(EMAIL)
-  googleAccountId      String?       @unique
-  githubAccountId      String?       @unique
+  authProcess          AuthProvider       @default(EMAIL)
+  googleAccountId      String?            @unique
+  githubAccountId      String?            @unique
   platformRole         PlatformRole?
   memberships          Membership[]
   auditLogs            AuditLog[]
   setInvitations       Invitation[]
   deploymentsTriggered Deployment[]
-  createdAt            DateTime      @default(now())
-  updatedAt            DateTime      @updatedAt
+  dockerCleanups       DockerCleanupLog[]
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
 }
 
 model Invitation {
@@ -403,27 +411,44 @@ model Server {
   @@index([serverSshKeyId])
 }
 
+/// One row per poll (every 60s) from the worker. Percentages for the charts,
+/// bytes for "used / total", load averages straight from /proc/loadavg.
 model ServerMetrics {
-  id          String   @id @default(uuid())
-  serverId    String
-  server      Server   @relation(fields: [serverId], references: [id], onDelete: Cascade)
-  cpuUsage    Float
-  memoryUsage Float
-  diskUsage   Float
-  createdAt   DateTime @default(now())
+  id               String   @id @default(uuid())
+  serverId         String
+  server           Server   @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  cpuUsage         Float
+  memoryUsage      Float
+  diskUsage        Float
+  memoryUsedBytes  Float
+  memoryTotalBytes Float
+  diskUsedBytes    Float
+  diskTotalBytes   Float
+  load1            Float
+  load5            Float
+  load15           Float
+  createdAt        DateTime @default(now())
 
   @@index([serverId, createdAt])
 }
 
+/// One row per cleanup run: created QUEUED by the api, moved through RUNNING
+/// to SUCCESS or FAILED by the worker.
 model DockerCleanupLog {
-  id           String   @id @default(uuid())
-  serverId     String
-  server       Server   @relation(fields: [serverId], references: [id], onDelete: Cascade)
-  success      Boolean  @default(true)
-  errorMessage String?
-  createdAt    DateTime @default(now())
+  id             String        @id @default(uuid())
+  serverId       String
+  server         Server        @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  status         CleanupStatus @default(QUEUED)
+  reclaimedBytes Float?
+  errorMessage   String?
+  /// Null = started by Warden itself, or the user has since been deleted.
+  triggeredById  String?
+  triggeredBy    User?         @relation(fields: [triggeredById], references: [id], onDelete: SetNull)
+  finishedAt     DateTime?
+  createdAt      DateTime      @default(now())
 
   @@index([serverId, createdAt])
+  @@index([triggeredById])
 }
 
 model DockerDiskMetrics {
@@ -441,18 +466,31 @@ model DockerDiskMetrics {
   @@index([serverId, createdAt])
 }
 
+/// What is on the server NOW: one row per Docker container, upserted on every
+/// poll and deleted when the container is gone. Current state, not history.
 model ServerContainer {
-  id                   String    @id @default(uuid())
+  id                   String   @id @default(uuid())
   serverId             String
-  server               Server    @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  server               Server   @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  dockerId             String
   containerName        String
-  containerStatus      String
-  containerCpuUsage    Float
-  containerMemoryUsage Float
-  createdAt            DateTime  @default(now())
-  lastUsedAt           DateTime?
+  image                String
+  /// Docker's state: running, exited, restarting, paused, created, dead
+  state                String
+  /// From the container's HEALTHCHECK, when it has one: healthy, unhealthy, starting
+  health               String?
+  /// Docker's own wording, e.g. "Up 3 hours"
+  statusText           String
+  /// docker stats CPU %, can pass 100 on multi-core hosts. Null when not running.
+  containerCpuUsage    Float?
+  /// Bytes. Null when not running.
+  containerMemoryUsage Float?
+  containerMemoryLimit Float?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
 
-  @@index([serverId, createdAt])
+  // Also serves as the serverId index (it's the leading column).
+  @@unique([serverId, dockerId])
 }
 
 model ServerLogs {

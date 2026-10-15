@@ -50,6 +50,55 @@ export const UpdateVariableSchema = z.object({
 export type UpdateVariableInput = z.infer<typeof UpdateVariableSchema>;
 
 // ---------------------------------------------------------------------------
+// Bulk import (.env): one request, one transaction, all or nothing.
+// ---------------------------------------------------------------------------
+const bulkRow = z.object({ key: variableKey, value: variableValue, isSecret: z.boolean() });
+
+// Express refuses JSON bodies over 100 KB, so cap well under it: a real .env
+// is a few KB, anything near this isn't one.
+const BULK_MAX_CHARS = 60_000;
+
+const bulkRows = z
+  .array(bulkRow)
+  .min(1, "Nothing to import")
+  .max(200, "Up to 200 variables at once")
+  // Two rows with one key would hit the unique index and roll the whole
+  // import back; never trust the client to have de-duplicated.
+  .refine((rows) => new Set(rows.map((r) => r.key)).size === rows.length, "Each key only once")
+  .refine(
+    (rows) => rows.reduce((n, r) => n + r.key.length + r.value.length, 0) <= BULK_MAX_CHARS,
+    "Too much for one import (60,000 characters max)",
+  );
+
+// What to do with keys that already exist. No default: the client must choose.
+export const BulkConflictSchema = z.enum(["skip", "overwrite"]);
+export type BulkConflict = z.infer<typeof BulkConflictSchema>;
+
+// POST /environment-variables/bulk
+export const BulkEnvironmentVariablesSchema = z.object({
+  environmentId: z.string().uuid(),
+  variables: bulkRows,
+  onConflict: BulkConflictSchema,
+});
+export type BulkEnvironmentVariablesInput = z.infer<typeof BulkEnvironmentVariablesSchema>;
+
+// POST /service-variables/bulk
+export const BulkServiceVariablesSchema = z.object({
+  serviceId: z.string().uuid(),
+  variables: bulkRows,
+  onConflict: BulkConflictSchema,
+});
+export type BulkServiceVariablesInput = z.infer<typeof BulkServiceVariablesSchema>;
+
+// Keys only, never values.
+export const BulkResultSchema = z.object({
+  added: z.array(z.string()),
+  updated: z.array(z.string()),
+  skipped: z.array(z.string()),
+});
+export type BulkResult = z.infer<typeof BulkResultSchema>;
+
+// ---------------------------------------------------------------------------
 // Output — a description, so no rules or defaults.
 // ---------------------------------------------------------------------------
 export const VariableScopeSchema = z.enum(["environment", "service"]);

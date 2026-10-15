@@ -2,6 +2,7 @@ import { useState } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Alert02Icon } from "@hugeicons/core-free-icons";
 import { Button } from "./Button";
+import { CloseButton } from "./CloseButton";
 
 interface ConfirmDialogProps {
   open: boolean;
@@ -30,8 +31,11 @@ function ConfirmDialogBody({ onClose, onConfirm, title, body, cta, phrase, loadi
       className="fixed inset-0 z-60 grid place-items-center bg-black/75 p-6"
       onMouseDown={(e) => e.target === e.currentTarget && !loading && onClose()}
     >
-      <div role="alertdialog" aria-modal="true" className="w-[480px] max-w-full rounded-[20px] border border-cb bg-surface px-7 py-[26px]">
-        <div className="flex items-start gap-[13px]">
+      <div role="alertdialog" aria-modal="true" className="relative w-[480px] max-w-full rounded-[20px] border border-cb bg-surface px-7 py-[26px]">
+        <div className="absolute top-3.5 right-3.5">
+          <CloseButton onClick={onClose} disabled={loading} />
+        </div>
+        <div className="flex items-start gap-[13px] pr-8">
           <span className="grid size-9 shrink-0 place-items-center rounded-[11px] bg-crit-s text-crit">
             <HugeiconsIcon icon={Alert02Icon} size={18} strokeWidth={1.5} />
           </span>

@@ -1,18 +1,24 @@
 {
   "name": "docker-client",
   "version": "1.0.0",
-  "main": "dist/index.js",
+  "main": "./dist/index.js",
   "scripts": {
-    "build": "tsc",
-    "dev": "tsc --watch"
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsc --watch",
+    "test": "vitest run"
   },
   "license": "ISC",
-  "dependencies": {
-    "dockerode": "^5.0.1"
-  },
   "devDependencies": {
-    "@types/dockerode": "^4.0.1",
     "@types/node": "^22.20.2",
-    "typescript": "^7.0.2"
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.3"
+  },
+  "description": "Typed wrappers around the Docker CLI, run over any command runner (Warden passes ssh-client's run).",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
   }
 }

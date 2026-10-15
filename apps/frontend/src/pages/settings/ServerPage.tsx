@@ -13,12 +13,15 @@ import { useAuth } from "../../features/auth/hooks/useAuth";
 import { useDeleteServer, useServer } from "../../features/servers/hooks/useServers";
 import { ConnectionTestModal } from "../../features/servers/components/ConnectionTestModal";
 import { EditServerForm } from "../../features/servers/components/EditServerForm";
+import { ResourcesTab } from "../../features/servers/components/ResourcesTab";
+import { ContainersTab } from "../../features/servers/components/ContainersTab";
+import { CleanupModal } from "../../features/servers/components/CleanupModal";
 import { serverWhere } from "../../features/servers/components/serverLabels";
 import { apiMessage } from "../../utils/apiMessage";
 import { formatDate, timeAgo } from "../../utils/formatDate";
 import { atLeast } from "../../utils/roles";
 
-type Tab = "details" | "danger";
+type Tab = "resources" | "containers" | "details" | "danger";
 
 export default function ServerPage() {
   const { serverId = "" } = useParams();
@@ -26,8 +29,9 @@ export default function ServerPage() {
   const navigate = useNavigate();
   const server = useServer(serverId);
   const del = useDeleteServer(serverId);
-  const [tab, setTab] = useState<Tab>("details");
+  const [tab, setTab] = useState<Tab>("resources");
   const [testing, setTesting] = useState(false);
+  const [cleaning, setCleaning] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const canEdit = atLeast(user?.role, "DEV_OPS");
 
@@ -64,14 +68,27 @@ export default function ServerPage() {
             {s.lastSeenAt ? `last reached ${timeAgo(s.lastSeenAt)}` : "never tested"}
           </p>
         </div>
-        {canEdit && <Button variant="secondary" onClick={() => setTesting(true)}>Test connection</Button>}
+        {canEdit && (
+          <span className="flex shrink-0 gap-2">
+            <Button variant="secondary" onClick={() => setCleaning(true)}>Run cleanup</Button>
+            <Button variant="secondary" onClick={() => setTesting(true)}>Test connection</Button>
+          </span>
+        )}
       </div>
 
       <Tabs
         value={tab}
         onChange={setTab}
-        tabs={[{ id: "details", label: "Details" }, ...(canEdit ? [{ id: "danger" as const, label: "Danger zone" }] : [])]}
+        tabs={[
+          { id: "resources", label: "Resources" },
+          { id: "containers", label: s.containers.total ? `Containers · ${s.containers.total}` : "Containers" },
+          { id: "details", label: "Details" },
+          ...(canEdit ? [{ id: "danger" as const, label: "Danger zone" }] : []),
+        ]}
       />
+
+      {tab === "resources" && <ResourcesTab serverId={s.id} />}
+      {tab === "containers" && <ContainersTab serverId={s.id} />}
 
       {tab === "details" && (
         <div className="mt-5 grid grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)] items-start gap-3.5 pb-2">
@@ -103,6 +120,7 @@ export default function ServerPage() {
       )}
 
       {testing && <ConnectionTestModal server={s} onClose={() => setTesting(false)} />}
+      {cleaning && <CleanupModal server={s} onClose={() => setCleaning(false)} />}
       <ConfirmDialog
         open={deleting}
         onClose={() => setDeleting(false)}

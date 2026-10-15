@@ -4,6 +4,7 @@ import { CancelCircleIcon, Tick02Icon } from "@hugeicons/core-free-icons";
 import type { ConnectionStep, Server } from "shared-types";
 import { Button } from "../../../components/ui/Button";
 import { Spinner } from "../../../components/ui/Spinner";
+import { CloseButton } from "../../../components/ui/CloseButton";
 import { apiMessage } from "../../../utils/apiMessage";
 import { useTestConnection } from "../hooks/useServers";
 import { STEP_LABEL } from "./serverLabels";
@@ -27,7 +28,11 @@ export function ConnectionTestModal({ server, onClose }: { server: Server; onClo
       <div role="dialog" aria-modal="true" aria-labelledby="test-title" className="w-[460px] max-w-full rounded-[20px] border border-cb bg-surface px-7 py-[26px]">
         <div className="flex items-center justify-between gap-3.5">
           <h3 id="test-title" className="m-0 text-lg font-bold tracking-[-0.3px] text-strong">Testing {server.serverName}</h3>
-          <span className="font-mono text-[11px] text-sand">{server.serverIp}:{server.serverPort}</span>
+          <span className="flex items-center gap-2">
+            <span className="font-mono text-[11px] text-sand">{server.serverIp}:{server.serverPort}</span>
+            {/* Disabled mid-test: the server is being contacted and its status updated. */}
+            <CloseButton onClick={onClose} disabled={test.isPending} />
+          </span>
         </div>
 
         <ul className="mt-[18px] flex flex-col gap-0.5" aria-live="polite">

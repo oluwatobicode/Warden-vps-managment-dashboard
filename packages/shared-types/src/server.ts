@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { slugName } from "./field.js";
+import { ServerUsageSchema } from "./monitoring.js";
 
 export const ServerTypeSchema = z.enum(["BUILD", "DEPLOY"]);
 export type ServerType = z.infer<typeof ServerTypeSchema>;
@@ -61,6 +62,9 @@ export const ServerSchema = z.object({
     fingerprint: z.string(),
   }),
   serviceCount: z.number().int(),
+  /** The latest poll's CPU / memory / disk %. Null until the worker has polled it. */
+  usage: ServerUsageSchema.nullable(),
+  containers: z.object({ total: z.number().int(), running: z.number().int() }),
   lastSeenAt: z.iso.datetime().nullable(),
   createdAt: z.iso.datetime(),
 });

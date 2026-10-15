@@ -5,6 +5,7 @@ import type { Server } from "shared-types";
 import { StatusPill } from "../../../components/ui/StatusPill";
 import { timeAgo } from "../../../utils/formatDate";
 import { SERVER_DOT, serverWhere } from "./serverLabels";
+import { UsageBars } from "./UsageBars";
 
 export function ServerRow({ server: s }: { server: Server }) {
   const build = s.serverType === "BUILD";
@@ -20,11 +21,14 @@ export function ServerRow({ server: s }: { server: Server }) {
           {build ? "Build server" : "Deploy server"}
         </span>
       </span>
+      <span className="flex min-w-[220px] flex-[1_1_220px] items-center">
+        <UsageBars usage={s.usage} />
+      </span>
       <span className="ml-auto flex items-center gap-3">
         <span className="flex flex-col items-end gap-1">
           <StatusPill status={s.status} />
           <span className="text-[10.5px] text-sand">
-            {s.serviceCount} service{s.serviceCount === 1 ? "" : "s"} · {s.lastSeenAt ? `seen ${timeAgo(s.lastSeenAt)}` : "never tested"}
+            {s.serviceCount} service{s.serviceCount === 1 ? "" : "s"} · {s.containers.running}/{s.containers.total} containers · {s.lastSeenAt ? `seen ${timeAgo(s.lastSeenAt)}` : "never tested"}
           </span>
         </span>
         <HugeiconsIcon icon={ArrowRight01Icon} size={15} strokeWidth={1.5} className="text-sand" />

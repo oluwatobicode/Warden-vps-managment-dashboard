@@ -9,7 +9,9 @@ import { Segmented } from "../../../components/ui/Segmented";
 import { Textarea } from "../../../components/ui/Textarea";
 import { Toggle } from "../../../components/ui/Toggle";
 import { parseDotenv } from "../../../utils/dotenv";
-import { useImportVariables, type ImportResult, type VariableOwner } from "../hooks/useVariables";
+import type { BulkResult } from "shared-types";
+import { apiReason } from "../../../utils/apiMessage";
+import { useImportVariables, type VariableOwner } from "../hooks/useVariables";
 
 const SAMPLE = "# paste your .env here\nDATABASE_URL=postgres://user:pass@db:5432/app\nREDIS_URL=redis://redis:6379\nLOG_LEVEL=info";
 const MAX_FILE = 256 * 1024; // a .env is a few KB; anything bigger isn't one
@@ -20,7 +22,7 @@ export function ImportEnvModal({ owner, existing, onClose }: { owner: VariableOw
   const [text, setText] = useState("");
   const [isSecret, setIsSecret] = useState(true);
   const [overwrite, setOverwrite] = useState(false);
-  const [results, setResults] = useState<ImportResult[] | null>(null);
+  const [results, setResults] = useState<BulkResult | null>(null);
   const [dragging, setDragging] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
   const run = useImportVariables(owner);
@@ -41,34 +43,28 @@ export function ImportEnvModal({ owner, existing, onClose }: { owner: VariableOw
 
   const onImport = () =>
     run.mutate(
-      { rows: usable.map((l) => ({ key: l.key, value: l.value, existingId: byKey.get(l.key) })), isSecret, overwrite },
+      { rows: usable.map((l) => ({ key: l.key, value: l.value })), isSecret, overwrite },
       {
         onSuccess: (r) => {
           setResults(r);
-          const failed = r.filter((x) => x.outcome === "failed").length;
-          if (failed) toast.error(`${failed} variable${failed === 1 ? "" : "s"} couldn't be saved`);
-          else toast.success("Variables imported");
+          toast.success("Variables imported");
         },
+        // All or nothing: on any error NOTHING was saved, so the user can fix
+        // the text and press Import again.
+        onError: (e) => toast.error(`Nothing was imported. ${apiReason(e)}`),
       },
     );
 
   if (results) {
-    const count = (o: ImportResult["outcome"]) => results.filter((r) => r.outcome === o).length;
     return (
       <Modal open onClose={onClose} width="w-[620px]" title="Import finished" footer={<><span /><Button onClick={onClose}>Done</Button></>}>
         <p className="m-0 text-[12.5px] text-muted-warm">
-          <span className="text-good">{count("added")} added</span> · {count("updated")} updated · {count("skipped")} skipped (already existed)
-          {count("failed") > 0 && <span className="text-crit"> · {count("failed")} failed</span>}
+          <span className="text-good">{results.added.length} added</span> · {results.updated.length} updated · {results.skipped.length} skipped (already existed)
         </p>
-        {results.some((r) => r.outcome === "failed") && (
-          <div className="max-h-[200px] overflow-y-auto rounded-xl border border-crit-border">
-            {results.filter((r) => r.outcome === "failed").map((r) => (
-              <div key={r.key} className="flex justify-between gap-3 border-b border-divider px-3.5 py-2 text-[11.5px] last:border-b-0">
-                <span className="font-mono text-body">{r.key}</span>
-                <span className="text-crit">{r.error}</span>
-              </div>
-            ))}
-          </div>
+        {results.skipped.length > 0 && (
+          <p className="m-0 text-[11.5px] text-sand">
+            Skipped: <span className="font-mono">{results.skipped.join(", ")}</span>
+          </p>
         )}
       </Modal>
     );
@@ -80,7 +76,7 @@ export function ImportEnvModal({ owner, existing, onClose }: { owner: VariableOw
       onClose={onClose}
       width="w-[680px]"
       title="Import .env"
-      description="Paste the contents of a .env file, or load one from your computer. Nothing is saved until you press Import."
+      description="Paste the contents of a .env file, or load one from your computer. Everything is saved together when you press Import, or nothing is."
       footer={
         <>
           <Button variant="ghost" onClick={onClose} className="px-0 text-xs">Cancel</Button>

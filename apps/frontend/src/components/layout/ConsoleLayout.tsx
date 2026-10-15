@@ -19,13 +19,13 @@ export function ConsoleLayout() {
   return (
     <div className="flex min-h-screen-ui flex-col pt-7 pb-12">
       <header className="grid grid-cols-[1fr_auto_1fr] items-center gap-5 px-[var(--page-x)]">
-        <div className="flex items-center gap-[13px] justify-self-start rounded-2xl border border-cb bg-ink py-3.5 pr-[22px] pl-4">
-          <span className="grid size-10 shrink-0 place-items-center rounded-[11px] bg-good-s text-[13px] font-bold text-good">
+        <div className="flex max-w-[260px] items-center gap-2.5 justify-self-start rounded-xl border border-cb bg-ink py-2 pr-4 pl-2.5">
+          <span className="grid size-7 shrink-0 place-items-center rounded-lg bg-good-s text-[10.5px] font-bold text-good">
             {initials(user?.organization.name ?? "")}
           </span>
-          <span className="flex flex-col gap-0.5">
-            <span className="text-[14.5px] font-semibold text-strong">{user?.organization.name}</span>
-            <span className="font-mono text-[11px] text-sand">{user ? ROLE_LABEL[user.role] : ""}</span>
+          <span className="flex min-w-0 flex-col gap-0.5">
+            <span className="truncate text-[12.5px] leading-tight font-semibold text-strong">{user?.organization.name}</span>
+            <span className="font-mono text-[10px] leading-tight text-sand">{user ? ROLE_LABEL[user.role] : ""}</span>
           </span>
         </div>
 

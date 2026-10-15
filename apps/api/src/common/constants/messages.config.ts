@@ -111,6 +111,9 @@ export const SERVER_MESSAGES = {
   connection_failed: 'Could not connect to the server',
   cleanup_started: 'Docker cleanup started',
   cleanup_complete: 'Docker cleanup complete',
+  cleanup_running: 'A cleanup is already running on this server',
+  cleanup_not_queued: 'Could not start the cleanup. Try again in a moment',
+  unreachable: 'Could not reach the server over SSH',
 } as const;
 
 export const SSH_KEY_MESSAGES = {
@@ -152,4 +155,6 @@ export const DEPLOYMENT_MESSAGES = {
 export const VARIABLE_MESSAGES = {
   not_found: 'Variable not found',
   key_taken: 'A variable with this name already exists here',
+  import_conflict:
+    'Someone changed these variables while you were importing. Try again',
 } as const;

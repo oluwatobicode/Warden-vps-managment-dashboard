@@ -101,7 +101,7 @@ Frontend rules for roles:
 - **On 401:** call `POST /auth/refresh` **once**, retry the original request, and if that fails too, clear the React Query cache, go to `/login`, and toast. Never loop.
 - **Response envelope.** Success: `{ success: true, statusCode, message, data, timestamp }` — hooks return `data`. Error: `{ success: false, statusCode, errorCode, message, issues? }`. `issues` is `{ field: [messages] }` on a 400 — map it onto React Hook Form fields with `setError`; show `message` as a toast for everything else.
 - **Flat endpoints**, parent in the body or query: `GET /services?environmentId=…`, `POST /services { environmentId, … }`. No nested URLs.
-- **Paged lists** (audit log) use a cursor: `?limit=&cursor=`, response `{ items, nextCursor }` — use `useInfiniteQuery`.
+- **Paged lists** (audit log) use a cursor: `?limit=&cursor=`, response `{ items, nextCursor }`. The audit log page shows Newer/Older pages: `useQuery` keyed by `(cursor, limit)` with `keepPreviousData`, and the page keeps a stack of the cursors it has visited. There's no total count, so no "page X of Y" or jumping to a page number (that would need an API change).
 - The full endpoint list lives in the api controllers; ask Claude for the current table rather than trusting a copy here.
 
 ## Security Expectations (frontend side)
@@ -130,7 +130,8 @@ Frontend rules for roles:
 **Needs an endpoint that doesn't exist yet** — build only after the api side lands:
 
 - Home metric cards + recent deployments (1I dashboard)
-- Server Resources tab, Containers tab, Run cleanup (1G monitoring, worker)
+
+**Built 2026-10-15 (1G monitoring):** server cards show CPU/MEM/DISK and container counts; the server page has Resources (24h charts in plain SVG, no chart library; Docker disk donut) and Containers tabs, and a Run cleanup modal (live preview, then follows the worker job). Hooks in `features/servers/hooks/useMonitoring.ts`; data refreshes every 60s to match the worker's poll.
 
 **Not Phase 1** — don't add buttons, routes, or empty states for these without an explicit go-ahead:
 

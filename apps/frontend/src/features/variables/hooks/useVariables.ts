@@ -1,12 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type {
+  BulkResult,
   ResolvedVariable,
   RevealedVariable,
   UpdateVariableInput,
   Variable,
 } from "shared-types";
 import { api } from "../../../api/axiosinstance";
-import { apiMessage } from "../../../utils/apiMessage";
 
 export type VariableOwner =
   | { kind: "environment"; id: string }
@@ -81,46 +81,22 @@ export function useRevealVariable(owner: VariableOwner) {
 export interface ImportRow {
   key: string;
   value: string;
-  /** The existing variable with this key, if there is one. */
-  existingId?: string;
-}
-
-export interface ImportResult {
-  key: string;
-  outcome: "added" | "updated" | "skipped" | "failed";
-  error?: string;
 }
 
 /**
- * Saves pasted/uploaded .env lines one after another (the API has no bulk
- * route). NOT all-or-nothing: each line's outcome is reported, so a failure
- * halfway leaves the earlier ones saved and says which didn't go in.
+ * POST …/bulk: the whole .env in ONE request and ONE database transaction.
+ * Either every row is saved, or none are (the API rolls back). Existing keys
+ * are skipped or overwritten as asked.
  */
 export function useImportVariables(owner: VariableOwner) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ rows, isSecret, overwrite }: { rows: ImportRow[]; isSecret: boolean; overwrite: boolean }) => {
-      const results: ImportResult[] = [];
-      for (const r of rows) {
-        try {
-          if (r.existingId) {
-            if (!overwrite) {
-              results.push({ key: r.key, outcome: "skipped" });
-              continue;
-            }
-            await api.patch(`${base(owner)}/${r.existingId}`, { value: r.value, isSecret });
-            results.push({ key: r.key, outcome: "updated" });
-          } else {
-            await api.post(base(owner), { key: r.key, value: r.value, isSecret, ...ownerParam(owner) });
-            results.push({ key: r.key, outcome: "added" });
-          }
-        } catch (e) {
-          results.push({ key: r.key, outcome: "failed", error: apiMessage(e) });
-        }
-      }
-      return results;
-    },
-    // One refresh at the end, not one per line.
+    mutationFn: ({ rows, isSecret, overwrite }: { rows: ImportRow[]; isSecret: boolean; overwrite: boolean }) =>
+      api.post<BulkResult>(`${base(owner)}/bulk`, {
+        ...ownerParam(owner),
+        variables: rows.map((r) => ({ key: r.key, value: r.value, isSecret })),
+        onConflict: overwrite ? "overwrite" : "skip",
+      }),
     onSettled: () => queryClient.invalidateQueries({ queryKey: ["variables"] }),
   });
 }

@@ -7,6 +7,7 @@ import OnboardingPage from "../pages/OnboardingPage";
 import ForgotPasswordPage from "../pages/ForgotPasswordPage";
 import InvitePage from "../pages/InvitePage";
 import NotFoundPage from "../pages/NotFoundPage";
+import LandingPage from "../pages/LandingPage";
 import HomePage from "../pages/HomePage";
 import { SettingsLayout } from "../components/layout/SettingsLayout";
 import ServersPage from "../pages/settings/ServersPage";
@@ -15,6 +16,7 @@ import SshKeysPage from "../pages/settings/SshKeysPage";
 import TeamPage from "../pages/settings/TeamPage";
 import NotificationsPage from "../pages/settings/NotificationsPage";
 import ApiTokensPage from "../pages/settings/ApiTokensPage";
+import AuditLogPage from "../pages/settings/AuditLogPage";
 import ProjectsPage from "../pages/ProjectsPage";
 import { ProjectLayout } from "../components/layout/ProjectLayout";
 import ProjectOverviewPage from "../pages/project/ProjectOverviewPage";
@@ -36,14 +38,15 @@ export const router = createBrowserRouter([
   { path: "/auth/verify", element: <VerifyPage /> },
   { path: "/invite/:token", element: <InvitePage /> },
 
+  // Public landing page; signed-in users are sent on to /projects.
+  { path: "/", element: <LandingPage /> },
+
   {
-    path: "/",
     element: <RequireAuth />,
     children: [
       {
         element: <ConsoleLayout />,
         children: [
-          { index: true, element: <Navigate to="/projects" replace /> },
           { path: "home", element: <HomePage /> },
           { path: "projects", element: <ProjectsPage /> },
           {
@@ -61,6 +64,14 @@ export const router = createBrowserRouter([
                 element: (
                   <RequireRole min="ADMIN">
                     <ApiTokensPage />
+                  </RequireRole>
+                ),
+              },
+              {
+                path: "audit-log",
+                element: (
+                  <RequireRole min="ADMIN">
+                    <AuditLogPage />
                   </RequireRole>
                 ),
               },

@@ -18,6 +18,16 @@ export function apiMessage(error: unknown, fallback = "Something went wrong. Ple
 }
 
 /**
+ * Like apiMessage, but a 400's first specific reason ("Each key only once")
+ * beats the generic "Validation failed". For errors with no field to sit under.
+ */
+export function apiReason(error: unknown, fallback?: string): string {
+  const issues = body(error)?.issues;
+  const first = issues && Object.values(issues).find((m) => m?.length)?.[0];
+  return first ?? apiMessage(error, fallback);
+}
+
+/**
  * Put a 400's field errors under the matching form fields. Returns true if
  * any landed, so the caller can skip the toast. Field names match because the
  * form and the API validate with the same shared-types schema.

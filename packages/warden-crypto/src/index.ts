@@ -7,3 +7,4 @@ export {
 } from "./aes";
 export type { KeyProvider } from "./key-provider";
 export { EnvKeyProvider } from "./env-key-provider";
+export { DekCache } from "./dek-cache";

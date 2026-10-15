@@ -15,6 +15,8 @@ import {
   UpdateVariableSchema,
   type CreateEnvironmentVariableInput,
   type UpdateVariableInput,
+  BulkEnvironmentVariablesSchema,
+  type BulkEnvironmentVariablesInput,
 } from 'shared-types';
 import { SessionGuard } from '../../common/guards/session.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -49,6 +51,18 @@ export class EnvironmentVariableController {
     body: CreateEnvironmentVariableInput,
   ) {
     return this.variables.createForEnvironment(orgId, body);
+  }
+
+  // One request, one transaction: the whole .env goes in, or none of it does.
+  @Post('bulk')
+  @Roles('ADMIN', 'DEV_OPS', 'DEVELOPER')
+  @HttpCode(200)
+  bulkImport(
+    @CurrentActor() actor: Actor,
+    @Body(new ZodValidationPipe(BulkEnvironmentVariablesSchema))
+    body: BulkEnvironmentVariablesInput,
+  ) {
+    return this.variables.importForEnvironment(actor, body);
   }
 
   @Get(':id/reveal')

@@ -5,6 +5,10 @@ import {
 } from '@nestjs/common';
 import { Prisma } from 'db';
 import type {
+  BulkConflict,
+  BulkEnvironmentVariablesInput,
+  BulkResult,
+  BulkServiceVariablesInput,
   CreateEnvironmentVariableInput,
   CreateServiceVariableInput,
   ResolvedVariable,
@@ -23,6 +27,20 @@ import {
   SERVICE_MESSAGES,
   VARIABLE_MESSAGES,
 } from '../../common/constants/messages.config';
+
+/** One import row, already encrypted. */
+interface SealedRow {
+  key: string;
+  valueEncrypted: string;
+  isSecret: boolean;
+}
+
+/** How importRows reaches one of the two variable tables inside a transaction. */
+interface ImportTable {
+  existing: (tx: Prisma.TransactionClient, keys: string[]) => Promise<Array<{ id: string; key: string }>>;
+  createMany: (tx: Prisma.TransactionClient, rows: SealedRow[]) => Promise<unknown>;
+  update: (tx: Prisma.TransactionClient, id: string, row: SealedRow) => Promise<unknown>;
+}
 
 @Injectable()
 export class VariableService {
@@ -245,6 +263,111 @@ export class VariableService {
     });
     if (!row) throw new NotFoundException(VARIABLE_MESSAGES.not_found);
     return row;
+  }
+
+  // ── bulk import (.env) ───────────────────────────────────────────────────────
+
+  async importForEnvironment(actor: Actor, input: BulkEnvironmentVariablesInput): Promise<BulkResult> {
+    const orgId = actor.organizationId;
+    const { environmentId } = input;
+    await this.assertEnvironmentInOrg(orgId, environmentId);
+    return this.importRows(actor, 'environment', environmentId, input, {
+      existing: (tx, keys) =>
+        tx.environmentVariable.findMany({
+          where: { environmentId, organizationId: orgId, key: { in: keys } },
+          select: { id: true, key: true },
+        }),
+      createMany: (tx, rows) =>
+        tx.environmentVariable.createMany({
+          data: rows.map((r) => ({ ...r, environmentId, organizationId: orgId })),
+        }),
+      update: (tx, id, r) =>
+        tx.environmentVariable.update({
+          where: { id },
+          data: { valueEncrypted: r.valueEncrypted, isSecret: r.isSecret },
+        }),
+    });
+  }
+
+  async importForService(actor: Actor, input: BulkServiceVariablesInput): Promise<BulkResult> {
+    const orgId = actor.organizationId;
+    const { serviceId } = input;
+    await this.assertServiceInOrg(orgId, serviceId);
+    return this.importRows(actor, 'service', serviceId, input, {
+      existing: (tx, keys) =>
+        tx.serviceVariable.findMany({
+          where: { serviceId, organizationId: orgId, key: { in: keys } },
+          select: { id: true, key: true },
+        }),
+      createMany: (tx, rows) =>
+        tx.serviceVariable.createMany({
+          data: rows.map((r) => ({ ...r, serviceId, organizationId: orgId })),
+        }),
+      update: (tx, id, r) =>
+        tx.serviceVariable.update({
+          where: { id },
+          data: { valueEncrypted: r.valueEncrypted, isSecret: r.isSecret },
+        }),
+    });
+  }
+
+  /**
+   * All or nothing: every row is written in ONE transaction, so a bad row or a
+   * crash halfway leaves the table exactly as it was.
+   */
+  private async importRows(
+    actor: Actor,
+    scope: VariableScope,
+    ownerId: string,
+    input: { variables: Array<{ key: string; value: string; isSecret: boolean }>; onConflict: BulkConflict },
+    table: ImportTable,
+  ): Promise<BulkResult> {
+    // Encrypt BEFORE the transaction: a transaction should hold its locks for
+    // as short a time as possible, and encryption doesn't need the database.
+    const dek = await this.orgKeys.getDek(actor.organizationId);
+    const rows: SealedRow[] = input.variables.map((v) => ({
+      key: v.key,
+      valueEncrypted: encrypt(v.value, dek, 'v1'),
+      isSecret: v.isSecret,
+    }));
+
+    let result: BulkResult;
+    try {
+      // Inside here, use `tx` only: anything sent through this.prisma.client
+      // would NOT be part of the transaction and would survive a rollback.
+      result = await this.prisma.client.$transaction(async (tx) => {
+        const idByKey = new Map((await table.existing(tx, rows.map((r) => r.key))).map((e) => [e.key, e.id]));
+        const fresh = rows.filter((r) => !idByKey.has(r.key));
+        const clashing = rows.filter((r) => idByKey.has(r.key));
+
+        if (fresh.length) await table.createMany(tx, fresh);
+        if (input.onConflict === 'overwrite') {
+          for (const r of clashing) await table.update(tx, idByKey.get(r.key)!, r);
+        }
+
+        return {
+          added: fresh.map((r) => r.key),
+          updated: input.onConflict === 'overwrite' ? clashing.map((r) => r.key) : [],
+          skipped: input.onConflict === 'skip' ? clashing.map((r) => r.key) : [],
+        };
+      });
+    } catch (e) {
+      // Someone created one of these keys between our read and our write: the
+      // unique index fired and the whole import rolled back. Say so plainly.
+      if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') {
+        throw new ConflictException(VARIABLE_MESSAGES.import_conflict);
+      }
+      throw e;
+    }
+
+    // One audit line for the import, after it committed. Counts, never values.
+    await this.audit.record(actor, {
+      action: 'variable.imported',
+      entityType: 'variable',
+      entityId: ownerId,
+      metadata: { scope, added: result.added.length, updated: result.updated.length, skipped: result.skipped.length },
+    });
+    return result;
   }
 
   // ── resolution ─────────────────────────────────────────────────────────────

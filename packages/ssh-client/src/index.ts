@@ -5,4 +5,4 @@ export {
   type KeyPair,
   type ParsedPrivateKey,
 } from "./keys";
-export { withSsh, SshError } from "./connection";
+export { withSsh, SshError, type SshTarget, type RunResult } from "./connection";

@@ -1,6 +1,6 @@
 import { NavLink, Outlet } from "react-router";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Key01Icon, Notification01Icon, ServerStack01Icon, SquareLock02Icon, UserGroupIcon } from "@hugeicons/core-free-icons";
+import { Key01Icon, Notification01Icon, ServerStack01Icon, SquareLock02Icon, Task01Icon, UserGroupIcon } from "@hugeicons/core-free-icons";
 import { useAuth } from "../../features/auth/hooks/useAuth";
 import { useServers } from "../../features/servers/hooks/useServers";
 import { useSshKeys } from "../../features/ssh-keys/hooks/useSshKeys";
@@ -17,7 +17,13 @@ export function SettingsLayout() {
     { to: "/settings/team", label: "Team & roles", icon: UserGroupIcon },
     { to: "/settings/notifications", label: "Notifications", icon: Notification01Icon },
     // The token list is ADMIN-only on the API, so the page is too.
-    ...(atLeast(user?.role, "ADMIN") ? [{ to: "/settings/tokens", label: "API tokens", icon: SquareLock02Icon }] : []),
+    ...(atLeast(user?.role, "ADMIN")
+      ? [
+          { to: "/settings/tokens", label: "API tokens", icon: SquareLock02Icon },
+          // Admin-only on the API too: the log can show who revealed which secret.
+          { to: "/settings/audit-log", label: "Audit log", icon: Task01Icon },
+        ]
+      : []),
   ];
 
   return (

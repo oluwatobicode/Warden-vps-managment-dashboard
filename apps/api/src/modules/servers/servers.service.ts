@@ -22,12 +22,14 @@ import {
 import { OrgKeyService } from '../warden-crypto/org-key.service';
 import { decrypt } from 'warden-crypto';
 import { SshError, withSsh } from 'ssh-client';
+import { MonitoringService } from '../monitoring/monitoring.service';
 @Injectable()
 export class ServerService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly orgKey: OrgKeyService,
     private readonly audit: AuditService,
+    private readonly monitoring: MonitoringService,
   ) {}
 
   //create a server
@@ -69,12 +71,13 @@ export class ServerService {
       include: SERVER_DETAIL,
       orderBy: { serverName: 'asc' },
     });
-    return rows.map(toServer);
+    return this.withCards(rows);
   }
 
   //   get a server
   async getServer(orgId: string, id: string): Promise<Server> {
-    return toServer(await this.findOrThrow(orgId, id));
+    const [server] = await this.withCards([await this.findOrThrow(orgId, id)]);
+    return server;
   }
 
   //   update server
@@ -113,7 +116,8 @@ export class ServerService {
         },
         include: SERVER_DETAIL,
       });
-      return toServer(row);
+      const [server] = await this.withCards([row]);
+      return server;
     } catch (e) {
       throw this.translateUniqueError(e);
     }
@@ -229,6 +233,12 @@ export class ServerService {
 
   //  helpers
 
+  /** Attach each server's latest reading and container counts (two queries for any number of servers). */
+  private async withCards(rows: ServerRow[]): Promise<Server[]> {
+    const cards = await this.monitoring.cardsFor(rows.map((r) => r.id));
+    return rows.map((r) => toServer(r, cards.get(r.id)));
+  }
+
   private async findOrThrow(orgId: string, id: string) {
     const row = await this.prisma.client.server.findFirst({
       where: { id, organizationId: orgId },
@@ -264,7 +274,12 @@ const SERVER_DETAIL = {
 
 type ServerRow = Prisma.ServerGetPayload<{ include: typeof SERVER_DETAIL }>;
 
-function toServer(row: ServerRow): Server {
+const NO_CARD = { usage: null, containers: { total: 0, running: 0 } };
+
+function toServer(
+  row: ServerRow,
+  card: Pick<Server, 'usage' | 'containers'> = NO_CARD,
+): Server {
   return {
     id: row.id,
     serverName: row.serverName,
@@ -281,6 +296,8 @@ function toServer(row: ServerRow): Server {
       fingerprint: row.serverSshKey.fingerprint,
     },
     serviceCount: row._count.services,
+    usage: card.usage,
+    containers: card.containers,
     lastSeenAt: row.lastSeenAt?.toISOString() ?? null,
     createdAt: row.createdAt.toISOString(),
   };
