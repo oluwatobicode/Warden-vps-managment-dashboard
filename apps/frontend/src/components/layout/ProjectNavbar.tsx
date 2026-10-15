@@ -1,9 +1,11 @@
 import { useState } from "react";
+import { Link } from "react-router";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowDown01Icon, Logout03Icon, PlusSignIcon, Search01Icon, UserSettings01Icon } from "@hugeicons/core-free-icons";
 import { useAuth } from "../../features/auth/hooks/useAuth";
 import { useLogout } from "../../features/auth/hooks/useLogout";
 import { ROLE_LABEL } from "../../utils/roles";
+import { UserAvatar } from "../../features/account/components/UserAvatar";
 
 // ⌘ on a Mac, Ctrl elsewhere: show the key people will actually press.
 const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform);
@@ -14,7 +16,6 @@ export function ProjectNavbar({ title, onSearch, onAddService }: { title: string
   const logout = useLogout();
   const [menuOpen, setMenuOpen] = useState(false);
   const name = user ? `${user.firstName} ${user.lastName}` : "";
-  const initials = (user ? user.firstName[0] + user.lastName[0] : "").toUpperCase();
 
   return (
     <header className="flex shrink-0 items-center justify-between gap-5 rounded-[20px] border border-divider bg-surface px-5 py-3">
@@ -48,7 +49,7 @@ export function ProjectNavbar({ title, onSearch, onAddService }: { title: string
             onClick={() => setMenuOpen((o) => !o)}
             className="flex cursor-pointer items-center gap-2"
           >
-            <span className="grid size-[30px] shrink-0 place-items-center rounded-full bg-good-s text-[10.5px] font-semibold text-good">{initials}</span>
+            <UserAvatar avatar={user?.avatar} name={name} size={30} />
             <span className="hidden flex-col items-start whitespace-nowrap md:flex">
               <span className="text-xs leading-tight font-medium text-strong">{name}</span>
               <span className="text-[10px] leading-tight text-sand">{user ? ROLE_LABEL[user.role] : ""}</span>
@@ -65,18 +66,15 @@ export function ProjectNavbar({ title, onSearch, onAddService }: { title: string
                   <p className="m-0 truncate text-xs text-strong">{user?.organization.name}</p>
                   <p className="m-0 mt-0.5 truncate text-[10.5px] text-sand">{user?.email}</p>
                 </div>
-                {/* Not built yet: shown so people know where it'll live, but inert. */}
-                <button
-                  type="button"
+                <Link
+                  to="/account"
                   role="menuitem"
-                  aria-disabled="true"
-                  title="Coming soon"
-                  className="flex w-full cursor-not-allowed items-center gap-[9px] px-3.5 py-[11px] text-left text-[12.5px] text-sand"
+                  onClick={() => setMenuOpen(false)}
+                  className="flex w-full items-center gap-[9px] px-3.5 py-[11px] text-left text-[12.5px] text-body hover:bg-hover"
                 >
                   <HugeiconsIcon icon={UserSettings01Icon} size={15} strokeWidth={1.5} />
                   <span className="flex-1 whitespace-nowrap">Account settings</span>
-                  <span className="rounded-md bg-chip px-1.5 py-px text-[9.5px] text-muted-warm">Soon</span>
-                </button>
+                </Link>
                 <button
                   type="button"
                   role="menuitem"

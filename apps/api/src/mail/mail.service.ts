@@ -82,7 +82,10 @@ export class MailService {
   ): Promise<void> {
     await this.deliver({
       to: input.email,
-      subject: 'Your Warden reset code',
+      subject:
+        input.purpose === 'set'
+          ? 'Your Warden code to add a password'
+          : 'Your Warden reset code',
       html: resetPasswordOtpHtml({ ...input, supportEmail: this.supportEmail }),
       consoleHint: `code ${input.code}`,
       failure: 'Could not send reset code',

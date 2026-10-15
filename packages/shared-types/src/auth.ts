@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { email, password } from "./field.js";
+import { AvatarSchema } from "./account.js";
 
 export const MagicLinkRequestSchema = z.object({ email });
 export type MagicLinkRequest = z.infer<typeof MagicLinkRequestSchema>;
@@ -71,6 +72,10 @@ export const SessionUserSchema = z.object({
     slug: z.string(),
   }),
   role: RoleSchema,
+  /** Always set: a stored choice, or a default derived from the user id. */
+  avatar: AvatarSchema,
+  /** False for GitHub/Google sign-ups that never set one: the account page offers "Add a password". */
+  hasPassword: z.boolean(),
 });
 
 export type SessionUser = z.infer<typeof SessionUserSchema>;

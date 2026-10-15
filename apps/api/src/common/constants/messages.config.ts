@@ -24,6 +24,18 @@ export const AUTH_MESSAGES = {
     'If an account with a password exists for that email, a reset code has been sent',
   reset_code_invalid: 'This code is invalid or has expired',
   password_reset: 'Password updated. Sign in with your new password',
+  password_set_code_sent: 'We emailed you a 6-digit code',
+  password_already_set: 'You already have a password. Change it with your current one',
+  password_none: "You don't have a password yet. Add one with an emailed code",
+  password_wrong: 'Your current password is not right',
+  password_changed: 'Password changed. Other devices were signed out',
+  password_added: 'Password added. You can now sign in with it too',
+  too_many_codes: 'Too many codes requested. Try again in an hour',
+} as const;
+
+export const ACCOUNT_MESSAGES = {
+  profile_updated: 'Profile updated',
+  signed_out_others: 'Signed out of other devices',
 } as const;
 
 export const LOGIN_MESSAGES = {

@@ -1,17 +1,13 @@
 import type { CookieOptions, Response } from 'express';
-import { MAX_AGE_MS } from '../constants/constants.config';
+import {
+  COOKIE,
+  COOKIE_PATHS as PATHS,
+  MAX_AGE_MS,
+} from '../constants/constants.config';
 
-export const COOKIE = {
-  access: 'warden_access',
-  refresh: 'warden_refresh',
-  pending: 'warden_pending',
-} as const;
-
-const PATHS = {
-  access: '/',
-  refresh: '/auth/refresh',
-  pending: '/auth/onboarding',
-} as const;
+// Names and paths have ONE home, constants.config.ts (built from API_PREFIX).
+// Re-exported so `import { COOKIE } from cookie.util` keeps working.
+export { COOKIE };
 
 function base(isProd: boolean): CookieOptions {
   return { httpOnly: true, secure: isProd, sameSite: 'lax' };

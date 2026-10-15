@@ -190,6 +190,26 @@ export class SessionService {
     }
   }
 
+  /** How many OTHER sessions this user has that are still alive (the index can hold expired sids). */
+  async countOthers(userId: string, keepSid: string): Promise<number> {
+    const sids = (await this.redis.smembers(REDIS_KEY.userSessions(userId))).filter((s) => s !== keepSid);
+    if (!sids.length) return 0;
+    const alive = await this.redis.exists(...sids.map(REDIS_KEY.session));
+    return alive;
+  }
+
+  /**
+   * "Sign out of other devices": every session but this one. Their refresh
+   * tokens fail on their own (refreshToken() checks the session exists).
+   */
+  async destroyOthers(userId: string, keepSid: string): Promise<void> {
+    const setKey = REDIS_KEY.userSessions(userId);
+    const others = (await this.redis.smembers(setKey)).filter((s) => s !== keepSid);
+    if (!others.length) return;
+    await this.redis.del(...others.map(REDIS_KEY.session));
+    await this.redis.srem(setKey, ...others);
+  }
+
   /**
    * Log out EVERYWHERE. Refresh tokens for these sessions aren't hunted down:
    * they'll fail refreshToken()'s session check, which is enough.

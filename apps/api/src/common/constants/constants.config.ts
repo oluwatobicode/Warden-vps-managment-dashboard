@@ -7,10 +7,24 @@ export const COOKIE = {
   pending: 'warden_pending',
 } as const;
 
+/**
+ * Every route lives under /api (main.ts: setGlobalPrefix). In production the
+ * dashboard and the api share one origin, `/` and `/api`, so cookies are
+ * SameSite=Lax with no CORS (see "Decisions made 2026-10-15" in CLAUDE.md).
+ */
+export const API_PREFIX = 'api';
+
+/**
+ * Where the browser sends each cookie. A cookie only goes to paths under its
+ * own, so these MUST include the prefix: without it the refresh cookie never
+ * reaches /api/auth/refresh (everyone logged out after 15 minutes) and the
+ * pending cookie never reaches /api/auth/onboarding (sign-up can't finish).
+ */
 export const COOKIE_PATHS = {
-  access: '/',
-  refresh: '/auth/refresh',
-  pending: '/auth/onboarding',
+  // Only the api needs the access token, so pages never receive it.
+  access: `/${API_PREFIX}`,
+  refresh: `/${API_PREFIX}/auth/refresh`,
+  pending: `/${API_PREFIX}/auth/onboarding`,
 } as const;
 
 export const MAX_AGE_MS = {
@@ -51,6 +65,10 @@ export const REDIS_KEY = {
   passwordReset: (email: string) => `${PREFIX}:pwreset:${email}`,
   passwordResetAttempts: (email: string) => `${PREFIX}:pwreset-attempts:${email}`,
   passwordResetRequests: (email: string) => `${PREFIX}:pwreset-requests:${email}`,
+  // "Add a password" from the account page (GitHub/Google users): keyed by user, not email.
+  passwordSet: (userId: string) => `${PREFIX}:pwset:${userId}`,
+  passwordSetAttempts: (userId: string) => `${PREFIX}:pwset-attempts:${userId}`,
+  passwordSetRequests: (userId: string) => `${PREFIX}:pwset-requests:${userId}`,
 } as const;
 
 // JWT

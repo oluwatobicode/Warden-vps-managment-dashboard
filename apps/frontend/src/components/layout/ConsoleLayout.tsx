@@ -1,7 +1,8 @@
-import { NavLink, Outlet } from "react-router";
+import { Link, NavLink, Outlet } from "react-router";
 import { useAuth } from "../../features/auth/hooks/useAuth";
 import { useLogout } from "../../features/auth/hooks/useLogout";
 import { ROLE_LABEL } from "../../utils/roles";
+import { UserAvatar } from "../../features/account/components/UserAvatar";
 
 const TABS = [
   { to: "/home", label: "Home" },
@@ -50,14 +51,19 @@ export function ConsoleLayout() {
           ))}
         </nav>
 
-        <button
-          type="button"
-          onClick={onLogout}
-          disabled={logout.isPending}
-          className="cursor-pointer justify-self-end rounded-3xl border border-[#2e2e2e] px-[22px] py-3 text-[13px] font-semibold text-strong hover:bg-raised disabled:opacity-50"
-        >
-          Logout
-        </button>
+        <div className="flex items-center gap-3 justify-self-end">
+          <Link to="/account" aria-label="Account settings" title="Account settings" className="rounded-full ring-2 ring-transparent hover:ring-fieldb">
+            <UserAvatar avatar={user?.avatar} name={user ? `${user.firstName} ${user.lastName}` : ""} size={38} />
+          </Link>
+          <button
+            type="button"
+            onClick={onLogout}
+            disabled={logout.isPending}
+            className="cursor-pointer rounded-3xl border border-[#2e2e2e] px-[22px] py-3 text-[13px] font-semibold text-strong hover:bg-raised disabled:opacity-50"
+          >
+            Logout
+          </button>
+        </div>
       </header>
 
       {/* Full width on purpose: the line runs edge to edge, the content doesn't. */}

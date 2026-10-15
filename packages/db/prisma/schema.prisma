@@ -171,6 +171,9 @@ model User {
   googleAccountId      String?            @unique
   githubAccountId      String?            @unique
   platformRole         PlatformRole?
+  /// DiceBear style id + seed. Null = a default derived from the user id (see the api's auth.mapper).
+  avatarStyle          String?
+  avatarSeed           String?
   memberships          Membership[]
   auditLogs            AuditLog[]
   setInvitations       Invitation[]

@@ -8,6 +8,7 @@ import ForgotPasswordPage from "../pages/ForgotPasswordPage";
 import InvitePage from "../pages/InvitePage";
 import NotFoundPage from "../pages/NotFoundPage";
 import LandingPage from "../pages/LandingPage";
+import AccountPage from "../pages/AccountPage";
 import HomePage from "../pages/HomePage";
 import { SettingsLayout } from "../components/layout/SettingsLayout";
 import ServersPage from "../pages/settings/ServersPage";
@@ -48,6 +49,7 @@ export const router = createBrowserRouter([
         element: <ConsoleLayout />,
         children: [
           { path: "home", element: <HomePage /> },
+          { path: "account", element: <AccountPage /> },
           { path: "projects", element: <ProjectsPage /> },
           {
             path: "settings",
