@@ -75,6 +75,7 @@ export class ProjectService {
       entityType: 'project',
       entityId: project.id,
       metadata: { name: project.projectName },
+      projectId: project.id,
     });
 
     return this.getProject(orgId, project.id);
@@ -129,6 +130,7 @@ export class ProjectService {
         entityType: 'project',
         entityId: id,
         metadata: { name: project.projectName },
+        projectId: id,
       });
     } catch (e) {
       if (

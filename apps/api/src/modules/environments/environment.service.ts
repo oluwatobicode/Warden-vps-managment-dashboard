@@ -54,6 +54,7 @@ export class EnvironmentService {
         entityType: 'environment',
         entityId: created.id,
         metadata: { name: created.environmentName, projectId: created.projectId },
+        projectId: created.projectId,
       });
 
       return toEnvironment(created);
@@ -137,6 +138,7 @@ export class EnvironmentService {
         entityType: 'environment',
         entityId: id,
         metadata: { name: env.environmentName, projectId: env.projectId },
+        projectId: env.projectId,
       });
     } catch (e) {
       if (

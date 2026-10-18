@@ -1,5 +1,5 @@
-import { Injectable, Logger } from '@nestjs/common';
-import type { AuditLog as AuditLogRow } from 'db';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import type { AuditLog as AuditLogRow, Prisma } from 'db';
 import type {
   AuditAction,
   AuditEntityType,
@@ -9,6 +9,7 @@ import type {
   ListAuditLogsQuery,
 } from 'shared-types';
 import { PrismaService } from '../../prisma/prisma.service';
+import { PROJECT_MESSAGES } from '../../common/constants/messages.config';
 import type { Actor } from '../../common/types/actor';
 
 export interface AuditEntry {
@@ -16,6 +17,8 @@ export interface AuditEntry {
   entityType: AuditEntityType;
   entityId: string;
   metadata?: AuditMetadata;
+  /** Project-scoped events (project, environment, variable) set this, for the project's Activity tab. */
+  projectId?: string;
 }
 
 @Injectable()
@@ -48,6 +51,7 @@ export class AuditService {
           entityId: entry.entityId,
           metadata: entry.metadata,
           organizationId: actor.organizationId,
+          projectId: entry.projectId ?? null,
           performedById: actor.userId,
           performedByEmail: user?.email ?? null,
           performedByRole: actor.role,
@@ -62,9 +66,35 @@ export class AuditService {
     }
   }
 
-  async list(orgId: string, query: ListAuditLogsQuery): Promise<AuditLogPage> {
+  /** The whole org's log. Admin-only (see AuditController). */
+  list(orgId: string, query: ListAuditLogsQuery): Promise<AuditLogPage> {
+    return this.page({ organizationId: orgId }, query);
+  }
+
+  /**
+   * One project's events, for every role. The project must be in the
+   * caller's org, otherwise 404 (never an empty list that hints it exists).
+   */
+  async listForProject(
+    orgId: string,
+    projectId: string,
+    query: ListAuditLogsQuery,
+  ): Promise<AuditLogPage> {
+    const project = await this.prisma.client.project.findFirst({
+      where: { id: projectId, organizationId: orgId },
+      select: { id: true },
+    });
+    if (!project) throw new NotFoundException(PROJECT_MESSAGES.not_found);
+    return this.page({ organizationId: orgId, projectId }, query);
+  }
+
+  /** Newest first, cursor-paged. Both lists share it, so they page the same way. */
+  private async page(
+    where: Prisma.AuditLogWhereInput,
+    query: ListAuditLogsQuery,
+  ): Promise<AuditLogPage> {
     const rows = await this.prisma.client.auditLog.findMany({
-      where: { organizationId: orgId },
+      where,
       orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
       take: query.limit + 1,
       ...(query.cursor && { cursor: { id: query.cursor }, skip: 1 }),

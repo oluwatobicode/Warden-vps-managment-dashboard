@@ -47,6 +47,16 @@ export const ListAuditLogsQuerySchema = z.object({
 });
 export type ListAuditLogsQuery = z.infer<typeof ListAuditLogsQuerySchema>;
 
+/**
+ * GET /project-activity : one project's events, for every role. projectId is
+ * REQUIRED: this route must never be able to return the org-wide log, which
+ * stays Admin-only at /audit-logs.
+ */
+export const ListProjectActivityQuerySchema = ListAuditLogsQuerySchema.extend({
+  projectId: z.uuid("Pick a project"),
+});
+export type ListProjectActivityQuery = z.infer<typeof ListProjectActivityQuerySchema>;
+
 export const AuditLogSchema = z.object({
   id: z.string(),
   action: z.string(),

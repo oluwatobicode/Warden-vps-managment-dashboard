@@ -24,6 +24,7 @@ import ProjectOverviewPage from "../pages/project/ProjectOverviewPage";
 import ServicePage from "../pages/project/ServicePage";
 import ProjectVariablesPage from "../pages/project/ProjectVariablesPage";
 import ProjectSettingsPage from "../pages/project/ProjectSettingsPage";
+import ProjectActivityPage from "../pages/project/ProjectActivityPage";
 import { RedirectIfAuthed, RequireAuth, RequireRole } from "./guards";
 
 export const router = createBrowserRouter([
@@ -90,6 +91,7 @@ export const router = createBrowserRouter([
           { index: true, element: <ProjectOverviewPage /> },
           { path: "services/:serviceId", element: <ServicePage /> },
           { path: "variables", element: <ProjectVariablesPage /> },
+          { path: "activity", element: <ProjectActivityPage /> },
           { path: "settings", element: <ProjectSettingsPage /> },
         ],
       },

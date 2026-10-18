@@ -568,9 +568,14 @@ model AuditLog {
   apiTokenName     String?
   organizationId   String
   organization     Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  /// Set for project-scoped events (project, environment, variable), for the
+  /// project's Activity tab. No foreign key on purpose: a "project deleted"
+  /// row must outlive the project, like the actor snapshot columns.
+  projectId        String?
   createdAt        DateTime     @default(now())
 
   @@index([organizationId, createdAt])
+  @@index([organizationId, projectId, createdAt])
   @@index([performedById])
   @@index([apiTokenId])
   @@index([entityType, entityId])

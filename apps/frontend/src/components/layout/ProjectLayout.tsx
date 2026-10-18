@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, NavLink, Outlet, useMatch, useParams, useSearchParams } from "react-router";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowLeft01Icon, Home01Icon, Settings01Icon, SquareLock02Icon } from "@hugeicons/core-free-icons";
+import { Activity01Icon, ArrowLeft01Icon, Home01Icon, Settings01Icon, SquareLock02Icon } from "@hugeicons/core-free-icons";
 import type { Environment, ProjectDetail, ServiceStatus } from "shared-types";
 import { useProject } from "../../features/projects/hooks/useProjects";
 import { useEnvironments } from "../../features/environments/hooks/useEnvironments";
@@ -99,11 +99,13 @@ function ProjectShell({
   const service = useService(serviceMatch?.params.serviceId ?? "", !!serviceMatch);
   const onVariables = useMatch("/projects/:projectId/variables");
   const onSettings = useMatch("/projects/:projectId/settings");
-  const title = serviceMatch ? (service.data?.serviceName ?? "Service") : onVariables ? "Variables" : onSettings ? "Project settings" : "Overview";
+  const onActivity = useMatch("/projects/:projectId/activity");
+  const title = serviceMatch ? (service.data?.serviceName ?? "Service") : onVariables ? "Variables" : onActivity ? "Activity" : onSettings ? "Project settings" : "Overview";
 
   const nav = [
     { to: base, label: "Overview", icon: Home01Icon, end: true },
     { to: `${base}/variables`, label: "Variables", icon: SquareLock02Icon, end: false },
+    { to: `${base}/activity`, label: "Activity", icon: Activity01Icon, end: false },
     { to: `${base}/settings`, label: "Settings", icon: Settings01Icon, end: false },
   ];
 

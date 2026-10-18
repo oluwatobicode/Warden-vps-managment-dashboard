@@ -166,6 +166,7 @@ export class VariableService {
       entityType: 'variable',
       entityId: row.id,
       metadata: { key: row.key, scope: 'environment' },
+      projectId: await this.projectOf('environment', row.environmentId),
     });
     return {
       key: row.key,
@@ -248,6 +249,7 @@ export class VariableService {
       entityType: 'variable',
       entityId: row.id,
       metadata: { key: row.key, scope: 'service' },
+      projectId: await this.projectOf('service', row.serviceId),
     });
     return {
       key: row.key,
@@ -255,6 +257,23 @@ export class VariableService {
         v1: await this.orgKeys.getDek(orgId),
       }),
     };
+  }
+
+  /**
+   * The project an environment or service belongs to, for the audit row's
+   * projectId (the project's Activity tab). The owner was already checked to
+   * be in the caller's org by the time this runs.
+   */
+  private async projectOf(scope: VariableScope, ownerId: string): Promise<string | undefined> {
+    if (scope === 'environment') {
+      const env = await this.prisma.client.environment.findUnique({ where: { id: ownerId }, select: { projectId: true } });
+      return env?.projectId;
+    }
+    const service = await this.prisma.client.service.findUnique({
+      where: { id: ownerId },
+      select: { environment: { select: { projectId: true } } },
+    });
+    return service?.environment.projectId;
   }
 
   private async findServiceVariable(orgId: string, id: string) {
@@ -366,6 +385,7 @@ export class VariableService {
       entityType: 'variable',
       entityId: ownerId,
       metadata: { scope, added: result.added.length, updated: result.updated.length, skipped: result.skipped.length },
+      projectId: await this.projectOf(scope, ownerId),
     });
     return result;
   }

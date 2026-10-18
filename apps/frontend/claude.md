@@ -133,6 +133,8 @@ Frontend rules for roles:
 - Databases as a service: Postgres, MySQL, Redis (Phase 1, decided 2026-10-15; needs the worker job + api first)
 - Canvas view (decided 2026-10-15: shared layout saved on `Service`; needs the save endpoint first)
 
+**Built 2026-10-18 (project Activity):** an Activity item in the project sidebar → `/projects/:id/activity`. The list, Newer/Older pager and detail drawer are one shared component, `features/audit-logs/components/ActivityList.tsx`, used by both this page and Settings → Audit log; `useActivityPage(source, …)` picks `/audit-logs` or `/project-activity`.
+
 **Built 2026-10-15 (account):** `/account` page (profile name + DiceBear avatar picker with all 30 styles × 5 faces, password change / add-with-code, sign out of other devices); `UserAvatar` in the console header and project navbar. Hooks in `features/account/hooks/useAccount.ts`; avatar drawing in `features/account/avatar.ts` (one lazily loaded chunk per style).
 
 **Built 2026-10-15 (1G monitoring):** server cards show CPU/MEM/DISK and container counts; the server page has Resources (24h charts in plain SVG, no chart library; Docker disk donut) and Containers tabs, and a Run cleanup modal (live preview, then follows the worker job). Hooks in `features/servers/hooks/useMonitoring.ts`; data refreshes every 60s to match the worker's poll.
