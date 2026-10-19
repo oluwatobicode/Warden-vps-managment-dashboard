@@ -22,6 +22,7 @@ import { ApiTokenModule } from './modules/api-tokens/api-token.module';
 import { AuditModule } from './modules/audit/audit.module';
 import { NotificationModule } from './modules/notifications/notification.module';
 import { MonitoringModule } from './modules/monitoring/monitoring.module';
+import { DashboardModule } from './modules/dashboard/dashboard.module';
 
 @Module({
   imports: [
@@ -56,6 +57,7 @@ import { MonitoringModule } from './modules/monitoring/monitoring.module';
     AuditModule,
     NotificationModule,
     MonitoringModule,
+    DashboardModule,
   ],
   controllers: [AppController],
   providers: [AppService, { provide: APP_GUARD, useClass: ThrottlerGuard }],

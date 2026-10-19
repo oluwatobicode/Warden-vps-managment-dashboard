@@ -12,3 +12,4 @@ export * from "./audit-log.js";
 export * from "./notification.js";
 export * from "./monitoring.js";
 export * from "./account.js";
+export * from "./dashboard.js";

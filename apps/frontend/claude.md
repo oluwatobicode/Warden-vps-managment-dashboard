@@ -129,9 +129,10 @@ Frontend rules for roles:
 
 **Needs an endpoint that doesn't exist yet** — build only after the api side lands:
 
-- Home metric cards + recent deployments (1I dashboard)
 - Databases as a service: Postgres, MySQL, Redis (Phase 1, decided 2026-10-15; needs the worker job + api first)
 - Canvas view (decided 2026-10-15: shared layout saved on `Service`; needs the save endpoint first)
+
+**Built 2026-10-18 (Home, 1I):** `GET /dashboard` (every role) returns the 4 spec cards' numbers, all COUNT queries in Postgres (projects, projects needing attention = any degraded/failed service, environments, services, deploys + last 7 days, servers by status), plus the last 10 deployments. Home shows the cards, a Recent deployments table (empty until Phase 2 deploys exist; `StatusPill` now covers every `DeploymentStatus`), then the projects and servers lists. Refreshes every minute.
 
 **Built 2026-10-18 (project Activity):** an Activity item in the project sidebar → `/projects/:id/activity`. The list, Newer/Older pager and detail drawer are one shared component, `features/audit-logs/components/ActivityList.tsx`, used by both this page and Settings → Audit log; `useActivityPage(source, …)` picks `/audit-logs` or `/project-activity`.
 

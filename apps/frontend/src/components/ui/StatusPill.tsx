@@ -1,8 +1,8 @@
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Alert02Icon, CancelCircleIcon, Clock01Icon, Loading03Icon, Tick02Icon } from "@hugeicons/core-free-icons";
-import type { ServerStatus, ServiceStatus } from "shared-types";
+import { Alert02Icon, ArrowTurnBackwardIcon, CancelCircleIcon, Clock01Icon, Loading03Icon, PackageIcon, Shield01Icon, StopCircleIcon, Tick02Icon } from "@hugeicons/core-free-icons";
+import type { DeploymentStatus, ServerStatus, ServiceStatus } from "shared-types";
 
-type Status = ServiceStatus | ServerStatus;
+type Status = ServiceStatus | ServerStatus | DeploymentStatus;
 type Tone = "good" | "warn" | "serious" | "crit" | "brand" | "flat";
 
 // One table for every status the API returns, so a status never looks
@@ -16,6 +16,14 @@ const STATUS: Record<Status, { label: string; tone: Tone; icon: typeof Tick02Ico
   CONNECTED: { label: "Connected", tone: "good", icon: Tick02Icon },
   IDLE: { label: "Idle", tone: "flat", icon: Clock01Icon },
   OFFLINE: { label: "Offline", tone: "crit", icon: CancelCircleIcon },
+  // A deploy's own steps (DEPLOYING and FAILED are shared with services above).
+  QUEUED: { label: "Queued", tone: "flat", icon: Clock01Icon },
+  BUILDING: { label: "Building", tone: "brand", icon: PackageIcon },
+  HEALTH_CHECK: { label: "Health check", tone: "brand", icon: Shield01Icon },
+  SUCCESS: { label: "Live", tone: "good", icon: Tick02Icon },
+  GATE_FAILED: { label: "Gate failed", tone: "crit", icon: Alert02Icon },
+  ROLLED_BACK: { label: "Rolled back", tone: "serious", icon: ArrowTurnBackwardIcon },
+  CANCELLED: { label: "Cancelled", tone: "flat", icon: StopCircleIcon },
 };
 
 const TONE: Record<Tone, string> = {
