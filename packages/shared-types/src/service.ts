@@ -125,6 +125,9 @@ export const ServiceSchema = z.object({
   image: z.string().nullable(),
   environmentId: z.string(),
   serverId: z.string().nullable(), // null until assigned (servers module)
+  /** Canvas position, shared by the team. Null = never placed (auto-placed). */
+  canvasX: z.number().nullable(),
+  canvasY: z.number().nullable(),
   createdAt: z.iso.datetime(),
   updatedAt: z.iso.datetime(),
 });

@@ -1,0 +1,4 @@
+-- AlterTable
+ALTER TABLE "Service" ADD COLUMN     "canvasX" DOUBLE PRECISION,
+ADD COLUMN     "canvasY" DOUBLE PRECISION;
+

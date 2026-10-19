@@ -23,6 +23,7 @@ import { AuditModule } from './modules/audit/audit.module';
 import { NotificationModule } from './modules/notifications/notification.module';
 import { MonitoringModule } from './modules/monitoring/monitoring.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
+import { CanvasModule } from './modules/canvas/canvas.module';
 
 @Module({
   imports: [
@@ -58,6 +59,7 @@ import { DashboardModule } from './modules/dashboard/dashboard.module';
     NotificationModule,
     MonitoringModule,
     DashboardModule,
+    CanvasModule,
   ],
   controllers: [AppController],
   providers: [AppService, { provide: APP_GUARD, useClass: ThrottlerGuard }],

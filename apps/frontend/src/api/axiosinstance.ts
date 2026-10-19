@@ -67,6 +67,7 @@ export const api = {
     unwrap(await axiosInstance.get<ApiEnvelope<T>>(url, { params })),
   post: async <T>(url: string, body?: unknown) => unwrap(await axiosInstance.post<ApiEnvelope<T>>(url, body)),
   patch: async <T>(url: string, body: unknown) => unwrap(await axiosInstance.patch<ApiEnvelope<T>>(url, body)),
+  put: async <T>(url: string, body: unknown) => unwrap(await axiosInstance.put<ApiEnvelope<T>>(url, body)),
   /** DELETE answers 204 with no body. */
   delete: async (url: string) => {
     await axiosInstance.delete(url);

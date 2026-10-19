@@ -199,6 +199,8 @@ function toService(row: Prisma.ServiceGetPayload<object>): Service {
     image: row.image,
     environmentId: row.environmentId,
     serverId: row.serverId,
+    canvasX: row.canvasX,
+    canvasY: row.canvasY,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };

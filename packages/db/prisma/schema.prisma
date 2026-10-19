@@ -296,6 +296,10 @@ model Service {
   image          String?
   port           Int?
   status         ServiceStatus     @default(NOT_DEPLOYED)
+  /// Where the box sits on the environment's canvas, shared by the whole team.
+  /// Null = never placed, so the canvas auto-places it in a free grid spot.
+  canvasX        Float?
+  canvasY        Float?
   environmentId  String
   organizationId String
   environment    Environment       @relation(fields: [environmentId, organizationId], references: [id, organizationId], onDelete: Cascade)

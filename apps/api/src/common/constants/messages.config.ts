@@ -33,6 +33,12 @@ export const AUTH_MESSAGES = {
   too_many_codes: 'Too many codes requested. Try again in an hour',
 } as const;
 
+export const CANVAS_MESSAGES = {
+  saved: 'Layout saved',
+  wrong_services:
+    'Some of these services are not in this environment, so nothing was saved',
+} as const;
+
 export const ACCOUNT_MESSAGES = {
   profile_updated: 'Profile updated',
   signed_out_others: 'Signed out of other devices',

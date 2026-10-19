@@ -91,6 +91,11 @@ export const router = createBrowserRouter([
           { index: true, element: <ProjectOverviewPage /> },
           { path: "services/:serviceId", element: <ServicePage /> },
           { path: "variables", element: <ProjectVariablesPage /> },
+          {
+            path: "canvas",
+            // Its own chunk: React Flow only loads when someone opens a canvas.
+            lazy: async () => ({ Component: (await import("../pages/project/ProjectCanvasPage")).default }),
+          },
           { path: "activity", element: <ProjectActivityPage /> },
           { path: "settings", element: <ProjectSettingsPage /> },
         ],
