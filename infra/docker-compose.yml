@@ -21,7 +21,33 @@ services:
       PUBLIC_KEY_FILE: /keys/authorized_keys
       PASSWORD_ACCESS: "false"
       SUDO_ACCESS: "false"
+      # Installs the docker CLI. It talks to docker-target below (see
+      # infra/README.md for the one-time `docker context` setup), never to
+      # this Mac's own Docker, so test databases can't touch other projects.
+      DOCKER_MODS: linuxserver/mods:universal-docker
     volumes:
       - ./ssh-target:/keys:ro
+  # The pretend VPS's own Docker engine (Docker-in-Docker). Databases that
+  # Warden creates on ssh-target run in here, sealed off from the host.
+  docker-target:
+    image: docker:29-dind
+    privileged: true
+    environment:
+      DOCKER_TLS_CERTDIR: ""
+    command: ["dockerd", "--host=tcp://0.0.0.0:2375", "--host=unix:///var/run/docker.sock"]
+    volumes: [dinddata:/var/lib/docker]
+  # A local S3-compatible store for building and testing database backups
+  # without a real Cloudflare R2 bucket (MinIO no longer publishes free
+  # images). Accepts any access keys; real-key checks happen on R2.
+  s3-local:
+    image: adobe/s3mock:latest
+    ports: ["9090:9090"]
+    environment:
+      COM_ADOBE_TESTING_S3MOCK_STORE_INITIAL_BUCKETS: warden-backups
+      COM_ADOBE_TESTING_S3MOCK_STORE_RETAIN_FILES_ON_EXIT: "true"
+      COM_ADOBE_TESTING_S3MOCK_STORE_ROOT: /s3mockroot
+    volumes: [s3data:/s3mockroot]
 volumes:
   pgdata:
+  dinddata:
+  s3data:

@@ -139,6 +139,10 @@ export class ServiceService {
     if (!current) throw new NotFoundException(SERVICE_MESSAGES.not_found);
 
     if (input.serverId === current.serverId) return toService(current);
+    // Its data volume lives on that server; moving it would strand the data.
+    if (current.type === 'DATABASE') {
+      throw new ConflictException(SERVICE_MESSAGES.database_stays);
+    }
 
     const mayBeRunning =
       current.status !== 'NOT_DEPLOYED' && current.status !== 'FAILED';
@@ -178,9 +182,12 @@ export class ServiceService {
   async deleteService(orgId: string, id: string): Promise<void> {
     const row = await this.prisma.client.service.findFirst({
       where: { id, organizationId: orgId },
-      select: { id: true, serverId: true },
+      select: { id: true, serverId: true, type: true },
     });
     if (!row) throw new NotFoundException(SERVICE_MESSAGES.not_found);
+    if (row.type === 'DATABASE') {
+      throw new ConflictException(SERVICE_MESSAGES.delete_database_elsewhere);
+    }
     if (row.serverId) throw new ConflictException(SERVICE_MESSAGES.has_server);
 
     await this.prisma.client.service.delete({ where: { id: row.id } });

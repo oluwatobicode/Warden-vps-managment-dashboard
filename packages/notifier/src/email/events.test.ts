@@ -34,6 +34,7 @@ const SAMPLES: EventPayloads = {
   "server.recovered": server,
   "server.disk_high": { ...server, diskUsagePercent: 91.6, thresholdPercent: 85 },
   "docker.cleanup_failed": server,
+  "database.backup_failed": { organizationName: "Acme", projectName: "argus", databaseName: "postgres", engine: "PostgreSQL", serverName: "fra-01", at: new Date("2026-10-21T02:00:00Z"), reason: "pg_dump: error: connection to server failed" },
   "member.joined": member,
   "member.removed": member,
 };

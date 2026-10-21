@@ -22,6 +22,15 @@ const EnvSchema = z.object({
   MONITOR_CONCURRENCY: z.coerce.number().int().min(1).max(50).default(10),
   /** true: log alerts instead of sending them (local testing). */
   NOTIFY_DRY_RUN: z.stringbool().default(false),
+  /**
+   * Warden's own bucket for database backups (Cloudflare R2 in production,
+   * infra's s3-local in dev). Empty = only orgs with their own bucket get
+   * backups. Must match the api's.
+   */
+  BACKUP_S3_ENDPOINT: z.string().default(""),
+  BACKUP_S3_BUCKET: z.string().default(""),
+  BACKUP_S3_ACCESS_KEY_ID: z.string().default(""),
+  BACKUP_S3_SECRET_ACCESS_KEY: z.string().default(""),
 });
 
 function load() {

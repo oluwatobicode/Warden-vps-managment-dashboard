@@ -3,6 +3,7 @@ import {
   ExecutionContext,
   Injectable,
   NestInterceptor,
+  StreamableFile,
 } from '@nestjs/common';
 import type { Response } from 'express';
 import { map, Observable } from 'rxjs';
@@ -28,13 +29,18 @@ export class ResponseInterceptor<T> implements NestInterceptor<
 
     return next.handle().pipe(
       // A fresh object per response — never mutate something shared.
-      map((data) => ({
-        success: true as const,
-        statusCode: res.statusCode,
-        message: 'OK',
-        data,
-        timestamp: new Date().toISOString(),
-      })),
+      // A file download (StreamableFile) goes out as the raw bytes.
+      map((data) =>
+        data instanceof StreamableFile
+          ? (data as unknown as ApiSuccessResponse<T>)
+          : {
+              success: true as const,
+              statusCode: res.statusCode,
+              message: 'OK',
+              data,
+              timestamp: new Date().toISOString(),
+            },
+      ),
     );
   }
 }

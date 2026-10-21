@@ -14,6 +14,7 @@ import { SettingsLayout } from "../components/layout/SettingsLayout";
 import ServersPage from "../pages/settings/ServersPage";
 import ServerPage from "../pages/settings/ServerPage";
 import SshKeysPage from "../pages/settings/SshKeysPage";
+import BackupStoragePage from "../pages/settings/BackupStoragePage";
 import TeamPage from "../pages/settings/TeamPage";
 import NotificationsPage from "../pages/settings/NotificationsPage";
 import ApiTokensPage from "../pages/settings/ApiTokensPage";
@@ -60,6 +61,7 @@ export const router = createBrowserRouter([
               { path: "servers", element: <ServersPage /> },
               { path: "servers/:serverId", element: <ServerPage /> },
               { path: "ssh-keys", element: <SshKeysPage /> },
+              { path: "backup-storage", element: <BackupStoragePage /> },
               { path: "team", element: <TeamPage /> },
               { path: "notifications", element: <NotificationsPage /> },
               {

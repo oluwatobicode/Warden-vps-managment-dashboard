@@ -7,3 +7,4 @@ import { redis } from "./redis";
 const defaultJobOptions = { removeOnComplete: true, removeOnFail: 200 };
 
 export const monitoringQueue = new Queue(QUEUES.monitoring, { connection: redis, defaultJobOptions });
+export const backupQueue = new Queue(QUEUES.backups, { connection: redis, defaultJobOptions });

@@ -39,6 +39,7 @@
     "rxjs": "^7.8.1",
     "shared-types": "workspace:*",
     "ssh-client": "workspace:*",
+    "storage": "workspace:*",
     "warden-crypto": "workspace:*",
     "zod": "^4.6.1"
   },

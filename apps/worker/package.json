@@ -11,13 +11,14 @@
   "license": "ISC",
   "dependencies": {
     "bullmq": "^6.3.4",
-    "ioredis": "^6.0.0",
     "db": "workspace:*",
     "docker-client": "workspace:*",
     "dotenv": "^17.4.2",
+    "ioredis": "^6.0.0",
     "notifier": "workspace:*",
     "shared-types": "workspace:*",
     "ssh-client": "workspace:*",
+    "storage": "workspace:*",
     "warden-crypto": "workspace:*",
     "zod": "^4.6.1"
   },

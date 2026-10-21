@@ -56,6 +56,7 @@ export const NotificationEventSchema = z.enum([
   "server.recovered",
   "server.disk_high",
   "docker.cleanup_failed",
+  "database.backup_failed",
   "member.joined",
   "member.removed",
 ]);

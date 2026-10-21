@@ -10,7 +10,7 @@ export interface RunResult {
  * ssh-client's `withSsh` hands out, but this package doesn't care how the
  * command gets there, which is also how the tests fake it.
  */
-export type Run = (cmd: string) => Promise<RunResult>;
+export type Run = (cmd: string, input?: string) => Promise<RunResult>;
 
 export type DockerErrorKind = "not_installed" | "permission_denied" | "failed";
 

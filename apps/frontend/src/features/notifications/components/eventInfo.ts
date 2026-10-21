@@ -22,6 +22,10 @@ export const EVENT_GROUPS: ReadonlyArray<{ label: string; events: ReadonlyArray<
     ],
   },
   {
+    label: "Databases",
+    events: [{ id: "database.backup_failed", label: "Backup failed" }],
+  },
+  {
     label: "Team",
     events: [
       { id: "member.joined", label: "Member joined" },
@@ -42,6 +46,7 @@ export const EVENT_CHIP: Record<NotificationEvent, string> = {
   "server.recovered": "Server back online",
   "server.disk_high": "Disk almost full",
   "docker.cleanup_failed": "Docker cleanup failed",
+  "database.backup_failed": "Database backup failed",
   "member.joined": "Member joined",
   "member.removed": "Member removed",
 };

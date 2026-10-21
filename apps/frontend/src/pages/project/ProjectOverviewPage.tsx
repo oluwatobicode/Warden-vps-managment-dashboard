@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Layers01Icon, PlusSignCircleIcon, Rocket01Icon } from "@hugeicons/core-free-icons";
+import { Database01Icon, Layers01Icon, PlusSignCircleIcon, Rocket01Icon } from "@hugeicons/core-free-icons";
 import type { Service } from "shared-types";
 import { Breadcrumbs } from "../../components/layout/Breadcrumbs";
 import { Button, ButtonLink } from "../../components/ui/Button";
@@ -20,6 +20,7 @@ import { atLeast } from "../../utils/roles";
 const GROUPS = [
   { type: "APPLICATION", label: "Applications", hint: "serve traffic on a port", icon: Rocket01Icon },
   { type: "WORKER", label: "Workers", hint: "background jobs, no port", icon: Layers01Icon },
+  { type: "DATABASE", label: "Databases", hint: "run by Warden, private to this server", icon: Database01Icon },
 ] as const;
 
 export default function ProjectOverviewPage() {

@@ -1,13 +1,15 @@
 import { env } from "./env";
 import { Worker, type Job } from "bullmq";
 import { prisma } from "db";
-import { CleanupJobSchema, CollectServerJobSchema, MONITORING_JOBS, QUEUES } from "shared-types";
+import { BACKUP_JOBS, BackupJobSchema, CleanupJobSchema, CollectServerJobSchema, DatabaseJobSchema, MONITORING_JOBS, QUEUES } from "shared-types";
 import { cleanup } from "./jobs/cleanup";
+import { databaseJob } from "./jobs/database";
+import { backupJob, backupTick } from "./jobs/backup";
 import { collectServer } from "./jobs/collect";
 import { pruneMetrics } from "./jobs/prune";
 import { tick } from "./jobs/tick";
 import { log } from "./log";
-import { monitoringQueue } from "./queues";
+import { backupQueue, monitoringQueue } from "./queues";
 import { redis } from "./redis";
 
 /*
@@ -42,10 +44,26 @@ async function main() {
   // Idempotent: safe on every boot, and changing the interval just updates it.
   await monitoringQueue.upsertJobScheduler(MONITORING_JOBS.tick, { every: env.MONITOR_INTERVAL_SECONDS * 1000 }, { name: MONITORING_JOBS.tick });
   await monitoringQueue.upsertJobScheduler(MONITORING_JOBS.prune, { every: 3600 * 1000 }, { name: MONITORING_JOBS.prune });
+  await backupQueue.upsertJobScheduler(BACKUP_JOBS.tick, { every: 15 * 60 * 1000 }, { name: BACKUP_JOBS.tick });
 
   const workers = [
     new Worker(QUEUES.monitoring, monitoringJob, { connection: redis, concurrency: env.MONITOR_CONCURRENCY }),
     new Worker(QUEUES.cleanup, (job) => cleanup(CleanupJobSchema.parse(job.data)), { connection: redis, concurrency: 2 }),
+    // A first MySQL boot can take minutes; a few at once is plenty.
+    new Worker(QUEUES.databases, (job) => databaseJob(DatabaseJobSchema.parse(job.data)), { connection: redis, concurrency: 3 }),
+    // One dump per server at a time is enough load; big dumps take minutes.
+    new Worker(
+      QUEUES.backups,
+      async (job) => {
+        if (job.name === BACKUP_JOBS.tick) {
+          const n = await backupTick();
+          if (n) log.info(`backup tick: queued ${n} backup(s)`);
+          return;
+        }
+        return backupJob(BackupJobSchema.parse(job.data));
+      },
+      { connection: redis, concurrency: 2 },
+    ),
   ];
   for (const w of workers) {
     w.on("failed", (job, err) => log.error(`${w.name}/${job?.name ?? "?"} failed: ${err.message}`));
@@ -60,7 +78,7 @@ async function main() {
     stopping = true;
     log.info(`${signal}: finishing current jobs`);
     await Promise.all(workers.map((w) => w.close()));
-    await monitoringQueue.close();
+    await Promise.all([monitoringQueue.close(), backupQueue.close()]);
     await prisma.$disconnect();
     redis.disconnect();
     process.exit(0);

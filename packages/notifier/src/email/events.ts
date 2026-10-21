@@ -51,6 +51,17 @@ export interface DiskHighEventPayload extends ServerEventPayload {
   thresholdPercent: number;
 }
 
+export interface BackupFailedEventPayload {
+  organizationName: string;
+  projectName: string;
+  databaseName: string;
+  engine: string;
+  serverName?: string | null;
+  at: Date;
+  reason?: string | null;
+  url?: string;
+}
+
 export interface MemberEventPayload {
   organizationName: string;
   memberName: string;
@@ -73,6 +84,7 @@ export interface EventPayloads {
   "server.recovered": ServerEventPayload;
   "server.disk_high": DiskHighEventPayload;
   "docker.cleanup_failed": ServerEventPayload;
+  "database.backup_failed": BackupFailedEventPayload;
   "member.joined": MemberEventPayload;
   "member.removed": MemberEventPayload;
 }
@@ -253,6 +265,23 @@ const RENDERERS: { [E in NotificationEvent]: (p: EventPayloads[E]) => Spec } = {
     reasonLabel: "Error",
     rows: [...serverRows(p), ["When", formatDateTime(p.at)]],
     button: viewServer(p),
+  }),
+
+  "database.backup_failed": (p) => ({
+    tone: "danger",
+    badge: "Backup failed",
+    subject: `Backup failed: ${p.databaseName}`,
+    heading: `The backup of ${p.databaseName} didn't finish`,
+    summary: `Warden couldn't back up this ${p.engine} database, so the latest copy is older than planned. The previous backups are still kept.`,
+    reason: p.reason,
+    reasonLabel: "Error",
+    rows: [
+      ["Database", p.databaseName],
+      ["Project", p.projectName],
+      ["Server", p.serverName ?? null],
+      ["When", formatDateTime(p.at)],
+    ],
+    button: p.url ? { label: "View database", url: p.url } : undefined,
   }),
 
   "member.joined": (p) => ({

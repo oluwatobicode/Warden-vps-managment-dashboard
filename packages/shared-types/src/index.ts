@@ -14,3 +14,5 @@ export * from "./monitoring.js";
 export * from "./account.js";
 export * from "./dashboard.js";
 export * from "./canvas.js";
+export * from "./database.js";
+export * from "./backup.js";

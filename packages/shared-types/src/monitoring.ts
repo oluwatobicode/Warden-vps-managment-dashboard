@@ -13,6 +13,10 @@ export const QUEUES = {
   monitoring: "monitoring",
   /** Enqueued by the api when someone presses Run cleanup. */
   cleanup: "docker-cleanup",
+  /** Create / restart / remove a database service (see database.ts). */
+  databases: "databases",
+  /** Backups and restores, plus the worker's hourly backup tick. */
+  backups: "database-backups",
 } as const;
 
 export const MONITORING_JOBS = {

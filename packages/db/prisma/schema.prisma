@@ -125,6 +125,29 @@ enum ServerType {
   DEPLOY
 }
 
+enum BackupStatus {
+  QUEUED
+  RUNNING
+  SUCCESS
+  FAILED
+}
+
+enum BackupTrigger {
+  SCHEDULED
+  MANUAL
+}
+
+enum BackupStorageKind {
+  PLATFORM
+  ORG
+}
+
+enum DatabaseEngine {
+  POSTGRES
+  MYSQL
+  REDIS
+}
+
 enum CleanupStatus {
   QUEUED
   RUNNING
@@ -236,6 +259,9 @@ model Organization {
   auditLogs            AuditLog[]
   invitations          Invitation[]
   notificationChannels NotificationChannel[]
+  serviceDatabases     ServiceDatabase[]
+  backupStorage        BackupStorage?
+  databaseBackups      DatabaseBackup[]
 }
 
 model NotificationChannel {
@@ -307,6 +333,7 @@ model Service {
   server         Server?           @relation(fields: [serverId, organizationId], references: [id, organizationId], onDelete: Restrict)
   deployments    Deployment[]
   variables      ServiceVariable[]
+  database       ServiceDatabase?
   createdAt      DateTime          @default(now())
   updatedAt      DateTime          @updatedAt
 
@@ -583,4 +610,81 @@ model AuditLog {
   @@index([performedById])
   @@index([apiTokenId])
   @@index([entityType, entityId])
+}
+
+/// A database service's engine details (one per Service of type DATABASE).
+/// The container runs on the service's server, on a private Docker network
+/// per environment, with its data in a named volume. Never a published port.
+model ServiceDatabase {
+  id                    String           @id @default(uuid())
+  serviceId             String           @unique
+  organizationId        String
+  service               Service          @relation(fields: [serviceId, organizationId], references: [id, organizationId], onDelete: Cascade)
+  organization          Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  engine                DatabaseEngine
+  version               String
+  /// Null for Redis (no database or user concept).
+  databaseName          String?
+  username              String?
+  /// encrypt(password, orgDek, 'v1'), like variables. Never returned.
+  passwordEncrypted     String
+  /// MySQL only: its separate root password.
+  rootPasswordEncrypted String?
+  containerName         String
+  volumeName            String
+  networkName           String
+  /// The auto-created environment variable holding the connection string.
+  variableName          String
+  environmentVariableId String?
+  /// Backups (item 18b). Hour is UTC; the UI shows local time.
+  backupEnabled         Boolean          @default(true)
+  backupHourUtc         Int              @default(2)
+  backupRetentionDays   Int              @default(7)
+  backups               DatabaseBackup[]
+  createdAt             DateTime         @default(now())
+  updatedAt             DateTime         @updatedAt
+
+  @@unique([serviceId, organizationId])
+  @@index([organizationId])
+}
+
+/// An org's own S3-compatible bucket for database backups (e.g. its own
+/// Cloudflare R2). When set, it's used instead of Warden's platform bucket.
+model BackupStorage {
+  id              String       @id @default(uuid())
+  organizationId  String       @unique
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  endpoint        String
+  bucket          String
+  accessKeyId     String
+  /// encrypt(secret, orgDek, 'v1'). Never returned.
+  secretEncrypted String
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+}
+
+/// One backup of one database. The file is encrypted with the org's key
+/// (AES-256-GCM: iv + authTag kept here) before it leaves the worker.
+model DatabaseBackup {
+  id             String            @id @default(uuid())
+  serviceId      String
+  organizationId String
+  database       ServiceDatabase   @relation(fields: [serviceId, organizationId], references: [serviceId, organizationId], onDelete: Cascade)
+  organization   Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  status         BackupStatus      @default(QUEUED)
+  trigger        BackupTrigger
+  /// Which bucket it went to, so it stays downloadable after the org switches storage.
+  storage        BackupStorageKind
+  bucket         String?
+  objectKey      String?
+  sizeBytes      Float?
+  iv             String?
+  authTag        String?
+  error          String?
+  startedAt      DateTime?
+  finishedAt     DateTime?
+  createdAt      DateTime          @default(now())
+
+  @@index([serviceId, createdAt])
+  @@index([organizationId])
 }

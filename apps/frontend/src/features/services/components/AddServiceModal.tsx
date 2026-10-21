@@ -20,6 +20,7 @@ import {
 } from "../../../utils/apiMessage";
 import { optionalNumber, optionalText } from "../../../utils/forms";
 import { useCreateService } from "../hooks/useServices";
+import { DatabaseForm } from "../../databases/components/DatabaseForm";
 
 type Source = "repo" | "image";
 
@@ -37,6 +38,9 @@ export function AddServiceModal({
   const navigate = useNavigate();
   const create = useCreateService();
   const [source, setSource] = useState<Source>("repo");
+  // A service built from a repo or image, or a database Warden runs for you.
+  const [kind, setKind] = useState<"service" | "database">("service");
+  const [dbBusy, setDbBusy] = useState(false);
   const {
     register,
     handleSubmit,
@@ -56,6 +60,7 @@ export function AddServiceModal({
   const close = () => {
     reset({ environmentId: env.id, type: "APPLICATION" });
     setSource("repo");
+    setKind("service");
     onClose();
   };
 
@@ -89,19 +94,49 @@ export function AddServiceModal({
       open={open}
       onClose={close}
       width="w-[560px]"
-      title={`Add a service to ${env.environmentName}`}
-      description="One deployable thing from one repo or image. You pick its server afterwards."
+      title={`Add to ${env.environmentName}`}
+      description={
+        kind === "service"
+          ? "One deployable thing from one repo or image. You pick its server afterwards."
+          : "Warden runs the database on your server, keeps its data in a volume, and gives your services the connection string."
+      }
       footer={
         <>
           <Button variant="ghost" onClick={close} className="px-0 text-xs">
             Cancel
           </Button>
-          <Button type="submit" form="add-service" loading={create.isPending}>
-            Add service
-          </Button>
+          {kind === "service" ? (
+            <Button type="submit" form="add-service" loading={create.isPending}>
+              Add service
+            </Button>
+          ) : (
+            <Button type="submit" form="add-database" loading={dbBusy}>
+              Create database
+            </Button>
+          )}
         </>
       }
     >
+      <Segmented
+        label="What are you adding?"
+        value={kind}
+        onChange={setKind}
+        options={[
+          { id: "service", label: "Service", detail: "Your app, from a repo or image" },
+          { id: "database", label: "Database", detail: "Postgres, MySQL or Redis" },
+        ]}
+      />
+      {kind === "database" ? (
+        <DatabaseForm
+          env={env}
+          onPending={setDbBusy}
+          onCreated={(service) => {
+            toast.success(`Creating ${service.serviceName} in ${env.environmentName}`);
+            close();
+            navigate(servicePath(service.id));
+          }}
+        />
+      ) : (
       <form
         id="add-service"
         onSubmit={handleSubmit(onSubmit)}
@@ -197,6 +232,7 @@ export function AddServiceModal({
           />
         )}
       </form>
+      )}
     </Modal>
   );
 }

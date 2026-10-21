@@ -24,6 +24,7 @@ import { NotificationModule } from './modules/notifications/notification.module'
 import { MonitoringModule } from './modules/monitoring/monitoring.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { CanvasModule } from './modules/canvas/canvas.module';
+import { DatabaseModule } from './modules/databases/database.module';
 
 @Module({
   imports: [
@@ -60,6 +61,7 @@ import { CanvasModule } from './modules/canvas/canvas.module';
     MonitoringModule,
     DashboardModule,
     CanvasModule,
+    DatabaseModule,
   ],
   controllers: [AppController],
   providers: [AppService, { provide: APP_GUARD, useClass: ThrottlerGuard }],

@@ -18,6 +18,7 @@ import { TYPE_LABEL, sourceLabel } from "../../features/services/components/serv
 import { VariablesPanel } from "../../features/variables/components/VariablesPanel";
 import { ResolvedVariables } from "../../features/variables/components/ResolvedVariables";
 import { apiMessage } from "../../utils/apiMessage";
+import { DatabasePanel } from "../../features/databases/components/DatabasePanel";
 import { atLeast } from "../../utils/roles";
 
 type Tab = "variables" | "settings";
@@ -56,7 +57,7 @@ export default function ServicePage() {
       },
     });
 
-  return (
+  const header = (
     <>
       <Breadcrumbs
         items={[
@@ -76,6 +77,22 @@ export default function ServicePage() {
         </div>
       </div>
 
+    </>
+  );
+
+  // A database has its own page body: connection, deploy log, restart, delete.
+  if (s.type === "DATABASE") {
+    return (
+      <>
+        {header}
+        <DatabasePanel service={s} canEdit={canEdit} afterDelete={overview} />
+      </>
+    );
+  }
+
+  return (
+    <>
+      {header}
       <Tabs
         value={tab}
         onChange={setTab}

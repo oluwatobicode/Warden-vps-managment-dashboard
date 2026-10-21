@@ -29,6 +29,13 @@ export const envSchema = z.object({
   MAIL_SUPPORT: z.string().optional().default(''),
   GITHUB_CLIENT_SECRET: z.string().optional().default(''),
   GITHUB_CALLBACK_URL: z.string().optional().default(''),
+  // Warden's own bucket for database backups (Cloudflare R2 or any
+  // S3-compatible store). Leave empty and backups need each org's own bucket.
+  // Must match the worker's.
+  BACKUP_S3_ENDPOINT: z.string().optional().default(''),
+  BACKUP_S3_BUCKET: z.string().optional().default(''),
+  BACKUP_S3_ACCESS_KEY_ID: z.string().optional().default(''),
+  BACKUP_S3_SECRET_ACCESS_KEY: z.string().optional().default(''),
 });
 
 export type Env = z.infer<typeof envSchema>;

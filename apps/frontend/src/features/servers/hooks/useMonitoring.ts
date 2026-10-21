@@ -17,6 +17,7 @@ export function useServerMetrics(serverId: string) {
   return useQuery({
     queryKey: monitoringKeys.metrics(serverId),
     queryFn: () => api.get<ServerMetrics>("/server-metrics", { serverId }),
+    enabled: !!serverId,
     refetchInterval: POLL_MS,
   });
 }

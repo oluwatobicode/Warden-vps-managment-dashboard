@@ -39,6 +39,24 @@ export function describeAudit(e: AuditLog): { text: string; area: AuditArea } {
       return { area: "infra", text: `Removed server ${s(m.name)} (${s(m.host)})` };
     case "server.cleanup_run":
       return { area: "infra", text: `Ran Docker cleanup on ${s(m.name)}` };
+    case "database.created":
+      return { area: "infra", text: `Created database ${s(m.name)} (${s(m.engine)} ${s(m.version)})` };
+    case "database.restarted":
+      return { area: "infra", text: `Restarted database ${s(m.name)}` };
+    case "database.deleted":
+      return { area: "infra", text: `Deleted database ${s(m.name)}${m.dataDeleted ? " and all its data" : " (data kept)"}` };
+    case "database.connection_revealed":
+      return { area: "secrets", text: `Revealed the connection string of a database (${s(m.variable)})` };
+    case "database.backup_restored":
+      return { area: "infra", text: `Restored database ${s(m.name)} from the backup of ${s(m.backupFrom)} UTC` };
+    case "database.backup_downloaded":
+      return { area: "secrets", text: `Downloaded a backup of database ${s(m.name)}` };
+    case "database.backup_settings_updated":
+      return { area: "infra", text: `Changed the backup schedule of database ${s(m.name)}` };
+    case "backup_storage.updated":
+      return { area: "infra", text: `Set the backup bucket to ${s(m.bucket)} (${s(m.endpoint)})` };
+    case "backup_storage.removed":
+      return { area: "infra", text: "Removed the organization's own backup bucket" };
     case "project.created":
       return { area: "projects", text: `Created project ${s(m.name)}` };
     case "project.deleted":

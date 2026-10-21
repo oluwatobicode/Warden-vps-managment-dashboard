@@ -69,7 +69,7 @@ export const api = {
   patch: async <T>(url: string, body: unknown) => unwrap(await axiosInstance.patch<ApiEnvelope<T>>(url, body)),
   put: async <T>(url: string, body: unknown) => unwrap(await axiosInstance.put<ApiEnvelope<T>>(url, body)),
   /** DELETE answers 204 with no body. */
-  delete: async (url: string) => {
-    await axiosInstance.delete(url);
+  delete: async (url: string, body?: unknown) => {
+    await axiosInstance.delete(url, body === undefined ? undefined : { data: body });
   },
 };

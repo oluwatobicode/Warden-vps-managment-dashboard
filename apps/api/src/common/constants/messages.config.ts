@@ -25,7 +25,8 @@ export const AUTH_MESSAGES = {
   reset_code_invalid: 'This code is invalid or has expired',
   password_reset: 'Password updated. Sign in with your new password',
   password_set_code_sent: 'We emailed you a 6-digit code',
-  password_already_set: 'You already have a password. Change it with your current one',
+  password_already_set:
+    'You already have a password. Change it with your current one',
   password_none: "You don't have a password yet. Add one with an emailed code",
   password_wrong: 'Your current password is not right',
   password_changed: 'Password changed. Other devices were signed out',
@@ -114,6 +115,40 @@ export const SERVICE_MESSAGES = {
   has_server: 'Unassign this service from its server before deleting it',
   server_not_deploy: 'Services can only run on DEPLOY servers',
   service_running: 'Stop this service before moving it to another server',
+  database_stays: 'A database stays on the server that holds its data',
+  delete_database_elsewhere:
+    'Delete databases from their own page (it asks whether to keep the data)',
+} as const;
+
+export const DATABASE_MESSAGES = {
+  not_found: 'Database not found',
+  variable_taken:
+    'This environment already has a variable with that name. Pick another name',
+  busy: 'This database is already being created or restarted. Wait for it to finish',
+  confirm_name: 'Type the database name to confirm deleting its data',
+  not_queued: 'Could not start the job. Try again in a moment',
+  build_server: 'Databases can only run on DEPLOY servers',
+  restarting: 'Restarting the database',
+  deleting: 'Deleting the database',
+} as const;
+
+export const BACKUP_MESSAGES = {
+  not_found: 'Backup not found',
+  no_storage:
+    'No backup storage is set up. Add a bucket in Settings → Backup storage',
+  not_running: 'The database is not running, so it cannot be backed up',
+  in_progress: 'A backup or restore of this database is already running',
+  not_restorable: 'Only finished backups can be restored or downloaded',
+  confirm_name: 'Type the database name to confirm the restore',
+  restoring: 'Restoring the backup',
+  storage_saved: 'Backup storage saved',
+  storage_removed:
+    'Your own bucket was removed. New backups go to Warden storage, if it is set up',
+  storage_unreachable: 'Could not write to that bucket',
+  storage_private_host:
+    'The endpoint must be a public hostname, not an IP address or a local name',
+  storage_missing:
+    'The storage this backup was saved to is no longer set up, so it cannot be read',
 } as const;
 
 export const SERVER_MESSAGES = {

@@ -127,9 +127,7 @@ Frontend rules for roles:
 
 **Phase 1 frontend** covers what the api already serves: auth (email, magic link, GitHub, onboarding, forgot/reset password, invites), projects / environments / services / variables, servers + test connection, SSH keys, team, API tokens, notification channels, audit log.
 
-**Needs an endpoint that doesn't exist yet** — build only after the api side lands:
-
-- Databases as a service: Postgres, MySQL, Redis (Phase 1, decided 2026-10-15; needs the worker job + api first)
+**Built 2026-10-21 (databases + backups):** Add service → "Database" (`features/databases/components/DatabaseForm.tsx`). A DATABASE service's page is `DatabasePanel`: connection (reveal/copy), latest create/restart/restore log (polls every 2s while running), `BackupsCard` (schedule shown in the viewer's local time, stored in UTC; list, back up now, download, restore with the typed name) and delete with keep-data as the default. Settings → Backup storage (`pages/settings/BackupStoragePage.tsx`; everyone sees it, DEV_OPS+ edit). Downloads are a plain link, not axios (a dump can be GBs), after a cheap `/auth/me` call that refreshes an expired access cookie. Hooks: `useDatabases.ts`, `useBackups.ts`.
 
 **Built 2026-10-19 (canvas):** `features/canvas/`: `layout.ts` (pure grid placement + Tidy up, tested), `ServiceCanvas` (React Flow; boxes are DERIVED from the services list every render, only the drag in progress and measured sizes live in local state, so a refetch never fights the user), `ServiceNode`, `CanvasPanel` (floating list/details, collapsible; the view refits so no box hides behind it), `useSaveCanvasPositions` (optimistic, springs back on failure). The page is a lazy route, so React Flow (61 kB gzipped) only loads when a canvas is opened.
 
