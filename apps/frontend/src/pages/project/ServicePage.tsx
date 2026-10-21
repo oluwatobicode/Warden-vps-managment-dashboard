@@ -20,6 +20,8 @@ import { ResolvedVariables } from "../../features/variables/components/ResolvedV
 import { apiMessage } from "../../utils/apiMessage";
 import { DatabasePanel } from "../../features/databases/components/DatabasePanel";
 import { atLeast } from "../../utils/roles";
+import { DatabaseLogo } from "../../features/databases/components/DatabaseLogo";
+import { engineOf } from "../../features/databases/engine";
 
 type Tab = "variables" | "settings";
 
@@ -57,6 +59,7 @@ export default function ServicePage() {
       },
     });
 
+  const engine = engineOf(s);
   const header = (
     <>
       <Breadcrumbs
@@ -70,6 +73,7 @@ export default function ServicePage() {
       <div className="flex items-start justify-between gap-6">
         <div className="min-w-0">
           <div className="flex items-center gap-3">
+            {engine && <DatabaseLogo engine={engine} size={24} />}
             <h2 className="m-0 font-mono text-[25px] font-semibold tracking-[-0.5px] text-strong">{s.serviceName}</h2>
             <StatusPill status={s.status} />
           </div>

@@ -1,4 +1,4 @@
-import { useForm, useWatch } from "react-hook-form";
+import { Controller, useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Link, useNavigate } from "react-router";
 import toast from "react-hot-toast";
@@ -78,12 +78,18 @@ export function AddServerDrawer({ open, onClose }: { open: boolean; onClose: () 
         </div>
         <div className="grid grid-cols-[150px_minmax(0,1fr)] gap-3">
           <Input label="SSH user" placeholder="deploy" mono error={errors.serverSSHUsername?.message} {...register("serverSSHUsername")} />
-          <Select
-            label="SSH key"
-            placeholder={keys.isPending ? "Loading…" : "Pick a key"}
-            options={(keys.data ?? []).map((k) => ({ value: k.id, label: k.sshKeyName }))}
-            error={errors.serverSshKeyId?.message}
-            {...register("serverSshKeyId")}
+          <Controller
+            control={control}
+            name="serverSshKeyId"
+            render={({ field }) => (
+              <Select
+                label="SSH key"
+                placeholder={keys.isPending ? "Loading…" : "Pick a key"}
+                options={(keys.data ?? []).map((k) => ({ value: k.id, label: k.sshKeyName }))}
+                error={errors.serverSshKeyId?.message}
+                {...field}
+              />
+            )}
           />
         </div>
         {noKeys && (

@@ -7,6 +7,7 @@ import { Select } from "../../../components/ui/Select";
 import { apiMessage } from "../../../utils/apiMessage";
 import { useServers } from "../../servers/hooks/useServers";
 import { useAssignServer } from "../hooks/useServices";
+import { serverOption } from "../../servers/serverOption";
 
 /**
  * Which DEPLOY server runs this service. The API refuses to move a service
@@ -38,10 +39,10 @@ export function ServerAssignment({ service, canEdit }: { service: Service; canEd
       <Select
         label="Deploy server"
         value={picked}
-        onChange={(e) => setPicked(e.target.value)}
+        onChange={setPicked}
         disabled={!canEdit || servers.isPending}
         placeholder="No server"
-        options={deployServers.map((s) => ({ value: s.id, label: `${s.serverName} · ${s.serverIp}` }))}
+        options={deployServers.map(serverOption)}
       />
       {servers.data && deployServers.length === 0 && (
         <p className="m-0 text-[11.5px] text-sand">

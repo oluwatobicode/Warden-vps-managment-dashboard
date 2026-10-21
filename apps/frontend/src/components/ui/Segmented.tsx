@@ -1,3 +1,5 @@
+import type { ReactNode } from "react";
+
 /** Pill group for picking one of a few options (service type, key mode…). */
 export function Segmented<T extends string>({
   options,
@@ -5,7 +7,7 @@ export function Segmented<T extends string>({
   onChange,
   label,
 }: {
-  options: ReadonlyArray<{ id: T; label: string; detail?: string }>;
+  options: ReadonlyArray<{ id: T; label: string; detail?: string; icon?: ReactNode }>;
   value: T;
   onChange: (id: T) => void;
   label?: string;
@@ -29,7 +31,10 @@ export function Segmented<T extends string>({
                 {on && <span className="size-[7px] rounded-full bg-good" />}
               </span>
               <span className="flex min-w-0 flex-col gap-[3px]">
-                <span className={`text-xs ${on ? "text-strong" : "text-muted-warm"}`}>{o.label}</span>
+                <span className={`flex items-center gap-1.5 text-xs ${on ? "text-strong" : "text-muted-warm"}`}>
+                  {o.icon}
+                  {o.label}
+                </span>
                 {o.detail && <span className="text-[10.5px] text-sand">{o.detail}</span>}
               </span>
             </button>

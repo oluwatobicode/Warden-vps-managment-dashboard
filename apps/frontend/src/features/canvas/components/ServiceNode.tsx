@@ -5,6 +5,8 @@ import { Database01Icon, Layers01Icon, Rocket01Icon } from "@hugeicons/core-free
 import type { Service } from "shared-types";
 import { StatusPill } from "../../../components/ui/StatusPill";
 import { NODE_H, NODE_W } from "../layout";
+import { DatabaseLogo } from "../../databases/components/DatabaseLogo";
+import { engineOf } from "../../databases/engine";
 
 export type ServiceNodeData = { service: Service; serverName?: string };
 export type ServiceNodeType = Node<ServiceNodeData, "service">;
@@ -14,6 +16,7 @@ const ICON = { APPLICATION: Rocket01Icon, WORKER: Layers01Icon, DATABASE: Databa
 /** One service's box on the canvas. */
 export const ServiceNode = memo(function ServiceNode({ data, selected }: NodeProps<ServiceNodeType>) {
   const s = data.service;
+  const engine = engineOf(s);
   const meta = [data.serverName ?? "no server", s.port ? `:${s.port}` : null].filter(Boolean).join(" · ");
   return (
     <div
@@ -22,7 +25,7 @@ export const ServiceNode = memo(function ServiceNode({ data, selected }: NodePro
     >
       <div className="flex items-center gap-2.5">
         <span className="grid size-7 shrink-0 place-items-center rounded-lg bg-chip text-muted-deep">
-          <HugeiconsIcon icon={ICON[s.type]} size={14} strokeWidth={1.5} />
+          {engine ? <DatabaseLogo engine={engine} size={15} /> : <HugeiconsIcon icon={ICON[s.type]} size={14} strokeWidth={1.5} />}
         </span>
         <span className="min-w-0 truncate font-mono text-[13px] font-semibold text-strong">{s.serviceName}</span>
       </div>

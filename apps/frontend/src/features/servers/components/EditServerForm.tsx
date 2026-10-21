@@ -1,4 +1,4 @@
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import toast from "react-hot-toast";
 import { UpdateServerSchema, type Server, type UpdateServerInput } from "shared-types";
@@ -16,6 +16,7 @@ export function EditServerForm({ server: s, canEdit }: { server: Server; canEdit
   const update = useUpdateServer(s.id);
   const {
     register,
+    control,
     handleSubmit,
     setError,
     reset,
@@ -58,7 +59,13 @@ export function EditServerForm({ server: s, canEdit }: { server: Server; canEdit
         </div>
         <div className="grid grid-cols-[150px_minmax(0,1fr)] gap-3">
           <Input label="SSH user" mono error={errors.serverSSHUsername?.message} {...register("serverSSHUsername")} />
-          <Select label="SSH key" options={(keys.data ?? [{ id: s.sshKey.id, sshKeyName: s.sshKey.sshKeyName }]).map((k) => ({ value: k.id, label: k.sshKeyName }))} {...register("serverSshKeyId")} />
+          <Controller
+            control={control}
+            name="serverSshKeyId"
+            render={({ field }) => (
+              <Select label="SSH key" options={(keys.data ?? [{ id: s.sshKey.id, sshKeyName: s.sshKey.sshKeyName }]).map((k) => ({ value: k.id, label: k.sshKeyName }))} {...field} />
+            )}
+          />
         </div>
         <div className="grid grid-cols-2 gap-3">
           <Input label="Provider" error={errors.provider?.message} {...register("provider", { setValueAs: clearableText })} />

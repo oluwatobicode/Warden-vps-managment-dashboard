@@ -121,6 +121,7 @@ Frontend rules for roles:
 - **Query keys:** one small key factory per feature (e.g. `serverKeys.all`, `serverKeys.detail(id)`) so invalidation is consistent.
 - **Types:** import request/response types from `shared-types` (`Project`, `Server`, `CreateServerInput`…). Only write a local type when shared-types doesn't have it.
 - **Components:** consume hooks, render UI. No data-fetching logic inside components.
+- **Dropdowns:** `components/ui/Select` is our own listbox (not a native `<select>`): controlled `value` / `onChange(value)`, so with React Hook Form use it through `Controller`, never `register`. Options can carry `icon` and `hint`. Servers as options: `serverOption()` in `features/servers/serverOption.tsx`. Database logos: `DatabaseLogo` + `engineOf(service)` (engine read from the service's image).
 - **Statuses:** one `StatusPill` in `components/ui` maps every status the API returns (service/project `NOT_DEPLOYED | DEPLOYING | HEALTHY | DEGRADED | FAILED`, server `CONNECTED | IDLE | OFFLINE`) to one colour and label, so the same status never looks different on two pages.
 
 ## Scope Boundary

@@ -1,22 +1,29 @@
 import { useEffect, useMemo } from "react";
-import { useForm, useWatch } from "react-hook-form";
+import { Controller, useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import toast from "react-hot-toast";
 import type { z } from "zod";
 import { CreateDatabaseSchema, DATABASE_CATALOG, type CreateDatabaseInput, type DatabaseEngine, type Environment, type Service } from "shared-types";
 import { Input } from "../../../components/ui/Input";
-import { Segmented } from "../../../components/ui/Segmented";
 import { Select } from "../../../components/ui/Select";
 import { applyApiIssues, apiMessage, apiStatus } from "../../../utils/apiMessage";
 import { formatBytes } from "../../../utils/formatBytes";
 import { useServers } from "../../servers/hooks/useServers";
 import { useServerMetrics } from "../../servers/hooks/useMonitoring";
 import { useCreateDatabase } from "../hooks/useDatabases";
+import { serverOption } from "../../servers/serverOption";
+import { DatabaseLogo } from "./DatabaseLogo";
 
 const ENGINES = (Object.keys(DATABASE_CATALOG) as DatabaseEngine[]).map((id) => ({
-  id,
+  value: id,
   label: DATABASE_CATALOG[id].label,
-  detail: id === "REDIS" ? "Cache, queues" : id === "MYSQL" ? "Needs ~400 MB RAM" : "The usual choice",
+  // Same-width slot for every logo, so the labels line up (MySQL's mark is wider).
+  icon: (
+    <span className="flex w-[22px] shrink-0 justify-center">
+      <DatabaseLogo engine={id} size={id === "MYSQL" ? 22 : 16} />
+    </span>
+  ),
+  hint: id === "REDIS" ? "Cache, queues" : id === "MYSQL" ? "Needs ~400 MB RAM" : "The usual choice",
 }));
 const NAME: Record<DatabaseEngine, string> = { POSTGRES: "postgres", MYSQL: "mysql", REDIS: "redis" };
 
@@ -62,7 +69,10 @@ export function DatabaseForm({ env, onCreated, onPending }: { env: Environment; 
   const metrics = useServerMetrics(serverId ?? "");
   const freeBytes = metrics.data?.memory ? metrics.data.memory.totalBytes - metrics.data.memory.usedBytes : null;
   const tight = freeBytes !== null && freeBytes < spec.idleMemoryMb * 1024 * 1024;
-  const versionOptions = useMemo(() => spec.versions.map((v, i) => ({ value: v, label: i === 0 ? `${v} (newest)` : v })), [spec]);
+  const versionOptions = useMemo(
+    () => spec.versions.map((v, i) => ({ value: v, label: `${spec.label} ${v}`, hint: i === 0 ? "newest, the default" : undefined, icon: <DatabaseLogo engine={engine} size={14} /> })),
+    [spec, engine],
+  );
 
   const onSubmit = (input: CreateDatabaseInput) =>
     create.mutate(input, {
@@ -79,13 +89,21 @@ export function DatabaseForm({ env, onCreated, onPending }: { env: Environment; 
 
   return (
     <form id="add-database" onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-4">
-      <Segmented label="Engine" value={engine} onChange={pickEngine} options={ENGINES} />
-      <div className="grid grid-cols-[minmax(0,1fr)_160px] gap-3">
+      <Select label="Engine" value={engine} onChange={(v) => pickEngine(v as DatabaseEngine)} options={ENGINES} />
+      <div className="grid grid-cols-[minmax(0,1fr)_200px] gap-3">
         <Input label="Name" mono error={errors.serviceName?.message} {...register("serviceName")} />
-        <Select label="Version" options={versionOptions} error={errors.version?.message} {...register("version")} />
+        <Controller
+          control={control}
+          name="version"
+          render={({ field }) => <Select label="Version" options={versionOptions} error={errors.version?.message} {...field} />}
+        />
       </div>
       {deployServers.length ? (
-        <Select label="Server" options={deployServers.map((s) => ({ value: s.id, label: `${s.serverName} (${s.serverIp})` }))} error={errors.serverId?.message} {...register("serverId")} />
+        <Controller
+          control={control}
+          name="serverId"
+          render={({ field }) => <Select label="Server" options={deployServers.map(serverOption)} error={errors.serverId?.message} {...field} />}
+        />
       ) : (
         <p className="m-0 text-[12px] text-crit">Add a deploy server first (Settings → Remote servers). Databases need one to run on.</p>
       )}

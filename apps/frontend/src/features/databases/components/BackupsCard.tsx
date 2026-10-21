@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router";
-import { useForm, useWatch } from "react-hook-form";
+import { Controller, useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import toast from "react-hot-toast";
 import type { z } from "zod";
@@ -181,7 +181,13 @@ function ScheduleForm({ serviceId, info, onDone }: { serviceId: string; info: Da
     <form onSubmit={handleSubmit(onSubmit)} className="mt-3.5 flex flex-col gap-3.5 rounded-xl border border-cb bg-field/40 p-3.5" noValidate>
       <Toggle checked={!!enabled} onChange={(v) => setValue("enabled", v, { shouldDirty: true })} label="Daily backups" detail="Off: only the backups you take by hand." />
       <div className="grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-3">
-        <Select label="Time of day" options={HOURS} disabled={!enabled} {...register("hourUtc", { setValueAs: Number })} error={errors.hourUtc?.message} />
+        <Controller
+          control={control}
+          name="hourUtc"
+          render={({ field }) => (
+            <Select label="Time of day" options={HOURS} disabled={!enabled} error={errors.hourUtc?.message} {...field} value={String(field.value)} onChange={(v) => field.onChange(Number(v))} />
+          )}
+        />
         <Input label="Keep for (days)" type="number" min={1} max={365} {...register("retentionDays", { valueAsNumber: true })} error={errors.retentionDays?.message} />
       </div>
       <p className="m-0 text-[11px] text-faint">Older backups are deleted after the next one finishes. The newest finished backup is always kept.</p>
