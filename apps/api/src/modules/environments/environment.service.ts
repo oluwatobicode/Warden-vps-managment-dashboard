@@ -4,6 +4,8 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { DEPLOY_MESSAGES } from '../../common/constants/messages.config';
+import { AppControlService } from '../deploys/app-control.service';
 import { pickServer } from './pick-server';
 import { AuditService } from '../audit/audit.service';
 import type { Actor } from '../../common/types/actor';
@@ -24,6 +26,7 @@ export class EnvironmentService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
+    private readonly apps: AppControlService,
   ) {}
 
   async createEnvironment(
@@ -124,7 +127,7 @@ export class EnvironmentService {
     }
   }
 
-  async deleteEnvironment(actor: Actor, id: string): Promise<void> {
+  async deleteEnvironment(actor: Actor, id: string, force = false): Promise<void> {
     const orgId = actor.organizationId;
     const env = await this.prisma.client.environment.findFirst({
       where: { id, organizationId: orgId },
@@ -138,6 +141,17 @@ export class EnvironmentService {
     if (siblings <= 1) {
       throw new ConflictException(ENVIRONMENT_MESSAGES.last_environment);
     }
+
+    // Apps come off their servers first; databases need their own delete (keep or drop data).
+    const inside = await this.prisma.client.service.findMany({
+      where: { environmentId: id, organizationId: orgId },
+      select: { id: true, serviceName: true, type: true },
+    });
+    const dbs = inside.filter((s) => s.type === 'DATABASE');
+    if (dbs.length) {
+      throw new ConflictException(DEPLOY_MESSAGES.has_databases.replace('{names}', dbs.map((d) => d.serviceName).join(', ')));
+    }
+    await this.apps.removeFromServers(orgId, inside.map((s) => s.id), force);
 
     try {
       await this.prisma.client.environment.delete({ where: { id } });

@@ -22,6 +22,8 @@ import { SessionGuard } from '../../common/guards/session.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { CurrentOrg } from '../../common/decorators/current-org.decorator';
+import { CurrentActor } from '../../common/decorators/current-actor.decorator';
+import type { Actor } from '../../common/types/actor';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import { UuidPipe } from '../../common/pipes/uuid.pipe';
 import { ServiceService } from './service.service';
@@ -76,10 +78,10 @@ export class ServiceController {
     return this.services.assignServer(orgId, id, body);
   }
 
+  /** Takes its app off the server first. `?force=true`: delete even if the server can't be reached. */
   @Delete(':id')
   @Roles('ADMIN', 'DEV_OPS', 'DEVELOPER')
-  @HttpCode(204)
-  async remove(@CurrentOrg() orgId: string, @Param('id', UuidPipe) id: string) {
-    await this.services.deleteService(orgId, id);
+  remove(@CurrentActor() actor: Actor, @Param('id', UuidPipe) id: string, @Query('force') force?: string) {
+    return this.services.deleteService(actor, id, force === 'true');
   }
 }

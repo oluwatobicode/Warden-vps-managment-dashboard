@@ -16,6 +16,7 @@ export const ServiceStatusSchema = z.enum([
   "HEALTHY",
   "DEGRADED",
   "FAILED",
+  "STOPPED",
 ]);
 export type ServiceStatus = z.infer<typeof ServiceStatusSchema>;
 

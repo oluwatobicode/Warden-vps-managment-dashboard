@@ -19,6 +19,7 @@ import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import { UuidPipe } from '../../common/pipes/uuid.pipe';
 import { DeployService } from './deploy.service';
 import { RepoServicesService } from './repo-services.service';
+import { AppControlService } from './app-control.service';
 
 /**
  * App deploys. Everyone can watch; Developer and up deploy, roll back, cancel
@@ -30,7 +31,24 @@ export class DeployController {
   constructor(
     private readonly deploys: DeployService,
     private readonly repoServices: RepoServicesService,
+    private readonly apps: AppControlService,
   ) {}
+
+  /** Stop: the live version stops serving; nothing is deleted. */
+  @Post('services/:id/stop')
+  @Roles('ADMIN', 'DEV_OPS', 'DEVELOPER')
+  @HttpCode(204)
+  async stop(@CurrentActor() actor: Actor, @Param('id', UuidPipe) id: string) {
+    await this.apps.stop(actor, id);
+  }
+
+  /** Start: the version that was live runs again. */
+  @Post('services/:id/start')
+  @Roles('ADMIN', 'DEV_OPS', 'DEVELOPER')
+  @HttpCode(204)
+  async start(@CurrentActor() actor: Actor, @Param('id', UuidPipe) id: string) {
+    await this.apps.start(actor, id);
+  }
 
   /** Add service → From GitHub: the picked apps become services, and (by default) deploy. */
   @Post('services/from-repo')

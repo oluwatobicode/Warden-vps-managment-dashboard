@@ -13,6 +13,9 @@ import {
   type UpdateServiceInput,
 } from 'shared-types';
 import { PrismaService } from '../../prisma/prisma.service';
+import { AppControlService, type Leftover } from '../deploys/app-control.service';
+import { AuditService } from '../audit/audit.service';
+import type { Actor } from '../../common/types/actor';
 import { pickServer } from '../environments/pick-server';
 import {
   ENVIRONMENT_MESSAGES,
@@ -22,7 +25,11 @@ import {
 
 @Injectable()
 export class ServiceService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly apps: AppControlService,
+    private readonly audit: AuditService,
+  ) {}
 
   async createService(
     orgId: string,
@@ -182,18 +189,31 @@ export class ServiceService {
   }
 
   // delete service
-  async deleteService(orgId: string, id: string): Promise<void> {
+  /**
+   * Delete a service. Its app comes off the server first (containers, which
+   * takes its route with them, and kept images); with `force`, an unreachable
+   * server is skipped and what's left there is returned to clean up by hand.
+   */
+  async deleteService(actor: Actor, id: string, force = false): Promise<{ leftovers: Leftover[] }> {
+    const orgId = actor.organizationId;
     const row = await this.prisma.client.service.findFirst({
       where: { id, organizationId: orgId },
-      select: { id: true, serverId: true, type: true },
+      select: { id: true, serviceName: true, type: true, environment: { select: { projectId: true } } },
     });
     if (!row) throw new NotFoundException(SERVICE_MESSAGES.not_found);
     if (row.type === 'DATABASE') {
       throw new ConflictException(SERVICE_MESSAGES.delete_database_elsewhere);
     }
-    if (row.serverId) throw new ConflictException(SERVICE_MESSAGES.has_server);
-
+    const leftovers = await this.apps.removeFromServers(orgId, [row.id], force);
     await this.prisma.client.service.delete({ where: { id: row.id } });
+    await this.audit.record(actor, {
+      action: 'service.deleted',
+      entityType: 'service',
+      entityId: row.id,
+      metadata: { service: row.serviceName, leftOnServer: leftovers.length > 0 },
+      projectId: row.environment.projectId,
+    });
+    return { leftovers };
   }
 }
 

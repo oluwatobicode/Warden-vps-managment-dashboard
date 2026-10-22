@@ -67,6 +67,8 @@ export async function deployJob(job: DeployJob): Promise<void> {
   if (!dep || dep.deploymentStatus !== "QUEUED") return; // cancelled, or already handled
   const log = new DeployLog(dep.id);
   const startedAt = new Date();
+  // A stopped app whose new deploy fails is still stopped (its old container isn't running).
+  const wasStopped = dep.service.status === "STOPPED";
   const step = async (status: DeploymentStatus, message: string) => {
     // A step is where a deploy can stop cleanly: before it, nothing of this step happened.
     if (await redis.exists(cancelKey(dep.id))) throw new DeployFailure("Cancelled. The live version wasn't changed", "CANCELLED");
@@ -121,7 +123,7 @@ export async function deployJob(job: DeployJob): Promise<void> {
     await prisma.$transaction([
       prisma.deployment.update({ where: { id: dep.id }, data: { deploymentStatus: failure.status, finishedAt: new Date() } }),
       prisma.deploymentHistory.create({ data: { deploymentId: dep.id, status: failure.status, message: failure.message.slice(0, 4000) } }),
-      prisma.service.update({ where: { id: dep.serviceId }, data: { status: stillLive ? "HEALTHY" : "FAILED" } }),
+      prisma.service.update({ where: { id: dep.serviceId }, data: { status: wasStopped ? "STOPPED" : stillLive ? "HEALTHY" : "FAILED" } }),
     ]);
     const event = failure.status === "CANCELLED" ? "deploy.cancelled" : failure.status === "GATE_FAILED" ? "deploy.gate_failed" : "deploy.failed";
     await notifyDeploy(dep, event, startedAt, failure.message.split("\n")[0]);

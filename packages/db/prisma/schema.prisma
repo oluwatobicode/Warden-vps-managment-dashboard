@@ -118,6 +118,8 @@ enum ServiceStatus {
   HEALTHY
   DEGRADED
   FAILED
+  /// Stopped on purpose (Stop button): the live version's container is kept, just not running.
+  STOPPED
 }
 
 enum ServerType {

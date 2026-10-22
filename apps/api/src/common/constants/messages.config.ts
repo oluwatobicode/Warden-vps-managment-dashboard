@@ -243,6 +243,16 @@ export const DEPLOY_MESSAGES = {
   domain_not_found: 'Domain not found',
   domain_no_server: 'Pick a server for this service first: the domain must point at it',
   domain_web_only: 'Only applications (services with a port) get domains',
+  busy_remove: '{name} is deploying right now. Wait for it to finish, or cancel it, then try again',
+  remove_unreachable:
+    'Couldn’t reach {server}, so nothing was removed. Try again, or delete anyway (its containers then stay on the server for you to remove)',
+  nothing_live: 'Nothing is live yet: deploy it first',
+  start_missing:
+    'The stopped version is no longer on the server (removed by hand?). Deploy to start it again',
+  start_failed: 'Couldn’t start it',
+  start_crashed: 'It started, then stopped again straight away. Open the last deploy’s output to see why, or deploy again',
+  has_databases:
+    'Delete its databases first ({names}): each one asks whether to keep or delete its data',
   no_apps_found:
     'Nothing to deploy found in this repo (no package.json, Dockerfile or other app files)',
   name_taken_in_env: 'A service called "{name}" already exists in this environment',

@@ -47,6 +47,12 @@ export function describeAudit(e: AuditLog): { text: string; area: AuditArea } {
       return { area: "infra", text: `Deleted database ${s(m.name)}${m.dataDeleted ? " and all its data" : " (data kept)"}` };
     case "database.connection_revealed":
       return { area: "secrets", text: `Revealed the connection string of a database (${s(m.variable)})` };
+    case "service.deleted":
+      return { area: "projects", text: `Deleted service ${s(m.service)}${m.leftOnServer ? " (its server couldn't be reached; containers may remain there)" : ""}` };
+    case "service.stopped":
+      return { area: "projects", text: `Stopped ${s(m.service)}` };
+    case "service.started":
+      return { area: "projects", text: `Started ${s(m.service)} again` };
     case "database.backup_restored":
       return { area: "infra", text: `Restored database ${s(m.name)} from the backup of ${s(m.backupFrom)} UTC` };
     case "database.backup_downloaded":

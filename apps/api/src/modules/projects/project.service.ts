@@ -11,6 +11,8 @@ import type {
   UpdateProjectInput,
 } from 'shared-types';
 import { PrismaService } from '../../prisma/prisma.service';
+import { DEPLOY_MESSAGES } from '../../common/constants/messages.config';
+import { AppControlService } from '../deploys/app-control.service';
 import { pickServer } from '../environments/pick-server';
 import { AuditService } from '../audit/audit.service';
 import type { Actor } from '../../common/types/actor';
@@ -23,6 +25,7 @@ export class ProjectService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
+    private readonly apps: AppControlService,
   ) {}
 
   /** POST /projects */
@@ -120,7 +123,7 @@ export class ProjectService {
     return this.getProject(orgId, id);
   }
 
-  async deleteProject(actor: Actor, id: string): Promise<void> {
+  async deleteProject(actor: Actor, id: string, force = false): Promise<void> {
     const orgId = actor.organizationId;
     // Read the name BEFORE the row is gone, for the audit line.
     const project = await this.prisma.client.project.findFirst({
@@ -128,6 +131,17 @@ export class ProjectService {
       select: { projectName: true },
     });
     if (!project) throw new NotFoundException(PROJECT_MESSAGES.not_found);
+    // Apps come off their servers first; databases need their own delete (keep or drop data).
+    const inside = await this.prisma.client.service.findMany({
+      where: { environment: { projectId: id }, organizationId: orgId },
+      select: { id: true, serviceName: true, type: true },
+    });
+    const dbs = inside.filter((s) => s.type === 'DATABASE');
+    if (dbs.length) {
+      throw new ConflictException(DEPLOY_MESSAGES.has_databases.replace('{names}', dbs.map((d) => d.serviceName).join(', ')));
+    }
+    await this.apps.removeFromServers(orgId, inside.map((s) => s.id), force);
+
     try {
       await this.prisma.client.project.delete({ where: { id } });
       await this.audit.record(actor, {

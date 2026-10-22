@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { AssignServerInput, CreateServiceInput, Service, UpdateServiceInput } from "shared-types";
-import { api } from "../../../api/axiosinstance";
+import { api, axiosInstance, unwrap } from "../../../api/axiosinstance";
+import type { ApiEnvelope } from "../../../types/api";
 import { projectKeys } from "../../projects/hooks/useProjects";
 
 export const serviceKeys = {
@@ -64,7 +65,9 @@ export function useDeleteService(id: string) {
   const queryClient = useQueryClient();
   const refresh = useRefresh();
   return useMutation({
-    mutationFn: () => api.delete(`/services/${id}`),
+    // force: delete even though the server can't be reached; the answer lists what's left there.
+    mutationFn: async (force: boolean = false) =>
+      unwrap(await axiosInstance.delete<ApiEnvelope<{ leftovers: Array<{ serverName: string; serviceName: string; command: string }> }>>(`/services/${id}${force ? "?force=true" : ""}`)),
     onSuccess: () => {
       queryClient.removeQueries({ queryKey: serviceKeys.detail(id) });
       return refresh();

@@ -161,7 +161,7 @@ function EnvironmentsTab({ canEdit, environments, selectedId, onSelect }: { canE
         onConfirm={onDelete}
         loading={del.isPending}
         title={`Delete ${deleting?.environmentName}?`}
-        body="Its services and variables are deleted with it. Refused while any of its services is on a server, or if it's the project's last environment."
+        body="Its apps are stopped and removed from their servers, then it's deleted with its services and variables. Refused while it has databases (delete those first: each asks about its data), or if it's the project's last environment."
         cta="Delete environment"
         phrase={deleting?.environmentName}
       />
@@ -190,7 +190,7 @@ function DangerTab() {
   return (
     <>
       <DangerZone
-        body={`Deleting ${project.projectName} removes ${project.environmentCount} environment(s) and ${project.serviceCount} service(s) with their variables. Refused while any service is still on a server.`}
+        body={`Deleting ${project.projectName} stops and removes its apps from their servers, then deletes ${project.environmentCount} environment(s) and ${project.serviceCount} service(s) with their variables. Refused while it has databases: delete those first (each asks about its data).`}
         action={<Button variant="danger" onClick={() => setOpen(true)}>Delete project</Button>}
       />
       <ConfirmDialog

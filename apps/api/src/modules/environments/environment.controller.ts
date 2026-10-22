@@ -71,7 +71,8 @@ export class EnvironmentController {
   async remove(
     @CurrentActor() actor: Actor,
     @Param('id', UuidPipe) id: string,
+    @Query('force') force?: string,
   ) {
-    await this.environments.deleteEnvironment(actor, id);
+    await this.environments.deleteEnvironment(actor, id, force === 'true');
   }
 }

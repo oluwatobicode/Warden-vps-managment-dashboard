@@ -201,3 +201,13 @@ export function useSetupProxy(serverId: string) {
       Promise.all([deployKeys.proxy(serverId), ["deploy-info"]].map((queryKey) => queryClient.invalidateQueries({ queryKey }))),
   });
 }
+
+/** Stop the live version (it stops serving; nothing is deleted) or start it again. */
+export function useStopStart(serviceId: string) {
+  const refresh = useRefresh(serviceId);
+  return useMutation({
+    mutationFn: (action: "stop" | "start") => api.post(`/services/${serviceId}/${action}`),
+    onSuccess: refresh,
+  });
+}
+

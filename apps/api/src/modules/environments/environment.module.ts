@@ -1,10 +1,11 @@
 import { Module } from '@nestjs/common';
+import { AppControlModule } from '../deploys/app-control.module';
 import { SessionModule } from '../auth/session/session.module';
 import { EnvironmentController } from './environment.controller';
 import { EnvironmentService } from './environment.service';
 
 @Module({
-  imports: [SessionModule],
+  imports: [SessionModule, AppControlModule],
   controllers: [EnvironmentController],
   providers: [EnvironmentService],
 })

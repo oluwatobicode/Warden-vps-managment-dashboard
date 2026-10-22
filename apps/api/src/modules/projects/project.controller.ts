@@ -5,6 +5,7 @@ import {
   Get,
   HttpCode,
   Param,
+  Query,
   Patch,
   Post,
   UseGuards,
@@ -65,7 +66,8 @@ export class ProjectController {
   async remove(
     @CurrentActor() actor: Actor,
     @Param('id', UuidPipe) id: string,
+    @Query('force') force?: string,
   ) {
-    await this.projects.deleteProject(actor, id);
+    await this.projects.deleteProject(actor, id, force === 'true');
   }
 }

@@ -17,7 +17,7 @@ import { ServerAssignment } from "../../features/services/components/ServerAssig
 import { TYPE_LABEL, sourceLabel } from "../../features/services/components/serviceLabels";
 import { VariablesPanel } from "../../features/variables/components/VariablesPanel";
 import { ResolvedVariables } from "../../features/variables/components/ResolvedVariables";
-import { apiMessage } from "../../utils/apiMessage";
+import { apiMessage, apiStatus } from "../../utils/apiMessage";
 import { DatabasePanel } from "../../features/databases/components/DatabasePanel";
 import { atLeast } from "../../utils/roles";
 import { DatabaseLogo } from "../../features/databases/components/DatabaseLogo";
@@ -45,6 +45,7 @@ export default function ServicePage() {
   const deployInfo = useDeployInfo(serviceId);
   const [view, setView] = useState<"own" | "resolved">("own");
   const [deleting, setDeleting] = useState(false);
+  const [forcing, setForcing] = useState(false);
 
   if (service.isPending) return <FullPageSpinner />;
   if (service.isError) return <p className="text-sm text-crit">{apiMessage(service.error, "This service doesn't exist")}</p>;
@@ -66,15 +67,20 @@ export default function ServicePage() {
   const deployPath = (id: string) => withEnv(`/projects/${project.id}/services/${s.id}/deployments/${id}`);
   const facts = [TYPE_LABEL[s.type], sourceLabel(s), s.branch ?? env?.branch ?? null, server?.serverName ?? "no server", s.port ? `:${s.port}` : null].filter(Boolean);
 
-  const onDelete = () =>
-    del.mutate(undefined, {
-      onSuccess: () => {
-        toast.success(`${s.serviceName} deleted`);
+  // Deleting takes the app off its server first. If the server can't be
+  // reached (502), offer "Delete anyway", which leaves its containers there.
+  const onDelete = (force = false) =>
+    del.mutate(force, {
+      onSuccess: ({ leftovers }) => {
+        if (leftovers.length) {
+          toast.error(`${s.serviceName} deleted, but ${leftovers[0].serverName} couldn't be reached: its containers are still there. Remove them with: ${leftovers[0].command}`, { duration: 15000 });
+        } else toast.success(`${s.serviceName} deleted`);
         navigate(overview, { replace: true });
       },
       onError: (e) => {
-        toast.error(apiMessage(e));
         setDeleting(false);
+        if (apiStatus(e) === 502) setForcing(true);
+        else toast.error(apiMessage(e));
       },
     });
 
@@ -216,7 +222,7 @@ export default function ServicePage() {
               <DangerZone
                 body={
                   s.serverId
-                    ? `${s.serviceName} is on ${server?.serverName ?? "a server"}. Unassign it first (General → Server), then it can be deleted with its variables.`
+                    ? `Stops ${s.serviceName} on ${server?.serverName ?? "its server"} and removes it there (its containers, address and kept versions), then deletes it with its variables, domains and deploy history. Environment variables are not affected.`
                     : `Deletes ${s.serviceName} and its own variables. Environment variables are not affected.`
                 }
                 action={<Button variant="danger" onClick={() => setDeleting(true)}>Delete service</Button>}
@@ -230,12 +236,24 @@ export default function ServicePage() {
       <ConfirmDialog
         open={deleting}
         onClose={() => setDeleting(false)}
-        onConfirm={onDelete}
+        onConfirm={() => onDelete(false)}
         loading={del.isPending}
         title={`Delete ${s.serviceName}?`}
-        body="Its own variables are deleted with it. This can't be undone."
+        body={s.serverId ? `It stops serving straight away and is removed from ${server?.serverName ?? "its server"}. Its own variables and deploy history are deleted too. This can't be undone.` : "Its own variables are deleted with it. This can't be undone."}
         cta="Delete service"
         phrase={s.serviceName}
+      />
+      <ConfirmDialog
+        open={forcing}
+        onClose={() => setForcing(false)}
+        onConfirm={() => {
+          setForcing(false);
+          onDelete(true);
+        }}
+        loading={del.isPending}
+        title={`Couldn't reach ${server?.serverName ?? "the server"}`}
+        body={`Nothing was removed. Delete ${s.serviceName} from Warden anyway? Its containers then stay on the server until you remove them by hand (Warden shows you the command).`}
+        cta="Delete anyway"
       />
     </>
   );

@@ -1,10 +1,12 @@
 import type { ServiceStatus } from 'shared-types';
 
+// Stopped on purpose isn't a problem: it shows only when nothing else is running.
 const RANK: Record<ServiceStatus, number> = {
-  FAILED: 4,
-  DEGRADED: 3,
-  DEPLOYING: 2,
-  HEALTHY: 1,
+  FAILED: 5,
+  DEGRADED: 4,
+  DEPLOYING: 3,
+  HEALTHY: 2,
+  STOPPED: 1,
   NOT_DEPLOYED: 0,
 };
 

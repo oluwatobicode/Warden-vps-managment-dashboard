@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { AppControlModule } from './app-control.module';
 import { SessionModule } from '../auth/session/session.module';
 import { DeployController } from './deploy.controller';
 import { DeployService } from './deploy.service';
@@ -11,7 +12,7 @@ import { RepoServicesService } from './repo-services.service';
 
 /** Phase 2: app deploys, live logs, the GitHub App. */
 @Module({
-  imports: [SessionModule],
+  imports: [SessionModule, AppControlModule],
   controllers: [DeployController, GithubController],
   providers: [DeployService, DeployGateway, GithubService, GithubConfig, RepoServicesService, deployQueueProvider],
 })

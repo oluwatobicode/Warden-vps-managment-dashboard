@@ -11,7 +11,7 @@ import { Skeleton } from "../../../components/ui/Skeleton";
 import { StatusPill } from "../../../components/ui/StatusPill";
 import { apiMessage } from "../../../utils/apiMessage";
 import { formatDuration, timeAgo } from "../../../utils/formatDate";
-import { isRunning, useDeployInfo, useDeployments, useTriggerDeploy } from "../hooks/useDeploys";
+import { isRunning, useDeployInfo, useDeployments, useStopStart, useTriggerDeploy } from "../hooks/useDeploys";
 import { RollbackDialog } from "./RollbackDialog";
 
 /** What's live, the Deploy button, and every deploy of this service. */
@@ -20,6 +20,7 @@ export function DeploysPanel({ service, canEdit, deployPath }: { service: Servic
   const info = useDeployInfo(service.id);
   const deployments = useDeployments(service.id);
   const trigger = useTriggerDeploy(service.id);
+  const stopStart = useStopStart(service.id);
   const [rollingBack, setRollingBack] = useState<Deployment | null>(null);
 
   const live = deployments.data?.find((d) => d.live);
@@ -36,6 +37,13 @@ export function DeploysPanel({ service, canEdit, deployPath }: { service: Servic
           ? "proxy"
           : null;
 
+  const stopped = service.status === "STOPPED";
+  const onStopStart = () =>
+    stopStart.mutate(stopped ? "start" : "stop", {
+      onSuccess: () => toast.success(stopped ? `${service.serviceName} is running again` : `${service.serviceName} stopped. Start brings the same version back`),
+      onError: (e) => toast.error(apiMessage(e)),
+    });
+
   const onDeploy = () =>
     trigger.mutate(
       {},
@@ -51,14 +59,21 @@ export function DeploysPanel({ service, canEdit, deployPath }: { service: Servic
   return (
     <div className="mt-[18px] flex flex-col gap-3.5 pb-2">
       <Card
-        title={live ? `Live: #${live.number}` : "Not deployed yet"}
+        title={live ? (stopped ? `Stopped: #${live.number}` : `Live: #${live.number}`) : "Not deployed yet"}
         sub={live ? `${live.commitMessage ?? live.commitSha?.slice(0, 7) ?? "deployed"} · ${timeAgo(live.finishedAt ?? live.createdAt)}${live.triggeredByName ? ` · by ${live.triggeredByName}` : ""}` : "Deploy to build it and start it on its server."}
         action={
           canEdit && (
+            <div className="flex items-center gap-2">
+              {live && !running && (
+                <Button variant="secondary" onClick={onStopStart} loading={stopStart.isPending}>
+                  {stopped ? "Start" : "Stop"}
+                </Button>
+              )}
             <Button onClick={running ? () => navigate(deployPath(running.id)) : onDeploy} loading={trigger.isPending} disabled={!running && !!blocker}>
               <HugeiconsIcon icon={Rocket01Icon} size={14} strokeWidth={1.6} />
               {running ? `Deploying #${running.number}…` : "Deploy"}
             </Button>
+            </div>
           )
         }
       >

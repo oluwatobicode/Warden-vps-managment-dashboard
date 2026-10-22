@@ -22,6 +22,7 @@ const DOT: Record<ServiceStatus, string> = {
   HEALTHY: "bg-good",
   DEGRADED: "bg-serious",
   FAILED: "bg-crit",
+  STOPPED: "bg-sand",
 };
 
 /** Inside a project: loads the project, then hands over to ProjectShell. */

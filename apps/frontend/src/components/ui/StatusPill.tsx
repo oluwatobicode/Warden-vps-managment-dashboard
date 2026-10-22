@@ -13,6 +13,7 @@ const STATUS: Record<Status, { label: string; tone: Tone; icon: typeof Tick02Ico
   HEALTHY: { label: "Healthy", tone: "good", icon: Tick02Icon },
   DEGRADED: { label: "Degraded", tone: "serious", icon: Alert02Icon },
   FAILED: { label: "Failed", tone: "crit", icon: CancelCircleIcon },
+  STOPPED: { label: "Stopped", tone: "flat", icon: StopCircleIcon },
   CONNECTED: { label: "Connected", tone: "good", icon: Tick02Icon },
   IDLE: { label: "Idle", tone: "flat", icon: Clock01Icon },
   OFFLINE: { label: "Offline", tone: "crit", icon: CancelCircleIcon },
