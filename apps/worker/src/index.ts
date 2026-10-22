@@ -1,15 +1,16 @@
 import { env } from "./env";
 import { Worker, type Job } from "bullmq";
 import { prisma } from "db";
-import { BACKUP_JOBS, BackupJobSchema, CleanupJobSchema, CollectServerJobSchema, DatabaseJobSchema, MONITORING_JOBS, QUEUES } from "shared-types";
+import { BACKUP_JOBS, BackupJobSchema, DEPLOY_JOBS, DeployJobSchema, ProxyJobSchema, CleanupJobSchema, CollectServerJobSchema, DatabaseJobSchema, MONITORING_JOBS, QUEUES } from "shared-types";
 import { cleanup } from "./jobs/cleanup";
 import { databaseJob } from "./jobs/database";
 import { backupJob, backupTick } from "./jobs/backup";
+import { deployJob, deployPrune, proxyJob } from "./jobs/deploy";
 import { collectServer } from "./jobs/collect";
 import { pruneMetrics } from "./jobs/prune";
 import { tick } from "./jobs/tick";
 import { log } from "./log";
-import { backupQueue, monitoringQueue } from "./queues";
+import { backupQueue, deployQueue, monitoringQueue } from "./queues";
 import { redis } from "./redis";
 
 /*
@@ -45,6 +46,7 @@ async function main() {
   await monitoringQueue.upsertJobScheduler(MONITORING_JOBS.tick, { every: env.MONITOR_INTERVAL_SECONDS * 1000 }, { name: MONITORING_JOBS.tick });
   await monitoringQueue.upsertJobScheduler(MONITORING_JOBS.prune, { every: 3600 * 1000 }, { name: MONITORING_JOBS.prune });
   await backupQueue.upsertJobScheduler(BACKUP_JOBS.tick, { every: 15 * 60 * 1000 }, { name: BACKUP_JOBS.tick });
+  await deployQueue.upsertJobScheduler(DEPLOY_JOBS.prune, { every: 3600 * 1000 }, { name: DEPLOY_JOBS.prune });
 
   const workers = [
     new Worker(QUEUES.monitoring, monitoringJob, { connection: redis, concurrency: env.MONITOR_CONCURRENCY }),
@@ -64,6 +66,18 @@ async function main() {
       },
       { connection: redis, concurrency: 2 },
     ),
+    // Deploys. Builds on the same server still go one at a time (a Redis lock
+    // in jobs/deploy.ts); this is how many servers can build at once.
+    new Worker(
+      QUEUES.deploys,
+      async (job) => {
+        if (job.name === DEPLOY_JOBS.prune) return deployPrune();
+        if (job.name === DEPLOY_JOBS.proxy) return proxyJob(ProxyJobSchema.parse(job.data));
+        return deployJob(DeployJobSchema.parse(job.data));
+      },
+      // A proxy setup that fails must say why: the api reads the job's failedReason.
+      { connection: redis, concurrency: 4, lockDuration: 60_000 },
+    ),
   ];
   for (const w of workers) {
     w.on("failed", (job, err) => log.error(`${w.name}/${job?.name ?? "?"} failed: ${err.message}`));
@@ -78,7 +92,7 @@ async function main() {
     stopping = true;
     log.info(`${signal}: finishing current jobs`);
     await Promise.all(workers.map((w) => w.close()));
-    await Promise.all([monitoringQueue.close(), backupQueue.close()]);
+    await Promise.all([monitoringQueue.close(), backupQueue.close(), deployQueue.close()]);
     await prisma.$disconnect();
     redis.disconnect();
     process.exit(0);

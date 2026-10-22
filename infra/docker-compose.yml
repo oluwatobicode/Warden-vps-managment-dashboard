@@ -27,6 +27,11 @@ services:
       DOCKER_MODS: linuxserver/mods:universal-docker
     volumes:
       - ./ssh-target:/keys:ro
+      # Shared with docker-target at the SAME path: on a real server the docker
+      # CLI and engine are one machine, so a folder Warden makes over SSH (a
+      # clone, a build) is the one `docker run -v` mounts. This makes the
+      # pretend VPS behave the same.
+      - wardenhome:/config/.warden
   # The pretend VPS's own Docker engine (Docker-in-Docker). Databases that
   # Warden creates on ssh-target run in here, sealed off from the host.
   docker-target:
@@ -35,7 +40,7 @@ services:
     environment:
       DOCKER_TLS_CERTDIR: ""
     command: ["dockerd", "--host=tcp://0.0.0.0:2375", "--host=unix:///var/run/docker.sock"]
-    volumes: [dinddata:/var/lib/docker]
+    volumes: [dinddata:/var/lib/docker, wardenhome:/config/.warden]
   # A local S3-compatible store for building and testing database backups
   # without a real Cloudflare R2 bucket (MinIO no longer publishes free
   # images). Accepts any access keys; real-key checks happen on R2.
@@ -51,3 +56,4 @@ volumes:
   pgdata:
   dinddata:
   s3data:
+  wardenhome:

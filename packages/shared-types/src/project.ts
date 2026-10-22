@@ -16,6 +16,8 @@ export const CreateProjectSchema = z.object({
     .refine((names) => new Set(names).size === names.length, {
       message: "Environment names must be unique",
     }),
+  /** Every environment starts with this default server (change it per environment later). */
+  defaultServerId: z.uuid().optional(),
 });
 export type CreateProjectInput = z.infer<typeof CreateProjectSchema>;
 
@@ -29,6 +31,8 @@ export const EnvironmentSchema = z.object({
   id: z.string(),
   environmentName: z.string(),
   branch: z.string().nullable(),
+  /** Where new services and databases in this environment go, unless they pick another. */
+  defaultServerId: z.string().nullable(),
   serviceCount: z.number().int(),
   // worst status of this environment's services
   status: ServiceStatusSchema,

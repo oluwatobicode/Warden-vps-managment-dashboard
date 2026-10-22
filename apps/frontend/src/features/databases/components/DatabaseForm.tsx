@@ -53,10 +53,11 @@ export function DatabaseForm({ env, onCreated, onPending }: { env: Environment; 
   const spec = DATABASE_CATALOG[engine];
 
   useEffect(() => onPending(create.isPending), [create.isPending, onPending]);
-  // Pick the first deploy server once the list arrives.
   useEffect(() => {
-    if (!serverId && deployServers[0]) setValue("serverId", deployServers[0].id);
-  }, [serverId, deployServers, setValue]);
+    // The environment's default server first; otherwise the first deploy server.
+    const pick = deployServers.find((s) => s.id === env.defaultServerId)?.id ?? deployServers[0]?.id;
+    if (!serverId && pick) setValue("serverId", pick);
+  }, [serverId, deployServers, setValue, env.defaultServerId]);
 
   const pickEngine = (e: DatabaseEngine) => {
     setValue("engine", e);

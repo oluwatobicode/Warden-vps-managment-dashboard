@@ -11,6 +11,7 @@ import type {
   UpdateProjectInput,
 } from 'shared-types';
 import { PrismaService } from '../../prisma/prisma.service';
+import { pickServer } from '../environments/pick-server';
 import { AuditService } from '../audit/audit.service';
 import type { Actor } from '../../common/types/actor';
 import { slugify } from '../../common/utils/slug.util';
@@ -37,6 +38,9 @@ export class ProjectService {
       select: { id: true },
     });
     if (taken) throw new ConflictException(PROJECT_MESSAGES.slug_taken);
+    if (input.defaultServerId) {
+      await pickServer(this.prisma, orgId, '', input.defaultServerId);
+    }
 
     let project;
     try {
@@ -53,6 +57,7 @@ export class ProjectService {
         await tx.environment.createMany({
           data: input.environments.map((environmentName) => ({
             environmentName,
+            defaultServerId: input.defaultServerId ?? null,
             projectId: created.id,
             organizationId: orgId,
           })),
@@ -198,6 +203,7 @@ function toProjectDetail(row: ProjectWithDetail): ProjectDetail {
       id: e.id,
       environmentName: e.environmentName,
       branch: e.branch,
+      defaultServerId: e.defaultServerId,
       serviceCount: e.services.length,
       status: rollupStatus(e.services.map((s) => s.status)),
       createdAt: e.createdAt.toISOString(),

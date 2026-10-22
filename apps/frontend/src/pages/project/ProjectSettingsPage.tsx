@@ -20,6 +20,7 @@ import { applyApiIssues, apiMessage, apiStatus } from "../../utils/apiMessage";
 import { formatDate } from "../../utils/formatDate";
 import { optionalText } from "../../utils/forms";
 import { atLeast } from "../../utils/roles";
+import { useServers } from "../../features/servers/hooks/useServers";
 
 type Tab = "general" | "environments" | "danger";
 
@@ -103,6 +104,8 @@ function GeneralTab({ canEdit }: { canEdit: boolean }) {
 
 function EnvironmentsTab({ canEdit, environments, selectedId, onSelect }: { canEdit: boolean; environments: Environment[]; selectedId?: string; onSelect: (id: string) => void }) {
   const { project } = useProjectContext();
+  const servers = useServers();
+  const serverName = (id: string | null) => (id ? (servers.data?.find((s) => s.id === id)?.serverName ?? "a server") : "no default server");
   const del = useDeleteEnvironment(project.id);
   const [editing, setEditing] = useState<Environment | "new" | null>(null);
   const [deleting, setDeleting] = useState<Environment | null>(null);
@@ -134,7 +137,7 @@ function EnvironmentsTab({ canEdit, environments, selectedId, onSelect }: { canE
             <span className="flex min-w-0 flex-col gap-[3px]">
               <span className="font-mono text-xs text-body">{e.environmentName}</span>
               <span className="font-mono text-[10.5px] text-sand">
-                {e.serviceCount} service{e.serviceCount === 1 ? "" : "s"} · branch {e.branch ?? "not set"}
+                {e.serviceCount} service{e.serviceCount === 1 ? "" : "s"} · branch {e.branch ?? "not set"} · {serverName(e.defaultServerId)}
               </span>
             </span>
             <span className="flex shrink-0 items-center gap-3">

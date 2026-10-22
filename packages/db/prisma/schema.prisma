@@ -166,6 +166,13 @@ enum DeploymentType {
   AUTOMATED
 }
 
+/// How a deploy's image was made. A rollback that reuses a kept image copies
+/// the original's method.
+enum BuildMethod {
+  DOCKERFILE
+  RAILPACK
+}
+
 enum AuthProvider {
   GOOGLE
   GITHUB
@@ -262,6 +269,7 @@ model Organization {
   serviceDatabases     ServiceDatabase[]
   backupStorage        BackupStorage?
   databaseBackups      DatabaseBackup[]
+  githubInstallations  GithubInstallation[]
 }
 
 model NotificationChannel {
@@ -306,41 +314,75 @@ model Environment {
   project         Project               @relation(fields: [projectId, organizationId], references: [id, organizationId], onDelete: Cascade)
   services        Service[]
   variables       EnvironmentVariable[]
+  /// Where new services and databases in this environment go, unless one
+  /// picks another. Apps must sit next to their databases (private network),
+  /// so one default per environment keeps them together. Restrict: a server
+  /// that's still some environment's default can't be deleted.
+  defaultServerId String?
+  defaultServer   Server?               @relation("EnvironmentDefaultServer", fields: [defaultServerId, organizationId], references: [id, organizationId], onDelete: Restrict)
   createdAt       DateTime              @default(now())
 
   @@unique([projectId, environmentName])
   @@unique([id, organizationId])
+  @@index([defaultServerId, organizationId])
   @@index([organizationId])
 }
 
 model Service {
-  id             String            @id @default(uuid())
-  serviceName    String
-  type           ServiceType       @default(APPLICATION)
-  githubRepoUrl  String?
-  branch         String?
-  image          String?
-  port           Int?
-  status         ServiceStatus     @default(NOT_DEPLOYED)
+  id                   String              @id @default(uuid())
+  serviceName          String
+  type                 ServiceType         @default(APPLICATION)
+  githubRepoUrl        String?
+  branch               String?
+  image                String?
+  port                 Int?
+  status               ServiceStatus       @default(NOT_DEPLOYED)
+  // ── Phase 2 build settings (APPLICATION / WORKER) ──
+  /// Which GitHub App installation can read the repo. Null = a public repo,
+  /// cloned without a key. Single-column FK with SetNull (uninstalling the App
+  /// must not delete services); the org is checked in code when it's set.
+  githubInstallationId String?
+  githubInstallation   GithubInstallation? @relation(fields: [githubInstallationId], references: [id], onDelete: SetNull)
+  /// GitHub's numeric repo id: survives renames, and is what push webhooks carry.
+  githubRepoId         Int?
+  /// Folder the build starts in ("" = repo root, so a monorepo's shared packages are visible).
+  rootDirectory        String              @default("")
+  /// Relative to rootDirectory. Used when that file exists; otherwise Railpack.
+  dockerfilePath       String              @default("Dockerfile")
+  /// Railpack overrides (e.g. "pnpm turbo build --filter=api").
+  buildCommand         String?
+  startCommand         String?
+  /// A website's built folder (e.g. "apps/frontend/dist"): Railpack serves it
+  /// as static files on $PORT. Needed when the site isn't at the repo root.
+  staticOutputDir      String?
+  /// Run once in the new image before it goes live (e.g. "npx prisma migrate deploy").
+  releaseCommand       String?
+  healthCheckPath      String              @default("/")
+  /// A push deploys this service only if it changed a file matching one of these (empty = any change).
+  watchPaths           String[]
+  autoDeploy           Boolean             @default(true)
+  domains              ServiceDomain[]
   /// Where the box sits on the environment's canvas, shared by the whole team.
   /// Null = never placed, so the canvas auto-places it in a free grid spot.
-  canvasX        Float?
-  canvasY        Float?
-  environmentId  String
-  organizationId String
-  environment    Environment       @relation(fields: [environmentId, organizationId], references: [id, organizationId], onDelete: Cascade)
-  serverId       String?
-  server         Server?           @relation(fields: [serverId, organizationId], references: [id, organizationId], onDelete: Restrict)
-  deployments    Deployment[]
-  variables      ServiceVariable[]
-  database       ServiceDatabase?
-  createdAt      DateTime          @default(now())
-  updatedAt      DateTime          @updatedAt
+  canvasX              Float?
+  canvasY              Float?
+  environmentId        String
+  organizationId       String
+  environment          Environment         @relation(fields: [environmentId, organizationId], references: [id, organizationId], onDelete: Cascade)
+  serverId             String?
+  server               Server?             @relation(fields: [serverId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  deployments          Deployment[]
+  variables            ServiceVariable[]
+  database             ServiceDatabase?
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
 
   @@unique([environmentId, serviceName])
   @@unique([id, organizationId])
   @@index([serverId])
   @@index([organizationId])
+  @@index([githubInstallationId])
+  @@index([githubRepoId])
 }
 
 model EnvironmentVariable {
@@ -390,6 +432,16 @@ model Deployment {
   triggeredByName  String?
   startedAt        DateTime? // left the queue; createdAt is when it was queued
   finishedAt       DateTime? // reached a final status
+  /// "warden/<service id8>:<number>". The last 3 per service stay on the server for instant rollbacks.
+  imageTag         String?
+  buildMethod      BuildMethod?
+  /// Set on a rollback: the deploy whose image/commit it brings back.
+  rollbackOfId     String?
+  rollbackOf       Deployment?         @relation("Rollback", fields: [rollbackOfId], references: [id], onDelete: SetNull)
+  rollbacks        Deployment[]        @relation("Rollback")
+  /// The container this deploy started ("warden-app-<id8>-<number>").
+  containerName    String?
+  logs             DeploymentLog[]
   serviceId        String
   service          Service             @relation(fields: [serviceId], references: [id], onDelete: Cascade)
   history          DeploymentHistory[]
@@ -398,8 +450,23 @@ model Deployment {
 
   @@unique([organizationId, number])
   @@index([triggeredById])
+  @@index([rollbackOfId])
   @@index([serviceId, createdAt])
   @@index([organizationId, createdAt])
+}
+
+/// A deploy's output (clone, build, app start), in chunks of lines, in order.
+/// Pruned after 30 days. Live viewers get the same lines over Socket.io.
+model DeploymentLog {
+  id           String     @id @default(uuid())
+  deploymentId String
+  deployment   Deployment @relation(fields: [deploymentId], references: [id], onDelete: Cascade)
+  seq          Int
+  text         String
+  createdAt    DateTime   @default(now())
+
+  @@unique([deploymentId, seq])
+  @@index([createdAt])
 }
 
 model DeploymentHistory {
@@ -428,9 +495,12 @@ model Server {
   provider              String?
   dockerCleanupEnabled  Boolean             @default(false)
   dockerCleanupInterval Int?                @default(30)
+  /// When Warden last set up Traefik (the front door on ports 80/443). Null = not set up.
+  proxyInstalledAt      DateTime?
   organizationId        String
   organization          Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   services              Service[]
+  defaultFor            Environment[]       @relation("EnvironmentDefaultServer")
   serverMetrics         ServerMetrics[]
   serverContainers      ServerContainer[]
   serverLogs            ServerLogs[]
@@ -687,4 +757,36 @@ model DatabaseBackup {
 
   @@index([serviceId, createdAt])
   @@index([organizationId])
+}
+
+/// A GitHub account/org that installed the Warden GitHub App for this org.
+model GithubInstallation {
+  id             String       @id @default(uuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  /// GitHub's installation id (what tokens are minted for).
+  installationId Int
+  accountLogin   String
+  accountType    String
+  services       Service[]
+  createdAt      DateTime     @default(now())
+
+  @@unique([organizationId, installationId])
+  @@index([installationId])
+}
+
+/// A custom domain on a service (Stage 8). sslip.io addresses aren't stored:
+/// they're worked out from the server's IP, so they follow an IP change.
+model ServiceDomain {
+  id             String    @id @default(uuid())
+  serviceId      String
+  organizationId String
+  service        Service   @relation(fields: [serviceId, organizationId], references: [id, organizationId], onDelete: Cascade)
+  /// Lowercase, unique across Warden: two services can't answer for one name.
+  domain         String    @unique
+  /// Last time its DNS pointed at the service's server.
+  verifiedAt     DateTime?
+  createdAt      DateTime  @default(now())
+
+  @@index([serviceId, organizationId])
 }

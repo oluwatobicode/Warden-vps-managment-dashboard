@@ -55,11 +55,17 @@ export default function ProjectCanvasPage() {
         <p className="m-0 text-[12.5px] text-sand">
           <span className="font-mono text-body">{env.environmentName}</span> · {list.length} service{list.length === 1 ? "" : "s"} · drag to arrange, the layout is shared with your team
         </p>
-        {/* Add service lives in the navbar, like every project page. */}
-        <Button variant="secondary" onClick={() => setTidying(true)} disabled={list.length < 2} className="px-3.5 py-2 text-xs">
-          <HugeiconsIcon icon={LayoutGridIcon} size={14} strokeWidth={1.5} />
-          Tidy up
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="secondary" onClick={() => setTidying(true)} disabled={list.length < 2} className="px-3.5 py-2 text-xs">
+            <HugeiconsIcon icon={LayoutGridIcon} size={14} strokeWidth={1.5} />
+            Tidy up
+          </Button>
+          {canAdd && (
+            <Button onClick={openAddService} className="px-3.5 py-2 text-xs">
+              Add service
+            </Button>
+          )}
+        </div>
       </div>
 
       {services.isPending && <Skeleton className="flex-1 rounded-2xl" />}

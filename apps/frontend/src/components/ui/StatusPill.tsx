@@ -20,7 +20,8 @@ const STATUS: Record<Status, { label: string; tone: Tone; icon: typeof Tick02Ico
   QUEUED: { label: "Queued", tone: "flat", icon: Clock01Icon },
   BUILDING: { label: "Building", tone: "brand", icon: PackageIcon },
   HEALTH_CHECK: { label: "Health check", tone: "brand", icon: Shield01Icon },
-  SUCCESS: { label: "Live", tone: "good", icon: Tick02Icon },
+  // Not "Live": every deploy that went live keeps SUCCESS, but only the newest one serves.
+  SUCCESS: { label: "Succeeded", tone: "good", icon: Tick02Icon },
   GATE_FAILED: { label: "Gate failed", tone: "crit", icon: Alert02Icon },
   ROLLED_BACK: { label: "Rolled back", tone: "serious", icon: ArrowTurnBackwardIcon },
   CANCELLED: { label: "Cancelled", tone: "flat", icon: StopCircleIcon },

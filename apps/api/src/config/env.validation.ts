@@ -36,6 +36,12 @@ export const envSchema = z.object({
   BACKUP_S3_BUCKET: z.string().optional().default(''),
   BACKUP_S3_ACCESS_KEY_ID: z.string().optional().default(''),
   BACKUP_S3_SECRET_ACCESS_KEY: z.string().optional().default(''),
+  // The Warden GitHub App (private repos, push webhooks). Empty = public
+  // repos only. Must match the worker's. The key may be one line with \n.
+  GITHUB_APP_ID: z.string().optional().default(''),
+  GITHUB_APP_PRIVATE_KEY: z.string().optional().default(''),
+  GITHUB_APP_WEBHOOK_SECRET: z.string().optional().default(''),
+  GITHUB_APP_SLUG: z.string().optional().default(''),
 });
 
 export type Env = z.infer<typeof envSchema>;

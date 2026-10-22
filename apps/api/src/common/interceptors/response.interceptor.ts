@@ -25,6 +25,8 @@ export class ResponseInterceptor<T> implements NestInterceptor<
     context: ExecutionContext,
     next: CallHandler<T>,
   ): Observable<ApiSuccessResponse<T>> {
+    // Only HTTP answers get the envelope; Socket.io replies (live deploy logs) go as they are.
+    if (context.getType() !== 'http') return next.handle() as unknown as Observable<ApiSuccessResponse<T>>;
     const res = context.switchToHttp().getResponse<Response>();
 
     return next.handle().pipe(

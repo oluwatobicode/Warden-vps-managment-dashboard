@@ -5,13 +5,11 @@ import { Activity01Icon, ArrowLeft01Icon, DashboardSquare01Icon, Home01Icon, Set
 import type { Environment, ProjectDetail, ServiceStatus } from "shared-types";
 import { useProject } from "../../features/projects/hooks/useProjects";
 import { useEnvironments } from "../../features/environments/hooks/useEnvironments";
-import { useAuth } from "../../features/auth/hooks/useAuth";
 import type { ProjectContext } from "../../features/projects/hooks/useProjectContext";
 import { useService } from "../../features/services/hooks/useServices";
 import { AddServiceModal } from "../../features/services/components/AddServiceModal";
 import { useJumpTargets } from "../../features/search/hooks/useJumpTargets";
 import { CommandPalette } from "../../features/search/components/CommandPalette";
-import { atLeast } from "../../utils/roles";
 import { ProjectNavbar } from "./ProjectNavbar";
 import { apiMessage, apiStatus } from "../../utils/apiMessage";
 import { FullPageSpinner } from "../ui/Spinner";
@@ -73,13 +71,11 @@ function ProjectShell({
   env: Environment | undefined;
   selectEnv: (id: string) => void;
 }) {
-  const { user } = useAuth();
   const [searching, setSearching] = useState(false);
   const [adding, setAdding] = useState(false);
   const targets = useJumpTargets({ project, env });
   const base = `/projects/${project.id}`;
   const withEnv = (path: string) => (env ? `${path}?env=${env.id}` : path);
-  const canAddService = atLeast(user?.role, "DEVELOPER") && !!env;
   const openAddService = () => setAdding(true);
   const context: ProjectContext = { project, environments: envs, env, selectEnv, withEnv, openAddService };
 
@@ -95,7 +91,9 @@ function ProjectShell({
   }, []);
 
   // The navbar title is the current page; on a service page, its name.
-  const serviceMatch = useMatch("/projects/:projectId/services/:serviceId");
+  const onService = useMatch("/projects/:projectId/services/:serviceId");
+  const onDeploy = useMatch("/projects/:projectId/services/:serviceId/deployments/:deploymentId");
+  const serviceMatch = onService ?? onDeploy;
   const service = useService(serviceMatch?.params.serviceId ?? "", !!serviceMatch);
   const onVariables = useMatch("/projects/:projectId/variables");
   const onSettings = useMatch("/projects/:projectId/settings");
@@ -182,7 +180,7 @@ function ProjectShell({
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col gap-[13px]">
-        <ProjectNavbar title={title} onSearch={() => setSearching(true)} onAddService={canAddService ? openAddService : undefined} />
+        <ProjectNavbar title={title} onSearch={() => setSearching(true)} />
         <main className="flex min-h-0 min-w-0 flex-1">
           <div className="min-w-0 flex-1 overflow-y-auto rounded-[20px] border border-divider bg-surface px-[30px] py-[26px]">
             <Outlet context={context} />
@@ -191,7 +189,15 @@ function ProjectShell({
       </div>
 
       {searching && <CommandPalette targets={targets} onClose={() => setSearching(false)} />}
-      {env && <AddServiceModal open={adding} onClose={() => setAdding(false)} env={env} servicePath={(id) => withEnv(`${base}/services/${id}`)} />}
+      {env && (
+        <AddServiceModal
+          open={adding}
+          onClose={() => setAdding(false)}
+          env={env}
+          servicePath={(id) => withEnv(`${base}/services/${id}`)}
+          deployPath={(id, deploymentId) => withEnv(`${base}/services/${id}/deployments/${deploymentId}`)}
+        />
+      )}
     </div>
   );
 }

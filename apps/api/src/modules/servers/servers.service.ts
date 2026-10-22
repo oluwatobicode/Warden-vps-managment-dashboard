@@ -131,6 +131,14 @@ export class ServerService {
         SERVER_MESSAGES.has_services.replace('{count}', String(n)),
       );
     if (row._count.services > 0) throw hasServices(row._count.services);
+    const defaults = await this.prisma.client.environment.count({
+      where: { defaultServerId: row.id, organizationId: orgId },
+    });
+    if (defaults > 0) {
+      throw new ConflictException(
+        SERVER_MESSAGES.default_of.replace('{count}', String(defaults)),
+      );
+    }
 
     try {
       await this.prisma.client.server.delete({ where: { id: row.id } });

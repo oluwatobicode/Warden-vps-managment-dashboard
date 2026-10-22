@@ -17,6 +17,8 @@ export const QUEUES = {
   databases: "databases",
   /** Backups and restores, plus the worker's hourly backup tick. */
   backups: "database-backups",
+  /** App deploys and Traefik setup (see deploy.ts). */
+  deploys: "deploys",
 } as const;
 
 export const MONITORING_JOBS = {

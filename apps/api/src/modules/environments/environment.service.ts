@@ -4,6 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { pickServer } from './pick-server';
 import { AuditService } from '../audit/audit.service';
 import type { Actor } from '../../common/types/actor';
 import {
@@ -37,12 +38,16 @@ export class EnvironmentService {
     if (!project) {
       throw new NotFoundException(PROJECT_MESSAGES.not_found);
     }
+    if (input.defaultServerId) {
+      await pickServer(this.prisma, orgId, '', input.defaultServerId);
+    }
 
     try {
       const created = await this.prisma.client.environment.create({
         data: {
           environmentName: input.environmentName,
           branch: input.branch,
+          defaultServerId: input.defaultServerId ?? null,
           projectId: input.projectId,
           organizationId: orgId,
         },
@@ -97,6 +102,9 @@ export class EnvironmentService {
     input: UpdateEnvironmentInput,
   ): Promise<Environment> {
     await this.assertExists(orgId, id);
+    if (input.defaultServerId) {
+      await pickServer(this.prisma, orgId, id, input.defaultServerId);
+    }
 
     try {
       const updated = await this.prisma.client.environment.update({
@@ -176,6 +184,7 @@ function toEnvironment(row: EnvironmentRow): Environment {
     id: row.id,
     environmentName: row.environmentName,
     branch: row.branch,
+    defaultServerId: row.defaultServerId,
     serviceCount: row.services.length,
     status: rollupStatus(row.services.map((s) => s.status)),
     createdAt: row.createdAt.toISOString(),

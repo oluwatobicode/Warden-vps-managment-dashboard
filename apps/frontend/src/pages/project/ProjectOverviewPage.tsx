@@ -3,7 +3,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { Database01Icon, Layers01Icon, PlusSignCircleIcon, Rocket01Icon } from "@hugeicons/core-free-icons";
 import type { Service } from "shared-types";
 import { Breadcrumbs } from "../../components/layout/Breadcrumbs";
-import { Button, ButtonLink } from "../../components/ui/Button";
+import { Button } from "../../components/ui/Button";
 import { Chip, SectionHeader } from "../../components/ui/Card";
 import { EmptyState } from "../../components/ui/EmptyState";
 import { Skeleton } from "../../components/ui/Skeleton";
@@ -49,11 +49,12 @@ export default function ProjectOverviewPage() {
           </span>
         }
         action={
-          <>
-            <ButtonLink variant="secondary" to={withEnv(`/projects/${project.id}/settings`)}>
-              Project settings
-            </ButtonLink>
-          </>
+          canAddService && (
+            <Button onClick={openAddService}>
+              <HugeiconsIcon icon={PlusSignCircleIcon} size={14} strokeWidth={1.5} />
+              Add service
+            </Button>
+          )
         }
       />
 

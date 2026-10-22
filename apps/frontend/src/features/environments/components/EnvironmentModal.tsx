@@ -1,4 +1,4 @@
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import toast from "react-hot-toast";
 import {
@@ -15,6 +15,7 @@ import {
   apiStatus,
 } from "../../../utils/apiMessage";
 import { optionalText } from "../../../utils/forms";
+import { ServerSelect } from "../../servers/components/ServerSelect";
 import {
   useCreateEnvironment,
   useUpdateEnvironment,
@@ -35,6 +36,7 @@ export function EnvironmentModal({
   const update = useUpdateEnvironment(projectId);
   const {
     register,
+    control,
     handleSubmit,
     setError,
     formState: { errors },
@@ -43,6 +45,7 @@ export function EnvironmentModal({
     defaultValues: {
       environmentName: editing?.environmentName ?? "",
       branch: editing?.branch ?? undefined,
+      defaultServerId: editing?.defaultServerId ?? null,
     },
   });
 
@@ -56,7 +59,7 @@ export function EnvironmentModal({
   const onSubmit = (input: UpdateEnvironmentInput) => {
     if (editing) {
       update.mutate(
-        { id: editing.id, input },
+        { id: editing.id, input: { ...input, defaultServerId: input.defaultServerId || null } },
         {
           onSuccess: () => (toast.success("Environment updated"), onClose()),
           onError: fail,
@@ -68,7 +71,7 @@ export function EnvironmentModal({
           message: "Give the environment a name",
         });
       create.mutate(
-        { environmentName: input.environmentName, branch: input.branch },
+        { environmentName: input.environmentName, branch: input.branch, defaultServerId: input.defaultServerId || null },
         {
           onSuccess: (env) => (
             toast.success(`${env.environmentName} created`),
@@ -123,6 +126,14 @@ export function EnvironmentModal({
           error={errors.branch?.message}
           {...register("branch", { setValueAs: optionalText })}
         />
+        <Controller
+          control={control}
+          name="defaultServerId"
+          render={({ field }) => (
+            <ServerSelect label="Default server" placeholder="No default server" error={errors.defaultServerId?.message} {...field} onChange={(v) => field.onChange(v || null)} />
+          )}
+        />
+        <p className="-mt-2 m-0 text-[11px] text-sand">New services and databases in this environment go here unless they pick another. Apps must be on the same server as their databases.</p>
       </form>
     </Modal>
   );

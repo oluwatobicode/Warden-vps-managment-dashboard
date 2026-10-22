@@ -13,6 +13,7 @@ import {
   type UpdateServiceInput,
 } from 'shared-types';
 import { PrismaService } from '../../prisma/prisma.service';
+import { pickServer } from '../environments/pick-server';
 import {
   ENVIRONMENT_MESSAGES,
   SERVER_MESSAGES,
@@ -32,6 +33,7 @@ export class ServiceService {
       select: { id: true },
     });
     if (!env) throw new NotFoundException(ENVIRONMENT_MESSAGES.not_found);
+    const serverId = await pickServer(this.prisma, orgId, env.id, input.serverId);
 
     try {
       const row = await this.prisma.client.service.create({
@@ -42,6 +44,7 @@ export class ServiceService {
           branch: input.branch,
           port: input.port,
           image: input.image,
+          serverId,
           environmentId: input.environmentId,
           organizationId: orgId,
         },

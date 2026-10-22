@@ -13,6 +13,8 @@ import {
 } from "../../../utils/apiMessage";
 import { useCreateProject } from "../hooks/useProjects";
 import { EnvironmentToggles } from "./EnvironmentToggles";
+import { ServerSelect } from "../../servers/components/ServerSelect";
+import { useServers } from "../../servers/hooks/useServers";
 
 export function CreateProjectModal({
   open,
@@ -38,15 +40,19 @@ export function CreateProjectModal({
       environments: ["production"],
     },
   });
+  // With exactly one deploy server, it's the obvious default.
+  const servers = useServers();
+  const deploy = (servers.data ?? []).filter((s) => s.serverType === "DEPLOY");
+  const onlyServer = deploy.length === 1 ? deploy[0].id : undefined;
 
   const close = () => {
     reset();
     onClose();
   };
 
-  const onSubmit = ({ projectDescription, ...rest }: CreateProjectInput) =>
+  const onSubmit = ({ projectDescription, defaultServerId, ...rest }: CreateProjectInput) =>
     create.mutate(
-      { ...rest, projectDescription: projectDescription?.trim() || undefined },
+      { ...rest, defaultServerId: defaultServerId ?? onlyServer, projectDescription: projectDescription?.trim() || undefined },
       {
         onSuccess: (project) => {
           toast.success(
@@ -119,6 +125,20 @@ export function CreateProjectModal({
             />
           )}
         />
+        <Controller
+          control={control}
+          name="defaultServerId"
+          render={({ field }) => (
+            <ServerSelect
+              label="Server for its environments"
+              placeholder="Choose later"
+              {...field}
+              value={field.value ?? onlyServer ?? ""}
+              onChange={(v) => field.onChange(v || undefined)}
+            />
+          )}
+        />
+        <p className="-mt-2 m-0 text-[11px] text-sand">Its services and databases go there by default. Each environment can use a different one later (Project settings → Environments).</p>
       </form>
     </Modal>
   );

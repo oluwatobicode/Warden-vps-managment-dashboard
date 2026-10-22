@@ -32,7 +32,7 @@ FIRST THINK AND PLAN AND I WILL APPROVE, ASK QUESTIONS TOO -> NEVER IGNORE THIS
 
 **Package manager: pnpm only.** Never `npm` or `yarn` in this monorepo — npm can't read pnpm's `node_modules/.pnpm` layout and breaks. Add packages with `pnpm add <pkg>` from `apps/frontend`, or `pnpm --filter frontend add <pkg>` from the root.
 
-Installed 2026-10-14: `@tanstack/react-query`, `react-router` (v8), `react-hook-form`, `@hookform/resolvers`, `zod` (pinned to the same major as shared-types, so the resolver accepts its schemas), `@hugeicons/react` + `@hugeicons/core-free-icons`, `vitest`, and `"shared-types": "workspace:*"`. Not yet: Zustand, Socket.io-client (add when needed).
+Installed 2026-10-14: `@tanstack/react-query`, `react-router` (v8), `react-hook-form`, `@hookform/resolvers`, `zod` (pinned to the same major as shared-types, so the resolver accepts its schemas), `@hugeicons/react` + `@hugeicons/core-free-icons`, `vitest`, and `"shared-types": "workspace:*"`. `socket.io-client` added 2026-10-22 (live deploy logs). Not yet: Zustand.
 
 ## Product shape
 
@@ -128,6 +128,10 @@ Frontend rules for roles:
 
 **Phase 1 frontend** covers what the api already serves: auth (email, magic link, GitHub, onboarding, forgot/reset password, invites), projects / environments / services / variables, servers + test connection, SSH keys, team, API tokens, notification channels, audit log.
 
+**Built 2026-10-22 (Add service, Railway-style):** `AddServiceModal` = From GitHub (`features/services/components/repo-wizard/`: `RepoStep` → `AppsStep` → `ReviewStep`, orchestrated by `RepoWizard`; detected app ↔ form ↔ request in the tested `features/services/repoForm.ts`, validated with the api's `CreateFromRepoSchema` before sending, issues mapped onto fields) · Docker image · Database. **Add service lives on the project Overview (where "Project settings" was) and the canvas toolbar, no longer in the navbar.** `features/servers/components/ServerSelect` is the one DEPLOY-server dropdown (project creation, environment default, image form, wizard). The service Settings tab is a side menu: General · Build & start · GitHub App (hidden for image services) · Domains (applications) · Delete.
+
+**Built 2026-10-22 (Phase 2 deploys):** a service page now opens on **Deployments** (`features/deploys/components/DeploysPanel`: what's live, its address, Deploy, the list with Roll back), `/projects/:id/services/:sid/deployments/:did` is one deploy (`DeploymentView`: steps with durations from a ticking `useNow`, the output box that follows the end unless you scroll up, Cancel, Roll back to this). Output comes from `useDeployLog`: saved chunks + Socket.io live, merged by `seq`; on `unauthorized` it calls `/auth/me` (refreshes the cookie) and reconnects. `RollbackDialog` always shows the database and variables warnings. The Settings tab adds Build & start (`BuildSettingsForm`, the api's field rules, watch paths one per line), GitHub App (`GithubRepoPicker`) and Domains (`DomainsCard`). Server page → Details → `ProxyCard` (the setup mutation waits for the worker job and fails with its reason). Settings → GitHub (`pages/settings/GithubPage.tsx`; `?connected=` / `?error=` from the install callback become a toast). `StatusPill` says **Succeeded** for SUCCESS (not "Live": only the newest serves; the green "live" badge marks it).
+
 **Built 2026-10-21 (databases + backups):** Add service → "Database" (`features/databases/components/DatabaseForm.tsx`). A DATABASE service's page is `DatabasePanel`: connection (reveal/copy), latest create/restart/restore log (polls every 2s while running), `BackupsCard` (schedule shown in the viewer's local time, stored in UTC; list, back up now, download, restore with the typed name) and delete with keep-data as the default. Settings → Backup storage (`pages/settings/BackupStoragePage.tsx`; everyone sees it, DEV_OPS+ edit). Downloads are a plain link, not axios (a dump can be GBs), after a cheap `/auth/me` call that refreshes an expired access cookie. Hooks: `useDatabases.ts`, `useBackups.ts`.
 
 **Built 2026-10-19 (canvas):** `features/canvas/`: `layout.ts` (pure grid placement + Tidy up, tested), `ServiceCanvas` (React Flow; boxes are DERIVED from the services list every render, only the drag in progress and measured sizes live in local state, so a refetch never fights the user), `ServiceNode`, `CanvasPanel` (floating list/details, collapsible; the view refits so no box hides behind it), `useSaveCanvasPositions` (optimistic, springs back on failure). The page is a lazy route, so React Flow (61 kB gzipped) only loads when a canvas is opened.
@@ -142,7 +146,6 @@ Frontend rules for roles:
 
 **Not Phase 1** — don't add buttons, routes, or empty states for these without an explicit go-ahead:
 
-- Triggering a deploy, build, rollback, live deploy logs (Phase 2)
 - Google sign-in (parked)
 - Traefik config editor: decided (raw editor AND form, each with a warning, plus validate-before-save and revert), but built after Phase 2 deploys install Traefik
 - Metrics history beyond 24h

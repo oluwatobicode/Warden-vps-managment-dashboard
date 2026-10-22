@@ -23,7 +23,23 @@ docker exec -u warden -e HOME=/config infra-ssh-target-1 sh -c \
   'docker context create warden-target --docker host=tcp://docker-target:2375; docker context use warden-target'
 ```
 
+Then let the warden user own the shared build folder (Warden clones and builds in `~/.warden`; the folder is shared with `docker-target` at the same path, like on a real server where the docker CLI and engine are one machine):
+
+```bash
+docker exec infra-ssh-target-1 chown 911:911 /config/.warden
+```
+
 Check: `ssh -p 2222 warden@127.0.0.1 docker ps` should work and list only Warden's test containers.
+
+## Deploys against the test server
+
+The test server's Traefik answers on port 80 **inside** `docker-target`. To open an app the way a visitor would:
+
+```bash
+docker exec infra-docker-target-1 wget -qO- --header 'Host: <the app's sslip.io address>' http://127.0.0.1/
+```
+
+(The address itself, `…127.0.0.1.sslip.io`, points at this Mac, not at the test server, so it won't open in a browser.)
 
 ## Backups against s3-local
 

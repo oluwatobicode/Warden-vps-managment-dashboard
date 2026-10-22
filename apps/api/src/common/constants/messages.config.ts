@@ -128,6 +128,8 @@ export const DATABASE_MESSAGES = {
   confirm_name: 'Type the database name to confirm deleting its data',
   not_queued: 'Could not start the job. Try again in a moment',
   build_server: 'Databases can only run on DEPLOY servers',
+  no_server:
+    'Pick a server: this environment has no default server yet (Project settings → Environments)',
   restarting: 'Restarting the database',
   deleting: 'Deleting the database',
 } as const;
@@ -155,6 +157,9 @@ export const SERVER_MESSAGES = {
   created: 'Server added successfully',
   updated: 'Server updated',
   deleted: 'Server deleted',
+  deploy_only: 'Services and databases run on DEPLOY servers only',
+  default_of:
+    'It’s the default server of {count} environment(s). Pick another default for them first (Project settings → Environments)',
   not_found: 'Server not found',
   duplicate_address: 'A server with this IP and port is already registered',
   has_services:
@@ -211,3 +216,50 @@ export const VARIABLE_MESSAGES = {
   import_conflict:
     'Someone changed these variables while you were importing. Try again',
 } as const;
+
+export const DEPLOY_MESSAGES = {
+  not_found: 'Deployment not found',
+  service_not_found: 'Service not found',
+  not_deployable: 'Only applications and workers are deployed this way',
+  no_source: 'Set a GitHub repo or an image in the service’s Settings first',
+  no_server: 'Pick a server for this service first',
+  no_port: 'An application needs a port. Set it in the service’s Settings',
+  no_proxy:
+    'The proxy isn’t set up on this server yet. Open the server’s page and press "Set up proxy"',
+  busy: 'This service is already deploying. Wait for it to finish, or cancel it',
+  rollback_not_success: 'Only a deploy that went live can be rolled back to',
+  rollback_is_live: 'That version is already live',
+  cancel_not_running: 'That deploy has already finished',
+  cancel_running:
+    'Cancelling: it stops after the step it’s on (a build in progress finishes first)',
+  not_queued: 'Could not start the deploy. Try again in a moment',
+  installation_not_found: 'That GitHub connection doesn’t belong to this organization',
+  repo_not_visible:
+    'The Warden GitHub App can’t see that repo. Allow it on GitHub (Settings → GitHub → Manage), then try again',
+  proxy_queued: 'Setting up the proxy',
+  server_not_found: 'Server not found',
+  proxy_build_server: 'The proxy runs on DEPLOY servers only',
+  domain_taken: 'That domain is already used by a service',
+  domain_not_found: 'Domain not found',
+  domain_no_server: 'Pick a server for this service first: the domain must point at it',
+  domain_web_only: 'Only applications (services with a port) get domains',
+  no_apps_found:
+    'Nothing to deploy found in this repo (no package.json, Dockerfile or other app files)',
+  name_taken_in_env: 'A service called "{name}" already exists in this environment',
+} as const;
+
+export const GITHUB_MESSAGES = {
+  not_configured:
+    'This Warden has no GitHub App set up yet (GITHUB_APP_* in the api and worker .env)',
+  bad_state: 'That GitHub link expired or wasn’t started here. Press Connect GitHub again',
+  install_failed: 'GitHub didn’t confirm the installation',
+  not_found: 'GitHub connection not found',
+  bad_signature: 'Bad signature',
+  repo_not_found_app:
+    'That repo or branch wasn’t found, or the Warden GitHub App isn’t allowed to read it',
+  repo_not_found_public:
+    'That repo or branch wasn’t found. If it’s private, connect GitHub (Settings → GitHub) and pick it there',
+  rate_limited:
+    'GitHub is limiting requests right now. Connect GitHub (Settings → GitHub) for a much higher limit, or try again in a few minutes',
+} as const;
+

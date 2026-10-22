@@ -35,8 +35,8 @@ const githubRepoUrl = z
     { message: "Only github.com repositories are supported" },
   );
 
-const branch = z.string().trim().min(1, "Enter a branch").max(100, "Use at most 100 characters");
-const port = z
+export const branch = z.string().trim().min(1, "Enter a branch").max(100, "Use at most 100 characters");
+export const port = z
   .number({ error: "Enter a port number" })
   .int("Enter a whole number")
   .min(1, "Ports run from 1 to 65535")
@@ -92,6 +92,8 @@ export const CreateServiceSchema = z
     port: port.optional(),
     // For services that deploy a prebuilt image instead of building a repo.
     image: image.optional(),
+    /** Absent = the environment's default server (none set = assign later). */
+    serverId: z.uuid().optional(),
   })
   .superRefine((data, ctx) => {
     for (const i of serviceTypeIssues(data)) {

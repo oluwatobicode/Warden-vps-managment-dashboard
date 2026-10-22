@@ -54,6 +54,7 @@
     "react-hot-toast": "^2.6.1",
     "react-router": "^8.4.0",
     "shared-types": "workspace:*",
+    "socket.io-client": "^4.8.4",
     "tailwindcss": "^4.3.3",
     "zod": "^4.6.1"
   },

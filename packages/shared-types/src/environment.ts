@@ -8,6 +8,8 @@ export const CreateEnvironmentSchema = z.object({
   // Default branch services in this environment deploy from (e.g. "main").
   // Optional: a team may not have decided yet. Services can override it.
   branch: z.string().trim().min(1, "Enter a branch").max(100, "Use at most 100 characters").optional(),
+  // Where its services and databases go by default (a DEPLOY server of this org).
+  defaultServerId: z.uuid().nullish(),
 });
 export type CreateEnvironmentInput = z.infer<typeof CreateEnvironmentSchema>;
 
@@ -15,5 +17,6 @@ export type CreateEnvironmentInput = z.infer<typeof CreateEnvironmentSchema>;
 export const UpdateEnvironmentSchema = CreateEnvironmentSchema.pick({
   environmentName: true,
   branch: true,
+  defaultServerId: true,
 }).partial();
 export type UpdateEnvironmentInput = z.infer<typeof UpdateEnvironmentSchema>;

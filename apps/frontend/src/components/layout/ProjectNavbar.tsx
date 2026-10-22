@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowDown01Icon, Logout03Icon, PlusSignIcon, Search01Icon, UserSettings01Icon } from "@hugeicons/core-free-icons";
+import { ArrowDown01Icon, Logout03Icon, Search01Icon, UserSettings01Icon } from "@hugeicons/core-free-icons";
 import { useAuth } from "../../features/auth/hooks/useAuth";
 import { useLogout } from "../../features/auth/hooks/useLogout";
 import { ROLE_LABEL } from "../../utils/roles";
@@ -11,7 +11,7 @@ import { UserAvatar } from "../../features/account/components/UserAvatar";
 const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform);
 
 /** Top bar inside a project (ATLINIX-style): page title · search · action · account. */
-export function ProjectNavbar({ title, onSearch, onAddService }: { title: string; onSearch: () => void; onAddService?: () => void }) {
+export function ProjectNavbar({ title, onSearch }: { title: string; onSearch: () => void }) {
   const { user } = useAuth();
   const logout = useLogout();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -32,12 +32,6 @@ export function ProjectNavbar({ title, onSearch, onAddService }: { title: string
           <kbd className="rounded-md border border-fieldb px-1.5 py-px font-sans text-[10px] text-faint">{isMac ? "⌘K" : "Ctrl K"}</kbd>
         </button>
 
-        {onAddService && (
-          <button type="button" onClick={onAddService} className="flex cursor-pointer items-center gap-1.5 rounded-[10px] bg-primary px-3 py-[7px] text-on-primary hover:bg-white">
-            <HugeiconsIcon icon={PlusSignIcon} size={13} strokeWidth={2} />
-            <span className="text-xs font-semibold whitespace-nowrap">Add service</span>
-          </button>
-        )}
 
         <span className="hidden h-7 w-px bg-fieldb sm:block" />
 

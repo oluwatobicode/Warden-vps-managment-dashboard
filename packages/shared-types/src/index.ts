@@ -16,3 +16,5 @@ export * from "./dashboard.js";
 export * from "./canvas.js";
 export * from "./database.js";
 export * from "./backup.js";
+export * from "./deploy.js";
+export * from "./repo.js";

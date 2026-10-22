@@ -19,6 +19,7 @@ import { EditServerForm } from "../../features/servers/components/EditServerForm
 import { ResourcesTab } from "../../features/servers/components/ResourcesTab";
 import { ContainersTab } from "../../features/servers/components/ContainersTab";
 import { CleanupModal } from "../../features/servers/components/CleanupModal";
+import { ProxyCard } from "../../features/deploys/components/ProxyCard";
 import { serverWhere } from "../../features/servers/components/serverLabels";
 import { apiMessage } from "../../utils/apiMessage";
 import { formatDate, timeAgo } from "../../utils/formatDate";
@@ -124,7 +125,10 @@ export default function ServerPage() {
           >
             <EditServerForm server={s} canEdit={canEdit} />
           </Card>
-          <Card title="About">
+          <div className="col-span-2 row-start-2">
+            <ProxyCard server={s} canEdit={canEdit} />
+          </div>
+          <Card title="About" className="row-start-1">
             <div className="mt-3">
               <FactRow label="Services on it">{s.serviceCount}</FactRow>
               <FactRow label="SSH key">{s.sshKey.sshKeyName}</FactRow>

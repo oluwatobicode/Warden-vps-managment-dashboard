@@ -62,6 +62,8 @@ export const REDIS_KEY = {
   magicLink: (tokenHash: string) => `${PREFIX}:magic:${tokenHash}`,
   pendingSignup: (id: string) => `${PREFIX}:pending:${id}`,
   oauthState: (state: string) => `${PREFIX}:oauth-state:${state}`,
+  // "Connect GitHub": who started it, so the install callback lands in the right org.
+  githubInstallState: (state: string) => `${PREFIX}:gh-install:${state}`,
   passwordReset: (email: string) => `${PREFIX}:pwreset:${email}`,
   passwordResetAttempts: (email: string) => `${PREFIX}:pwreset-attempts:${email}`,
   passwordResetRequests: (email: string) => `${PREFIX}:pwreset-requests:${email}`,

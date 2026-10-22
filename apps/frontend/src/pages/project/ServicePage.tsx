@@ -22,18 +22,27 @@ import { DatabasePanel } from "../../features/databases/components/DatabasePanel
 import { atLeast } from "../../utils/roles";
 import { DatabaseLogo } from "../../features/databases/components/DatabaseLogo";
 import { engineOf } from "../../features/databases/engine";
+import { DeploysPanel } from "../../features/deploys/components/DeploysPanel";
+import { DeploymentView } from "../../features/deploys/components/DeploymentView";
+import { BuildSettingsForm } from "../../features/deploys/components/BuildSettingsForm";
+import { GithubRepoPicker } from "../../features/deploys/components/GithubRepoPicker";
+import { DomainsCard } from "../../features/deploys/components/DomainsCard";
+import { useDeployInfo } from "../../features/deploys/hooks/useDeploys";
 
-type Tab = "variables" | "settings";
+type Tab = "deployments" | "variables" | "settings";
+type Section = "general" | "build" | "github" | "domains" | "delete";
 
 export default function ServicePage() {
-  const { serviceId = "" } = useParams();
+  const { serviceId = "", deploymentId } = useParams();
   const { project, environments, withEnv } = useProjectContext();
   const { user } = useAuth();
   const navigate = useNavigate();
   const service = useService(serviceId);
   const servers = useServers();
   const del = useDeleteService(serviceId);
-  const [tab, setTab] = useState<Tab>("variables");
+  const [tab, setTab] = useState<Tab>("deployments");
+  const [section, setSection] = useState<Section>("general");
+  const deployInfo = useDeployInfo(serviceId);
   const [view, setView] = useState<"own" | "resolved">("own");
   const [deleting, setDeleting] = useState(false);
 
@@ -45,6 +54,16 @@ export default function ServicePage() {
   const server = servers.data?.find((x) => x.id === s.serverId);
   const canEdit = atLeast(user?.role, "DEVELOPER");
   const overview = withEnv(`/projects/${project.id}`);
+  const fromImage = !!s.image && !s.githubRepoUrl;
+  const settingsTabs: Array<{ id: Section; label: string }> = [
+    { id: "general", label: "General" },
+    // A prebuilt image has nothing to build and no repo to connect.
+    ...(fromImage ? [] : [{ id: "build" as const, label: "Build & start" }, { id: "github" as const, label: "GitHub App" }]),
+    ...(s.type === "APPLICATION" ? [{ id: "domains" as const, label: "Domains" }] : []),
+    ...(canEdit ? [{ id: "delete" as const, label: "Delete" }] : []),
+  ];
+  const servicePath = withEnv(`/projects/${project.id}/services/${s.id}`);
+  const deployPath = (id: string) => withEnv(`/projects/${project.id}/services/${s.id}/deployments/${id}`);
   const facts = [TYPE_LABEL[s.type], sourceLabel(s), s.branch ?? env?.branch ?? null, server?.serverName ?? "no server", s.port ? `:${s.port}` : null].filter(Boolean);
 
   const onDelete = () =>
@@ -94,6 +113,19 @@ export default function ServicePage() {
     );
   }
 
+  // One deploy's page: its steps and live output.
+  if (deploymentId) {
+    return (
+      <>
+        {header}
+        <button type="button" onClick={() => navigate(servicePath)} className="mt-1 cursor-pointer text-[12px] text-sand hover:text-strong">
+          ← All deployments
+        </button>
+        <DeploymentView service={s} deploymentId={deploymentId} canEdit={canEdit} onRolledBack={(id) => navigate(deployPath(id))} />
+      </>
+    );
+  }
+
   return (
     <>
       {header}
@@ -101,10 +133,13 @@ export default function ServicePage() {
         value={tab}
         onChange={setTab}
         tabs={[
+          { id: "deployments", label: "Deployments" },
           { id: "variables", label: "Variables" },
           { id: "settings", label: "Settings" },
         ]}
       />
+
+      {tab === "deployments" && <DeploysPanel service={s} canEdit={canEdit} deployPath={deployPath} />}
 
       {tab === "variables" && (
         <div className="mt-[18px] pb-2">
@@ -140,25 +175,55 @@ export default function ServicePage() {
       )}
 
       {tab === "settings" && (
-        <div className="mt-[18px] grid grid-cols-2 items-start gap-3.5 pb-2">
-          <Card title="Source & runtime" sub="Takes effect on the next deploy.">
-            <EditServiceForm service={s} canEdit={canEdit} />
-          </Card>
-          <Card title="Server" sub="Only deploy servers run services. A running service can't be moved.">
-            <ServerAssignment service={s} canEdit={canEdit} />
-          </Card>
-          {canEdit && (
-            <div className="col-span-2">
+        <div className="mt-[18px] grid grid-cols-[180px_minmax(0,1fr)] items-start gap-5 pb-2">
+          <nav role="tablist" aria-label="Service settings" aria-orientation="vertical" className="sticky top-0 flex flex-col gap-0.5">
+            {settingsTabs.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                role="tab"
+                aria-selected={section === t.id}
+                onClick={() => setSection(t.id)}
+                className={`cursor-pointer rounded-[10px] px-3 py-2.5 text-left text-[12.5px] font-semibold ${section === t.id ? "bg-[#24262c] text-white" : t.id === "delete" ? "text-crit/80 hover:text-crit" : "text-[#7c8088] hover:text-strong"}`}
+              >
+                {t.label}
+              </button>
+            ))}
+          </nav>
+          <div className="flex min-w-0 flex-col gap-3.5">
+            {section === "general" && (
+              <>
+                <Card title="Source & runtime" sub="Takes effect on the next deploy.">
+                  <EditServiceForm service={s} canEdit={canEdit} />
+                </Card>
+                <Card title="Server" sub="Only deploy servers run services. A running service can't be moved.">
+                  <ServerAssignment service={s} canEdit={canEdit} />
+                </Card>
+              </>
+            )}
+            {section === "build" && deployInfo.data && (
+              <Card title="Build & start" sub="How Warden turns the repo into a running app. Used from the next deploy.">
+                <BuildSettingsForm service={s} settings={deployInfo.data.settings} canEdit={canEdit} />
+              </Card>
+            )}
+            {section === "github" && deployInfo.data && (
+              <Card title="GitHub App" sub="For private repos and deploy-on-push.">
+                <GithubRepoPicker service={s} settings={deployInfo.data.settings} canEdit={canEdit} />
+              </Card>
+            )}
+            {section === "domains" && deployInfo.data && <DomainsCard service={s} info={deployInfo.data} canEdit={canEdit} />}
+            {section === "delete" && (
               <DangerZone
                 body={
                   s.serverId
-                    ? `${s.serviceName} is on ${server?.serverName ?? "a server"}. Unassign it first, then it can be deleted with its variables.`
+                    ? `${s.serviceName} is on ${server?.serverName ?? "a server"}. Unassign it first (General → Server), then it can be deleted with its variables.`
                     : `Deletes ${s.serviceName} and its own variables. Environment variables are not affected.`
                 }
                 action={<Button variant="danger" onClick={() => setDeleting(true)}>Delete service</Button>}
               />
-            </div>
-          )}
+            )}
+            {(section === "build" || section === "github" || section === "domains") && deployInfo.isPending && <Card title="Loading…" />}
+          </div>
         </div>
       )}
 

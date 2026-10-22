@@ -15,6 +15,7 @@ import ServersPage from "../pages/settings/ServersPage";
 import ServerPage from "../pages/settings/ServerPage";
 import SshKeysPage from "../pages/settings/SshKeysPage";
 import BackupStoragePage from "../pages/settings/BackupStoragePage";
+import GithubPage from "../pages/settings/GithubPage";
 import TeamPage from "../pages/settings/TeamPage";
 import NotificationsPage from "../pages/settings/NotificationsPage";
 import ApiTokensPage from "../pages/settings/ApiTokensPage";
@@ -62,6 +63,7 @@ export const router = createBrowserRouter([
               { path: "servers/:serverId", element: <ServerPage /> },
               { path: "ssh-keys", element: <SshKeysPage /> },
               { path: "backup-storage", element: <BackupStoragePage /> },
+              { path: "github", element: <GithubPage /> },
               { path: "team", element: <TeamPage /> },
               { path: "notifications", element: <NotificationsPage /> },
               {
@@ -92,6 +94,7 @@ export const router = createBrowserRouter([
         children: [
           { index: true, element: <ProjectOverviewPage /> },
           { path: "services/:serviceId", element: <ServicePage /> },
+          { path: "services/:serviceId/deployments/:deploymentId", element: <ServicePage /> },
           { path: "variables", element: <ProjectVariablesPage /> },
           {
             path: "canvas",

@@ -21,6 +21,7 @@ import {
 } from 'shared-types';
 import { decrypt, encrypt } from 'warden-crypto';
 import { PrismaService } from '../../prisma/prisma.service';
+import { pickServer } from '../environments/pick-server';
 import { AuditService } from '../audit/audit.service';
 import { OrgKeyService } from '../warden-crypto/org-key.service';
 import {
@@ -31,6 +32,7 @@ import {
 } from '../../common/constants/messages.config';
 import type { Actor } from '../../common/types/actor';
 import { DATABASE_QUEUE } from './database.queue';
+import { createDeployment } from '../deploys/deployment-counter';
 import { BackupStorageService } from './backup-storage.service';
 
 /** A deploy that hasn't finished yet: a second create/restart must wait. */
@@ -97,6 +99,9 @@ export class DatabaseService {
     const orgId = actor.organizationId;
     const db = this.prisma.client;
     const spec = DATABASE_CATALOG[input.engine];
+    // The server asked for, else the environment's default (a database needs one now).
+    const serverId = await pickServer(this.prisma, orgId, input.environmentId, input.serverId);
+    if (!serverId) throw new BadRequestException(DATABASE_MESSAGES.no_server);
 
     const [env, server, taken] = await Promise.all([
       db.environment.findFirst({
@@ -104,7 +109,7 @@ export class DatabaseService {
         select: { id: true },
       }),
       db.server.findFirst({
-        where: { id: input.serverId, organizationId: orgId },
+        where: { id: serverId, organizationId: orgId },
         select: { id: true, serverType: true },
       }),
       db.environmentVariable.findFirst({
@@ -403,22 +408,12 @@ export class DatabaseService {
       message: string;
     },
   ): Promise<string> {
-    const { deployCounter } = await tx.organization.update({
-      where: { id: d.orgId },
-      data: { deployCounter: { increment: 1 } },
-      select: { deployCounter: true },
-    });
-    const dep = await tx.deployment.create({
-      data: {
-        number: deployCounter,
-        organizationId: d.orgId,
-        serviceId: d.serviceId,
-        deploymentStatus: 'QUEUED',
-        commitMessage: d.message,
-        triggeredById: d.actor.userId,
-        triggeredByName: d.triggeredByName,
-        history: { create: { status: 'QUEUED', message: 'Queued' } },
-      },
+    const dep = await createDeployment(tx, {
+      orgId: d.orgId,
+      serviceId: d.serviceId,
+      message: d.message,
+      triggeredById: d.actor.userId,
+      triggeredByName: d.triggeredByName,
     });
     return dep.id;
   }

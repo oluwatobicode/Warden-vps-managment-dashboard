@@ -1,6 +1,6 @@
 import { NavLink, Outlet } from "react-router";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { CloudUploadIcon, Key01Icon, Notification01Icon, ServerStack01Icon, SquareLock02Icon, Task01Icon, UserGroupIcon } from "@hugeicons/core-free-icons";
+import { CloudUploadIcon, GithubIcon, Key01Icon, Notification01Icon, ServerStack01Icon, SquareLock02Icon, Task01Icon, UserGroupIcon } from "@hugeicons/core-free-icons";
 import { useAuth } from "../../features/auth/hooks/useAuth";
 import { useServers } from "../../features/servers/hooks/useServers";
 import { useSshKeys } from "../../features/ssh-keys/hooks/useSshKeys";
@@ -14,6 +14,7 @@ export function SettingsLayout() {
   const items = [
     { to: "/settings/servers", label: "Remote servers", icon: ServerStack01Icon, badge: servers.data?.length },
     { to: "/settings/ssh-keys", label: "SSH keys", icon: Key01Icon, badge: keys.data?.length },
+    { to: "/settings/github", label: "GitHub", icon: GithubIcon },
     { to: "/settings/backup-storage", label: "Backup storage", icon: CloudUploadIcon },
     { to: "/settings/team", label: "Team & roles", icon: UserGroupIcon },
     { to: "/settings/notifications", label: "Notifications", icon: Notification01Icon },
