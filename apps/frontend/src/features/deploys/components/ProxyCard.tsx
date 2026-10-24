@@ -11,12 +11,14 @@ import { ProxySetupError, useProxyStatus, useSetupProxy } from "../hooks/useDepl
  * until it's set up. Setting it up again is safe: it's recreated with the
  * current settings, and certificates are kept.
  */
-export function ProxyCard({ server, canEdit }: { server: Pick<Server, "id" | "serverName" | "serverType">; canEdit: boolean }) {
+export function ProxyCard({ server, canEdit, editorReady }: { server: Pick<Server, "id" | "serverName" | "serverType">; canEdit: boolean; editorReady?: boolean }) {
   const status = useProxyStatus(server.id);
   const setup = useSetupProxy(server.id);
 
   if (server.serverType !== "DEPLOY") return null;
   const installedAt = status.data?.installedAt;
+  // Set up before the config editor existed: needs one update (Traefik restarts).
+  const outdated = !!installedAt && editorReady === false;
   const onSetup = () =>
     setup.mutate(undefined, {
       onSuccess: () => toast.success(`The proxy is running on ${server.serverName}`),
@@ -30,15 +32,17 @@ export function ProxyCard({ server, canEdit }: { server: Pick<Server, "id" | "se
       action={
         canEdit && (
           <Button variant={installedAt ? "secondary" : "primary"} loading={setup.isPending} onClick={onSetup} className="whitespace-nowrap">
-            {installedAt ? "Set up again" : "Set up proxy"}
+            {outdated ? "Update proxy" : installedAt ? "Set up again" : "Set up proxy"}
           </Button>
         )
       }
     >
-      <p className={`mt-3 text-[12px] ${installedAt && !setup.isPending ? "text-good" : "text-warn"}`}>
+      <p className={`mt-3 text-[12px] ${installedAt && !setup.isPending && !outdated ? "text-good" : "text-warn"}`}>
         {setup.isPending
           ? "Setting it up… (the first time downloads Traefik)"
-          : installedAt
+          : outdated
+            ? "Running, but set up before the config editor existed. Update it to turn the editor on: Traefik restarts, so this server's sites are unreachable for 2–3 seconds."
+            : installedAt
             ? `Running · set up ${timeAgo(installedAt)}`
             : "Not set up yet. Ports 80 and 443 must be free and open in the cloud firewall (on GCP: Allow HTTP and HTTPS traffic)."}
       </p>

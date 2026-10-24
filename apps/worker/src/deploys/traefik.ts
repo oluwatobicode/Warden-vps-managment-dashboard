@@ -11,6 +11,13 @@ import { ensureNetwork, ensureVolume, q, removeContainer, type Run } from "docke
 export const PROXY_IMAGE = "traefik:v3.7";
 export const PROXY_CONTAINER = "warden-traefik";
 export const PROXY_NETWORK = "warden-proxy";
+/**
+ * Which setup a server's Traefik has (Server.proxyRevision). 2 added
+ * warden.yml (the config editor), its private status page and the host gateway.
+ */
+export const PROXY_REVISION = 2;
+/** The folder Traefik watches; warden.yml lives here (a volume, so it survives re-setups). */
+export const DYNAMIC_DIR = "/etc/traefik/dynamic";
 
 const ARGS = [
   "--providers.docker=true",
@@ -25,6 +32,15 @@ const ARGS = [
   "--certificatesresolvers.le.acme.storage=/letsencrypt/acme.json",
   "--ping=true",
   "--ping.entrypoint=web",
+  // warden.yml, edited on the server page → Proxy. Reloaded live when it changes.
+  `--providers.file.directory=${DYNAMIC_DIR}`,
+  "--providers.file.watch=true",
+  // Traefik's status page, so Warden can ask whether a change loaded cleanly.
+  // Bound to 127.0.0.1 INSIDE the container: not reachable from the apps'
+  // network, and never published (only 80/443 are).
+  "--api=true",
+  "--api.insecure=true",
+  "--entrypoints.traefik.address=127.0.0.1:8080",
   // Zero-downtime swaps. When the old version stops, its address vanishes, so a
   // request already sent to it would wait out the 30s default before the retry
   // rule could send it to the new version. Measured in the test server: with
@@ -40,6 +56,7 @@ const ARGS = [
 export async function setupProxy(run: Run): Promise<void> {
   await ensureNetwork(run, PROXY_NETWORK);
   await ensureVolume(run, "warden-traefik-acme");
+  await ensureVolume(run, "warden-traefik-dynamic");
   const pull = await run(`docker pull -q ${PROXY_IMAGE}`);
   if (pull.code !== 0) throw new Error(`Couldn't download Traefik: ${firstLine(pull.stderr || pull.stdout)}`);
   await removeContainer(run, PROXY_CONTAINER);
@@ -53,6 +70,9 @@ export async function setupProxy(run: Run): Promise<void> {
       // Read-only: Traefik only watches containers, it never starts or stops them.
       "-v /var/run/docker.sock:/var/run/docker.sock:ro",
       "-v warden-traefik-acme:/letsencrypt",
+      `-v warden-traefik-dynamic:${DYNAMIC_DIR}`,
+      // "host.docker.internal" = the server itself, for routes to apps not deployed by Warden.
+      "--add-host=host.docker.internal:host-gateway",
       "--label warden=1",
       PROXY_IMAGE,
       ...ARGS,

@@ -44,6 +44,7 @@
     "socket.io": "4.8.4",
     "ssh-client": "workspace:*",
     "storage": "workspace:*",
+    "traefik-config": "workspace:*",
     "warden-crypto": "workspace:*",
     "zod": "^4.6.1"
   },

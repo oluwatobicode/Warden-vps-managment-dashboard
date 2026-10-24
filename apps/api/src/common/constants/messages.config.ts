@@ -273,3 +273,15 @@ export const GITHUB_MESSAGES = {
     'GitHub is limiting requests right now. Connect GitHub (Settings → GitHub) for a much higher limit, or try again in a few minutes',
 } as const;
 
+export const PROXY_MESSAGES = {
+  server_not_found: 'Server not found',
+  update_first:
+    'This server’s proxy was set up before the editor existed. Press "Update proxy" first',
+  fix_first: 'Fix the problems first',
+  busy: 'Someone is applying a change to this server’s proxy right now. Try again in a moment',
+  stale:
+    'The config changed since you opened it (someone else saved). Reload to see their version, then make your change again',
+  unreachable: 'Couldn’t reach {server}, so nothing was changed',
+  version_not_found: 'That version doesn’t exist',
+} as const;
+

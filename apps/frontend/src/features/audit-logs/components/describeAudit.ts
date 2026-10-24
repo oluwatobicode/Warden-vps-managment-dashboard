@@ -47,6 +47,12 @@ export function describeAudit(e: AuditLog): { text: string; area: AuditArea } {
       return { area: "infra", text: `Deleted database ${s(m.name)}${m.dataDeleted ? " and all its data" : " (data kept)"}` };
     case "database.connection_revealed":
       return { area: "secrets", text: `Revealed the connection string of a database (${s(m.variable)})` };
+    case "proxy_config.applied":
+      return { area: "infra", text: `Changed the proxy config (warden.yml) on ${s(m.server)}` };
+    case "proxy_config.reverted":
+      return { area: "infra", text: `Reverted the proxy config on ${s(m.server)} to an earlier version` };
+    case "proxy_config.rolled_back":
+      return { area: "infra", text: `Tried a proxy config change on ${s(m.server)}; Traefik refused it and the previous version was put back` };
     case "service.deleted":
       return { area: "projects", text: `Deleted service ${s(m.service)}${m.leftOnServer ? " (its server couldn't be reached; containers may remain there)" : ""}` };
     case "service.stopped":

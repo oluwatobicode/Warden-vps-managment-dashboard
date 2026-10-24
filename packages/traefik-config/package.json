@@ -1,0 +1,29 @@
+{
+  "name": "traefik-config",
+  "version": "1.0.0",
+  "description": "The Traefik config editor's logic: turn the form into Traefik's file-provider config, merge it with free YAML, and check the result (YAML, Traefik's own schema, Warden's naming rules, references) before anything is applied.",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsc --watch",
+    "test": "vitest run"
+  },
+  "license": "ISC",
+  "dependencies": {
+    "ajv": "^8.20.0",
+    "shared-types": "workspace:*",
+    "yaml": "^2.9.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.2",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.3"
+  }
+}

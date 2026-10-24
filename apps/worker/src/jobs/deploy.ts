@@ -8,7 +8,7 @@ import { log as workerLog } from "../log";
 import { notify } from "../notify";
 import { redis } from "../redis";
 import { DeployLog } from "../deploys/logger";
-import { routeLabels, setupProxy, proxyRunning } from "../deploys/traefik";
+import { PROXY_REVISION, routeLabels, setupProxy, proxyRunning } from "../deploys/traefik";
 import { buildDockerfile, clone, hasDockerfile } from "../deploys/source";
 import { buildRailpack } from "../deploys/railpack";
 import { installationToken } from "../deploys/github";
@@ -271,7 +271,7 @@ export async function proxyJob(job: ProxyJob): Promise<void> {
   if (!server) return;
   const target = await sshTargetFor({ ...server, organizationId: server.organizationId });
   await withSsh(target, (run) => setupProxy(run));
-  await prisma.server.update({ where: { id: server.id }, data: { proxyInstalledAt: new Date() } });
+  await prisma.server.update({ where: { id: server.id }, data: { proxyInstalledAt: new Date(), proxyRevision: PROXY_REVISION } });
   workerLog.info(`proxy set up on ${server.serverName}`);
 }
 

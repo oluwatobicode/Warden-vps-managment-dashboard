@@ -19,13 +19,13 @@ import { EditServerForm } from "../../features/servers/components/EditServerForm
 import { ResourcesTab } from "../../features/servers/components/ResourcesTab";
 import { ContainersTab } from "../../features/servers/components/ContainersTab";
 import { CleanupModal } from "../../features/servers/components/CleanupModal";
-import { ProxyCard } from "../../features/deploys/components/ProxyCard";
+import { ProxyTab } from "../../features/proxy/components/ProxyTab";
 import { serverWhere } from "../../features/servers/components/serverLabels";
 import { apiMessage } from "../../utils/apiMessage";
 import { formatDate, timeAgo } from "../../utils/formatDate";
 import { atLeast } from "../../utils/roles";
 
-type Tab = "resources" | "containers" | "details" | "danger";
+type Tab = "resources" | "containers" | "proxy" | "details" | "danger";
 
 export default function ServerPage() {
   const { serverId = "" } = useParams();
@@ -109,6 +109,7 @@ export default function ServerPage() {
               ? `Containers · ${s.containers.total}`
               : "Containers",
           },
+          ...(s.serverType === "DEPLOY" ? [{ id: "proxy" as const, label: "Proxy" }] : []),
           { id: "details", label: "Details" },
           ...(canEdit ? [{ id: "danger" as const, label: "Danger zone" }] : []),
         ]}
@@ -116,6 +117,7 @@ export default function ServerPage() {
 
       {tab === "resources" && <ResourcesTab serverId={s.id} />}
       {tab === "containers" && <ContainersTab serverId={s.id} />}
+      {tab === "proxy" && <ProxyTab server={s} canEdit={canEdit} />}
 
       {tab === "details" && (
         <div className="mt-5 grid grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)] items-start gap-3.5 pb-2">
@@ -125,10 +127,7 @@ export default function ServerPage() {
           >
             <EditServerForm server={s} canEdit={canEdit} />
           </Card>
-          <div className="col-span-2 row-start-2">
-            <ProxyCard server={s} canEdit={canEdit} />
-          </div>
-          <Card title="About" className="row-start-1">
+          <Card title="About">
             <div className="mt-3">
               <FactRow label="Services on it">{s.serviceCount}</FactRow>
               <FactRow label="SSH key">{s.sshKey.sshKeyName}</FactRow>

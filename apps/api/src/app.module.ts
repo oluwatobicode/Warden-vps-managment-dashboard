@@ -26,6 +26,7 @@ import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { CanvasModule } from './modules/canvas/canvas.module';
 import { DatabaseModule } from './modules/databases/database.module';
 import { DeployModule } from './modules/deploys/deploy.module';
+import { ProxyConfigModule } from './modules/proxy/proxy.module';
 
 @Module({
   imports: [
@@ -64,6 +65,7 @@ import { DeployModule } from './modules/deploys/deploy.module';
     CanvasModule,
     DatabaseModule,
     DeployModule,
+    ProxyConfigModule,
   ],
   controllers: [AppController],
   providers: [AppService, { provide: APP_GUARD, useClass: ThrottlerGuard }],

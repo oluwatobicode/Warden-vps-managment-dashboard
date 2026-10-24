@@ -198,7 +198,7 @@ export function useSetupProxy(serverId: string) {
       throw new ProxySetupError("The proxy setup is taking longer than 3 minutes. Check the server, then try again");
     },
     onSettled: () =>
-      Promise.all([deployKeys.proxy(serverId), ["deploy-info"]].map((queryKey) => queryClient.invalidateQueries({ queryKey }))),
+      Promise.all([deployKeys.proxy(serverId), ["deploy-info"], ["proxy-config", serverId]].map((queryKey) => queryClient.invalidateQueries({ queryKey }))),
   });
 }
 
