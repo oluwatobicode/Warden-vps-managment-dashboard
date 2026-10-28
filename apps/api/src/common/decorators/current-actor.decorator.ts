@@ -14,6 +14,7 @@ export const CurrentActor = createParamDecorator(
       // Writing it to performedById would break the foreign key, so null it.
       userId: req.apiTokenId ? null : s.userId,
       apiTokenId: req.apiTokenId ?? null,
+      tokenProjectId: req.apiTokenProjectId ?? null,
     };
   },
 );

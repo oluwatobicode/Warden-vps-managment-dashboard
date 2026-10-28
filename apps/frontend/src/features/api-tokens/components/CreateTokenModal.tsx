@@ -11,6 +11,8 @@ import { CopyButton } from "../../../components/ui/CopyButton";
 import { CloseButton } from "../../../components/ui/CloseButton";
 import { Input } from "../../../components/ui/Input";
 import { Segmented } from "../../../components/ui/Segmented";
+import { Select } from "../../../components/ui/Select";
+import { useProjects } from "../../projects/hooks/useProjects";
 import { applyApiIssues, apiMessage } from "../../../utils/apiMessage";
 import { useCreateApiToken } from "../hooks/useApiTokens";
 
@@ -20,6 +22,7 @@ import { useCreateApiToken } from "../hooks/useApiTokens";
  */
 export function CreateTokenModal({ onClose }: { onClose: () => void }) {
   const create = useCreateApiToken();
+  const projects = useProjects();
   const [token, setToken] = useState<string | null>(null);
   const {
     register,
@@ -29,7 +32,7 @@ export function CreateTokenModal({ onClose }: { onClose: () => void }) {
     formState: { errors },
   } = useForm<z.input<typeof CreateApiTokenSchema>, unknown, CreateApiTokenInput>({
     resolver: zodResolver(CreateApiTokenSchema),
-    defaultValues: { apiName: "", apiTokenScope: "DEPLOY", expiresIn: "90d" },
+    defaultValues: { apiName: "", apiTokenScope: "DEPLOY", expiresIn: "90d", projectId: null },
   });
 
   const onSubmit = (input: CreateApiTokenInput) =>
@@ -48,7 +51,7 @@ export function CreateTokenModal({ onClose }: { onClose: () => void }) {
           <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-4">
             <div>
               <h3 id="token-title" className="m-0 text-lg font-bold tracking-[-0.3px] text-strong">Create API token</h3>
-              <p className="mt-[9px] text-[12.5px] text-muted-warm">For CI and scripts. Shown once, then only its hash is kept.</p>
+              <p className="mt-[9px] text-[12.5px] text-muted-warm">For CI and scripts: it can deploy, roll back, cancel and read deployments, nothing else. Shown once, then only its hash is kept.</p>
             </div>
             <Input label="Token name" placeholder="github-actions" mono autoFocus error={errors.apiName?.message} {...register("apiName")} />
             <Controller
@@ -60,10 +63,24 @@ export function CreateTokenModal({ onClose }: { onClose: () => void }) {
                   value={field.value ?? "DEPLOY"}
                   onChange={field.onChange}
                   options={[
-                    { id: "READ", label: "Read only", detail: "Acts as a Viewer" },
-                    { id: "DEPLOY", label: "Deploy", detail: "Acts as a Developer" },
-                    { id: "ADMIN", label: "Admin", detail: "Full API access" },
+                    { id: "READ", label: "Read only", detail: "Reads deployments and their logs" },
+                    { id: "DEPLOY", label: "Deploy", detail: "Also deploys, rolls back and cancels" },
                   ]}
+                />
+              )}
+            />
+            <Controller
+              control={control}
+              name="projectId"
+              render={({ field }) => (
+                <Select
+                  label="Project"
+                  placeholder="Every project"
+                  value={field.value ?? ""}
+                  onChange={(v) => field.onChange(v || null)}
+                  disabled={projects.isPending}
+                  error={errors.projectId?.message}
+                  options={(projects.data ?? []).map((p) => ({ value: p.id, label: p.projectName, hint: "only this project's services" }))}
                 />
               )}
             />

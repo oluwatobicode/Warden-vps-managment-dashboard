@@ -9,11 +9,14 @@ import { GithubService } from './github.service';
 import { GithubConfig } from './github.config';
 import { deployQueueProvider } from './deploy.queue';
 import { RepoServicesService } from './repo-services.service';
+import { SessionGuard } from '../../common/guards/session.guard';
+import { ApiTokenGuard } from '../../common/guards/api-token.guard';
+import { SessionOrTokenGuard } from '../../common/guards/session-or-token.guard';
 
 /** Phase 2: app deploys, live logs, the GitHub App. */
 @Module({
   imports: [SessionModule, AppControlModule],
   controllers: [DeployController, GithubController],
-  providers: [DeployService, DeployGateway, GithubService, GithubConfig, RepoServicesService, deployQueueProvider],
+  providers: [SessionGuard, ApiTokenGuard, SessionOrTokenGuard, DeployService, DeployGateway, GithubService, GithubConfig, RepoServicesService, deployQueueProvider],
 })
 export class DeployModule {}

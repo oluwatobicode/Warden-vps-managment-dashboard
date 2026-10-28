@@ -9,7 +9,8 @@ import {
   type TriggerDeployInput,
   type UpdateDeploySettingsInput,
 } from 'shared-types';
-import { SessionGuard } from '../../common/guards/session.guard';
+import { SessionOrTokenGuard } from '../../common/guards/session-or-token.guard';
+import { TokenAllowed } from '../../common/decorators/token-allowed.decorator';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { CurrentOrg } from '../../common/decorators/current-org.decorator';
@@ -24,9 +25,11 @@ import { AppControlService } from './app-control.service';
 /**
  * App deploys. Everyone can watch; Developer and up deploy, roll back, cancel
  * and change build settings; DevOps and up set up a server's proxy.
+ * API tokens (CI) may only use the routes marked @TokenAllowed(): READ tokens
+ * read deployments, DEPLOY tokens also deploy, roll back and cancel.
  */
 @Controller()
-@UseGuards(SessionGuard, RolesGuard)
+@UseGuards(SessionOrTokenGuard, RolesGuard)
 export class DeployController {
   constructor(
     private readonly deploys: DeployService,
@@ -60,6 +63,7 @@ export class DeployController {
 
   /** 202: Deployment #N is queued; the worker does the rest. */
   @Post('deployments')
+  @TokenAllowed()
   @Roles('ADMIN', 'DEV_OPS', 'DEVELOPER')
   @HttpCode(202)
   trigger(@CurrentActor() actor: Actor, @Body(new ZodValidationPipe(TriggerDeploySchema)) body: TriggerDeployInput) {
@@ -67,23 +71,27 @@ export class DeployController {
   }
 
   @Get('deployments')
-  list(@CurrentOrg() orgId: string, @Query('serviceId', UuidPipe) serviceId: string) {
-    return this.deploys.list(orgId, serviceId);
+  @TokenAllowed()
+  list(@CurrentActor() actor: Actor, @Query('serviceId', UuidPipe) serviceId: string) {
+    return this.deploys.list(actor.organizationId, serviceId, actor.tokenProjectId);
   }
 
   @Get('deployments/:id')
-  detail(@CurrentOrg() orgId: string, @Param('id', UuidPipe) id: string) {
-    return this.deploys.detail(orgId, id);
+  @TokenAllowed()
+  detail(@CurrentActor() actor: Actor, @Param('id', UuidPipe) id: string) {
+    return this.deploys.detail(actor.organizationId, id, actor.tokenProjectId);
   }
 
   /** Saved output after chunk `after` (0 = from the start). Live lines come over Socket.io. */
   @Get('deployments/:id/logs')
-  logs(@CurrentOrg() orgId: string, @Param('id', UuidPipe) id: string, @Query('after') after?: string) {
+  @TokenAllowed()
+  logs(@CurrentActor() actor: Actor, @Param('id', UuidPipe) id: string, @Query('after') after?: string) {
     const n = Number(after ?? 0);
-    return this.deploys.logs(orgId, id, Number.isInteger(n) && n > 0 ? n : 0);
+    return this.deploys.logs(actor.organizationId, id, Number.isInteger(n) && n > 0 ? n : 0, actor.tokenProjectId);
   }
 
   @Post('deployments/:id/rollback')
+  @TokenAllowed()
   @Roles('ADMIN', 'DEV_OPS', 'DEVELOPER')
   @HttpCode(202)
   rollback(@CurrentActor() actor: Actor, @Param('id', UuidPipe) id: string) {
@@ -91,6 +99,7 @@ export class DeployController {
   }
 
   @Post('deployments/:id/cancel')
+  @TokenAllowed()
   @Roles('ADMIN', 'DEV_OPS', 'DEVELOPER')
   cancel(@CurrentActor() actor: Actor, @Param('id', UuidPipe) id: string) {
     return this.deploys.cancel(actor, id);

@@ -47,6 +47,7 @@ export class ApiTokenGuard implements CanActivate {
     };
 
     req.apiTokenId = token.id;
+    req.apiTokenProjectId = token.projectId;
 
     void this.prisma.client.apiToken
       .update({

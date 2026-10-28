@@ -5,6 +5,7 @@ import { Breadcrumbs } from "../../components/layout/Breadcrumbs";
 import { Button } from "../../components/ui/Button";
 import { Card, DangerZone } from "../../components/ui/Card";
 import { ConfirmDialog } from "../../components/ui/ConfirmDialog";
+import { CopyButton } from "../../components/ui/CopyButton";
 import { FullPageSpinner } from "../../components/ui/Spinner";
 import { StatusPill } from "../../components/ui/StatusPill";
 import { Tabs } from "../../components/ui/Tabs";
@@ -204,6 +205,12 @@ export default function ServicePage() {
                 </Card>
                 <Card title="Server" sub="Only deploy servers run services. A running service can't be moved.">
                   <ServerAssignment service={s} canEdit={canEdit} />
+                </Card>
+                <Card title="Service ID" sub="For deploying from CI with an API token (Settings → API tokens).">
+                  <div className="mt-3.5 flex items-center gap-3 rounded-xl bg-ink px-4 py-3">
+                    <span className="min-w-0 flex-1 truncate font-mono text-xs text-body">{s.id}</span>
+                    <CopyButton value={s.id} text="Copy" done="Service ID copied" />
+                  </div>
                 </Card>
               </>
             )}

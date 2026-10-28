@@ -10,6 +10,7 @@ export interface AuthenticatedRequest extends Request {
   sid?: string;
   // set by ApiTokenGuard (alongside session)
   apiTokenId?: string;
+  apiTokenProjectId?: string | null; // the one project the token may touch, if any
   // set by OnboardingGuard
   pending?: PendingSignupRecord;
   pendingId?: string;

@@ -190,6 +190,8 @@ export const API_TOKEN_MESSAGES = {
   invalid: 'Invalid API token',
   expired: 'This API token has expired',
   insufficient_scope: 'This API token does not have permission for that action',
+  route_not_allowed: 'API tokens can only deploy, roll back, cancel and read deployments. Sign in for anything else',
+  project_not_found: 'Project not found',
 } as const;
 
 export const NOTIFICATION_MESSAGES = {

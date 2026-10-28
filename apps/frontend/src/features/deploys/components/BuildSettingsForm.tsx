@@ -111,7 +111,7 @@ export function BuildSettingsForm({ service, settings, canEdit }: { service: Ser
         <Controller
           control={control}
           name="autoDeploy"
-          render={({ field }) => <Toggle checked={field.value} onChange={field.onChange} label="Deploy on every push" detail="Needs the repo connected through the Warden GitHub App (Settings → GitHub)." />}
+          render={({ field }) => <Toggle checked={field.value} onChange={field.onChange} label="Deploy on every push" detail="Needs the repo connected through the Warden GitHub App (Settings → GitHub). Deploying from CI with an API token instead? Turn this off, or each push deploys twice." />}
         />
         {canEdit && (
           <Button type="submit" disabled={!isDirty} loading={update.isPending} className="self-start">

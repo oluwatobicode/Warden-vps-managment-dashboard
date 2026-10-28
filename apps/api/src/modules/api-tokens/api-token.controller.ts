@@ -65,6 +65,7 @@ export class ApiTokenWhoamiController {
       tokenId: req.apiTokenId!,
       organizationId: req.session!.organizationId,
       role: req.session!.role,
+      projectId: req.apiTokenProjectId ?? null,
     };
   }
 }

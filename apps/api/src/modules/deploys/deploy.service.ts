@@ -36,6 +36,14 @@ const IN_PROGRESS = ['QUEUED', 'BUILDING', 'DEPLOYING', 'HEALTH_CHECK'] as const
 /** The worker checks this between steps (see apps/worker/src/jobs/deploy.ts). */
 export const cancelKey = (deploymentId: string) => `deploy-cancel:${deploymentId}`;
 
+/**
+ * A token tied to one project gets a 404 for anything outside it, the same
+ * answer as for another org's ids, so it can't even tell what exists.
+ */
+function inProject(onlyProject: string | null | undefined, projectId: string, message: string): void {
+  if (onlyProject && onlyProject !== projectId) throw new NotFoundException(message);
+}
+
 type DeploymentRow = Prisma.DeploymentGetPayload<{
   include: { rollbackOf: { select: { number: true } } };
 }>;
@@ -58,7 +66,7 @@ export class DeployService {
   // ── deploy, rollback, cancel ───────────────────────────────────────────
 
   async trigger(actor: Actor, input: TriggerDeployInput): Promise<Deployment> {
-    const svc = await this.deployable(actor.organizationId, input.serviceId);
+    const svc = await this.deployable(actor.organizationId, input.serviceId, actor.tokenProjectId);
     const dep = await this.queueDeploy(svc, {
       triggeredById: actor.userId,
       triggeredByName: await this.actorName(actor),
@@ -84,8 +92,10 @@ export class DeployService {
     const orgId = actor.organizationId;
     const target = await this.prisma.client.deployment.findFirst({
       where: { id: deploymentId, organizationId: orgId },
+      include: { service: { select: { environment: { select: { projectId: true } } } } },
     });
     if (!target) throw new NotFoundException(DEPLOY_MESSAGES.not_found);
+    inProject(actor.tokenProjectId, target.service.environment.projectId, DEPLOY_MESSAGES.not_found);
     if (target.deploymentStatus !== 'SUCCESS') {
       throw new BadRequestException(DEPLOY_MESSAGES.rollback_not_success);
     }
@@ -122,6 +132,7 @@ export class DeployService {
       include: { service: { select: { serviceName: true, environment: { select: { projectId: true } } } } },
     });
     if (!dep) throw new NotFoundException(DEPLOY_MESSAGES.not_found);
+    inProject(actor.tokenProjectId, dep.service.environment.projectId, DEPLOY_MESSAGES.not_found);
     if (!(IN_PROGRESS as readonly string[]).includes(dep.deploymentStatus)) {
       throw new BadRequestException(DEPLOY_MESSAGES.cancel_not_running);
     }
@@ -169,8 +180,9 @@ export class DeployService {
 
   // ── reading ────────────────────────────────────────────────────────────
 
-  async list(orgId: string, serviceId: string): Promise<Deployment[]> {
-    await this.serviceOf(orgId, serviceId);
+  async list(orgId: string, serviceId: string, onlyProject: string | null = null): Promise<Deployment[]> {
+    const svc = await this.serviceOf(orgId, serviceId);
+    inProject(onlyProject, svc.environment.projectId, DEPLOY_MESSAGES.service_not_found);
     const [rows, live] = await Promise.all([
       this.prisma.client.deployment.findMany({
         where: { serviceId, organizationId: orgId },
@@ -183,16 +195,17 @@ export class DeployService {
     return rows.map((r) => this.toDto(r, live));
   }
 
-  async detail(orgId: string, deploymentId: string): Promise<DeploymentDetail> {
+  async detail(orgId: string, deploymentId: string, onlyProject: string | null = null): Promise<DeploymentDetail> {
     const r = await this.prisma.client.deployment.findFirst({
       where: { id: deploymentId, organizationId: orgId },
       include: {
         rollbackOf: { select: { number: true } },
-        service: { select: { serviceName: true } },
+        service: { select: { serviceName: true, environment: { select: { projectId: true } } } },
         history: { orderBy: { createdAt: 'asc' } },
       },
     });
     if (!r) throw new NotFoundException(DEPLOY_MESSAGES.not_found);
+    inProject(onlyProject, r.service.environment.projectId, DEPLOY_MESSAGES.not_found);
     return {
       ...this.toDto(r, await this.liveId(r.serviceId)),
       serviceId: r.serviceId,
@@ -206,8 +219,8 @@ export class DeployService {
   }
 
   /** The saved output, after a given chunk (a reconnecting viewer asks for what it missed). */
-  async logs(orgId: string, deploymentId: string, afterSeq = 0): Promise<DeployLogChunk[]> {
-    await this.assertDeployment(orgId, deploymentId);
+  async logs(orgId: string, deploymentId: string, afterSeq = 0, onlyProject: string | null = null): Promise<DeployLogChunk[]> {
+    await this.assertDeployment(orgId, deploymentId, onlyProject);
     const rows = await this.prisma.client.deploymentLog.findMany({
       where: { deploymentId, seq: { gt: afterSeq } },
       orderBy: { seq: 'asc' },
@@ -218,12 +231,13 @@ export class DeployService {
   }
 
   /** For the live log gateway: does this deployment belong to the org? */
-  async assertDeployment(orgId: string, deploymentId: string): Promise<void> {
+  async assertDeployment(orgId: string, deploymentId: string, onlyProject: string | null = null): Promise<void> {
     const ok = await this.prisma.client.deployment.findFirst({
       where: { id: deploymentId, organizationId: orgId },
-      select: { id: true },
+      select: { service: { select: { environment: { select: { projectId: true } } } } },
     });
     if (!ok) throw new NotFoundException(DEPLOY_MESSAGES.not_found);
+    inProject(onlyProject, ok.service.environment.projectId, DEPLOY_MESSAGES.not_found);
   }
 
   // ── settings ───────────────────────────────────────────────────────────
@@ -435,8 +449,9 @@ export class DeployService {
   }
 
   /** The checks the api can make before queueing (the worker re-checks on the server). */
-  private async deployable(orgId: string, serviceId: string) {
+  private async deployable(orgId: string, serviceId: string, onlyProject: string | null = null) {
     const s = await this.serviceOf(orgId, serviceId);
+    inProject(onlyProject, s.environment.projectId, DEPLOY_MESSAGES.service_not_found);
     if (s.type !== 'APPLICATION' && s.type !== 'WORKER') throw new BadRequestException(DEPLOY_MESSAGES.not_deployable);
     if (!s.githubRepoUrl && !s.image) throw new BadRequestException(DEPLOY_MESSAGES.no_source);
     if (!s.server) throw new BadRequestException(DEPLOY_MESSAGES.no_server);

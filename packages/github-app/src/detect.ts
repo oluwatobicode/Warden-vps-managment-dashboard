@@ -60,7 +60,12 @@ function globToRegExp(glob: string): RegExp {
   const g = glob.replace(/^\.\//, "").replace(/\/+$/, "");
   const re = g
     .split("**")
-    .map((part) => part.split("*").map((s) => s.replace(/[.+?^${}()|[\]\\]/g, "\\$&")).join("[^/]+"))
+    .map((part) =>
+      part
+        .split("*")
+        .map((s) => s.replace(/[.+?^${}()|[\]\\]/g, "\\$&"))
+        .join("[^/]+"),
+    )
     .join(".+");
   return new RegExp(`^${re}$`);
 }
@@ -93,25 +98,40 @@ const parse = (text: string | null): Pkg | null => {
   }
 };
 
-const BUILD_VAR = /\b((?:VITE|NEXT_PUBLIC|PUBLIC|REACT_APP|NUXT_PUBLIC)_[A-Z0-9_]+)\b/g;
-const WORKER_DEPS = ["bullmq", "bull", "agenda", "node-cron", "bee-queue", "@temporalio/worker"];
+const BUILD_VAR =
+  /\b((?:VITE|NEXT_PUBLIC|PUBLIC|REACT_APP|NUXT_PUBLIC)_[A-Z0-9_]+)\b/g;
+const WORKER_DEPS = [
+  "bullmq",
+  "bull",
+  "agenda",
+  "node-cron",
+  "bee-queue",
+  "@temporalio/worker",
+];
 
-function framework(pkg: Pkg): { label: string; website: boolean; server: boolean } | null {
+function framework(
+  pkg: Pkg,
+): { label: string; website: boolean; server: boolean } | null {
   const d = { ...pkg.dependencies, ...pkg.devDependencies };
   const has = (n: string) => n in d;
   const build = pkg.scripts?.build ?? "";
   if (has("next")) return { label: "Next.js", website: false, server: true };
   if (has("nuxt")) return { label: "Nuxt", website: false, server: true };
-  if (has("@sveltejs/kit")) return { label: "SvelteKit", website: false, server: true };
-  if (has("@remix-run/node") || has("@react-router/dev")) return { label: "React Router", website: false, server: true };
+  if (has("@sveltejs/kit"))
+    return { label: "SvelteKit", website: false, server: true };
+  if (has("@remix-run/node") || has("@react-router/dev"))
+    return { label: "React Router", website: false, server: true };
   if (has("astro")) return { label: "Astro", website: true, server: false };
-  if (has("@nestjs/core")) return { label: "NestJS", website: false, server: true };
+  if (has("@nestjs/core"))
+    return { label: "NestJS", website: false, server: true };
   if (has("express")) return { label: "Express", website: false, server: true };
   if (has("fastify")) return { label: "Fastify", website: false, server: true };
   if (has("hono")) return { label: "Hono", website: false, server: true };
   if (has("koa")) return { label: "Koa", website: false, server: true };
-  if (has("react-scripts")) return { label: "Create React App", website: true, server: false };
-  if (has("vite") || /\bvite build\b/.test(build)) return { label: "Vite", website: true, server: false };
+  if (has("react-scripts"))
+    return { label: "Create React App", website: true, server: false };
+  if (has("vite") || /\bvite build\b/.test(build))
+    return { label: "Vite", website: true, server: false };
   return null;
 }
 
@@ -126,24 +146,45 @@ interface Ctx {
 
 /** Variables a website bakes in at build time, from the files that usually list them. */
 async function buildVarsOf(ctx: Ctx, dir: string): Promise<string[]> {
-  const candidates = [".env.example", ".env.sample", ".env.template", ".env.local.example", "src/vite-env.d.ts", "env.d.ts", "src/env.d.ts"].flatMap((f) =>
-    dir ? [join(dir, f), f] : [f],
-  );
+  const candidates = [
+    ".env.example",
+    ".env.sample",
+    ".env.template",
+    ".env.local.example",
+    "src/vite-env.d.ts",
+    "env.d.ts",
+    "src/env.d.ts",
+  ].flatMap((f) => (dir ? [join(dir, f), f] : [f]));
   const found = new Set<string>();
   for (const p of [...new Set(candidates)].filter(ctx.has).slice(0, 6)) {
-    for (const m of (await ctx.repo.read(p))?.matchAll(BUILD_VAR) ?? []) found.add(m[1]);
+    for (const m of (await ctx.repo.read(p))?.matchAll(BUILD_VAR) ?? [])
+      found.add(m[1]);
   }
   return [...found].sort();
 }
 
-const run = (pm: PM, script: string) => (pm === "npm" ? `npm run ${script}` : `${pm} run ${script}`);
+const run = (pm: PM, script: string) =>
+  pm === "npm" ? `npm run ${script}` : `${pm} run ${script}`;
 
-async function nodeApp(ctx: Ctx, dir: string, pkg: Pkg): Promise<DetectedApp | null> {
+async function nodeApp(
+  ctx: Ctx,
+  dir: string,
+  pkg: Pkg,
+): Promise<DetectedApp | null> {
   const fw = framework(pkg);
   const scripts = pkg.scripts ?? {};
-  const startScript = scripts["start:prod"] ? "start:prod" : scripts.start ? "start" : null;
+  const startScript = scripts["start:prod"]
+    ? "start:prod"
+    : scripts.start
+      ? "start"
+      : null;
   const deps = { ...pkg.dependencies, ...pkg.devDependencies };
-  const looksWorker = !fw?.server && !fw?.website && (WORKER_DEPS.some((d) => d in deps) || /worker/i.test(dir) || /worker/i.test(pkg.name ?? ""));
+  const looksWorker =
+    !fw?.server &&
+    !fw?.website &&
+    (WORKER_DEPS.some((d) => d in deps) ||
+      /worker/i.test(dir) ||
+      /worker/i.test(pkg.name ?? ""));
   // A library (packages/db, shared-types…): nothing to start and nothing to serve.
   if (!fw && !startScript && !looksWorker) return null;
 
@@ -170,29 +211,50 @@ async function nodeApp(ctx: Ctx, dir: string, pkg: Pkg): Promise<DetectedApp | n
     }
     if (startScript && !website) {
       startCommand =
-        ctx.pm === "pnpm" ? `pnpm --filter ${pkg.name} run ${startScript}` : ctx.pm === "yarn" ? `yarn workspace ${pkg.name} run ${startScript}` : `npm run ${startScript} --workspace=${dir}`;
+        ctx.pm === "pnpm"
+          ? `pnpm --filter ${pkg.name} run ${startScript}`
+          : ctx.pm === "yarn"
+            ? `yarn workspace ${pkg.name} run ${startScript}`
+            : `npm run ${startScript} --workspace=${dir}`;
     }
-    notes.push("Built from the repo root, so it can use the repo's shared packages.");
+    notes.push(
+      "Built from the repo root, so it can use the repo's shared packages.",
+    );
   } else if (!hasDocker) {
     if (scripts.build) notes.push(`Railpack runs \`${run(ctx.pm, "build")}\`.`);
-    if (startScript && !website) notes.push(`It starts with \`${run(ctx.pm, startScript)}\`.`);
+    if (startScript && !website)
+      notes.push(`It starts with \`${run(ctx.pm, startScript)}\`.`);
   }
   if (startScript === "start:prod") notes.push("Uses the start:prod script.");
 
   const outDir = fw?.label === "Create React App" ? "build" : "dist";
   const staticOutputDir = website && mono && dir ? join(dir, outDir) : null;
-  if (website) notes.push(`A website: it's built to ${join(dir, outDir)} and served as static files.`);
-  else if (type === "APPLICATION") notes.push("It must listen on the PORT variable (Warden sets it to the service's port).");
+  if (website)
+    notes.push(
+      `A website: it's built to ${join(dir, outDir)} and served as static files.`,
+    );
+  else if (type === "APPLICATION")
+    notes.push(
+      "It must listen on the PORT variable (Warden sets it to the service's port).",
+    );
   if (hasDocker) notes.push(`Uses its Dockerfile (${dockerfile}).`);
 
-  const buildVars = website || fw?.label === "Next.js" || fw?.label === "Astro" ? await buildVarsOf(ctx, dir) : [];
-  if (buildVars.length) notes.push("Its build-time variables are baked in when it's built: set them before deploying.");
+  const buildVars =
+    website || fw?.label === "Next.js" || fw?.label === "Astro"
+      ? await buildVarsOf(ctx, dir)
+      : [];
+  if (buildVars.length)
+    notes.push(
+      "Its build-time variables are baked in when it's built: set them before deploying.",
+    );
 
   return {
     path: dir,
     name,
     packageName: pkg.name ?? null,
-    framework: hasDocker ? `${fw?.label ?? "Node"} (Dockerfile)` : (fw?.label ?? (looksWorker ? "Node worker" : "Node")),
+    framework: hasDocker
+      ? `${fw?.label ?? "Node"} (Dockerfile)`
+      : (fw?.label ?? (looksWorker ? "Node worker" : "Node")),
     type,
     website,
     buildMethod: hasDocker ? "DOCKERFILE" : "RAILPACK",
@@ -204,13 +266,28 @@ async function nodeApp(ctx: Ctx, dir: string, pkg: Pkg): Promise<DetectedApp | n
     port: type === "WORKER" ? null : 3000,
     // Railpack's static-site server answers /health; other apps start at /.
     healthCheckPath: website ? "/health" : "/",
-    watchPaths: mono && dir ? [`${dir}/**`, ...(ctx.workspaceGlobs ?? []).filter((g) => !globToRegExp(g).test(dir) && !g.startsWith("!")).map((g) => g.replace(/\/\*+$/, "/**")), lockfileOf(ctx.pm)] : [],
+    watchPaths:
+      mono && dir
+        ? [
+            `${dir}/**`,
+            ...(ctx.workspaceGlobs ?? [])
+              .filter((g) => !globToRegExp(g).test(dir) && !g.startsWith("!"))
+              .map((g) => g.replace(/\/\*+$/, "/**")),
+            lockfileOf(ctx.pm),
+          ]
+        : [],
     buildVars,
     notes,
   };
 }
 
-const lockfileOf = (pm: PM) => ({ pnpm: "pnpm-lock.yaml", yarn: "yarn.lock", bun: "bun.lock", npm: "package-lock.json" })[pm];
+const lockfileOf = (pm: PM) =>
+  ({
+    pnpm: "pnpm-lock.yaml",
+    yarn: "yarn.lock",
+    bun: "bun.lock",
+    npm: "package-lock.json",
+  })[pm];
 
 /** A non-Node app at the repo root (Railpack knows these languages). */
 function otherApp(ctx: Ctx): DetectedApp | null {
@@ -255,32 +332,64 @@ function otherApp(ctx: Ctx): DetectedApp | null {
     watchPaths: [],
     buildVars: [],
     notes: site
-      ? ["A website of plain files: they're served as they are, with nothing to build or start."]
-      : [docker ? "Uses the repo's Dockerfile." : `Railpack builds it as a ${lang.label} app.`, "It must listen on the PORT variable (Warden sets it to the service's port)."],
+      ? [
+          "A website of plain files: they're served as they are, with nothing to build or start.",
+        ]
+      : [
+          docker
+            ? "Uses the repo's Dockerfile."
+            : `Railpack builds it as a ${lang.label} app.`,
+          "It must listen on the PORT variable (Warden sets it to the service's port).",
+        ],
   };
 }
 
-export async function detectApps(repo: RepoFiles): Promise<{ monorepo: boolean; apps: DetectedApp[] }> {
+export async function detectApps(
+  repo: RepoFiles,
+): Promise<{ monorepo: boolean; apps: DetectedApp[] }> {
   const set = new Set(repo.files);
   const has = (p: string) => set.has(p);
-  const rootPkg = parse(has("package.json") ? await repo.read("package.json") : null);
-  const pm: PM = has("pnpm-lock.yaml") || has("pnpm-workspace.yaml") ? "pnpm" : has("yarn.lock") ? "yarn" : has("bun.lock") || has("bun.lockb") ? "bun" : "npm";
+  const rootPkg = parse(
+    has("package.json") ? await repo.read("package.json") : null,
+  );
+  const pm: PM =
+    has("pnpm-lock.yaml") || has("pnpm-workspace.yaml")
+      ? "pnpm"
+      : has("yarn.lock")
+        ? "yarn"
+        : has("bun.lock") || has("bun.lockb")
+          ? "bun"
+          : "npm";
 
   let globs: string[] = [];
-  if (has("pnpm-workspace.yaml")) globs = pnpmWorkspaceGlobs((await repo.read("pnpm-workspace.yaml")) ?? "");
+  if (has("pnpm-workspace.yaml"))
+    globs = pnpmWorkspaceGlobs((await repo.read("pnpm-workspace.yaml")) ?? "");
   else if (Array.isArray(rootPkg?.workspaces)) globs = rootPkg.workspaces;
-  else if (rootPkg?.workspaces && Array.isArray(rootPkg.workspaces.packages)) globs = rootPkg.workspaces.packages;
+  else if (rootPkg?.workspaces && Array.isArray(rootPkg.workspaces.packages))
+    globs = rootPkg.workspaces.packages;
   globs = globs.filter((g) => !g.startsWith("!"));
 
-  const ctx: Ctx = { repo, has, pm, turbo: has("turbo.json"), workspaceGlobs: globs.length ? globs : null };
+  const ctx: Ctx = {
+    repo,
+    has,
+    pm,
+    turbo: has("turbo.json"),
+    workspaceGlobs: globs.length ? globs : null,
+  };
 
   if (globs.length) {
     const patterns = globs.map(globToRegExp);
     const dirs = repo.files
       .filter((f) => f.endsWith("/package.json"))
       .map((f) => f.slice(0, -"/package.json".length))
-      .filter((d) => !d.includes("node_modules") && patterns.some((p) => p.test(d)))
-      .sort((a, b) => Number(!a.startsWith("apps/")) - Number(!b.startsWith("apps/")) || a.localeCompare(b))
+      .filter(
+        (d) => !d.includes("node_modules") && patterns.some((p) => p.test(d)),
+      )
+      .sort(
+        (a, b) =>
+          Number(!a.startsWith("apps/")) - Number(!b.startsWith("apps/")) ||
+          a.localeCompare(b),
+      )
       .slice(0, 30);
     const apps: DetectedApp[] = [];
     for (const dir of dirs) {
