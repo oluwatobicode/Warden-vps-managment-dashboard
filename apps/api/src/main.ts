@@ -4,6 +4,7 @@ import type { INestApplicationContext } from '@nestjs/common';
 import type { ServerOptions } from 'socket.io';
 import { AppModule } from './app.module';
 import cookieParser from 'cookie-parser';
+import type { NestExpressApplication } from '@nestjs/platform-express';
 import { ConfigService } from '@nestjs/config';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
@@ -32,7 +33,8 @@ class WardenIoAdapter extends IoAdapter {
 
 async function bootstrap() {
   // rawBody: GitHub webhooks are checked against the exact bytes they signed.
-  const app = await NestFactory.create(AppModule, { rawBody: true });
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, { rawBody: true });
+  app.set('trust proxy', app.get(ConfigService).getOrThrow<number>('TRUST_PROXY'));
 
   app.use(cookieParser());
 

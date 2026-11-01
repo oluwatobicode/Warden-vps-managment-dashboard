@@ -63,6 +63,16 @@ export function describeAudit(e: AuditLog): { text: string; area: AuditArea } {
       return { area: "infra", text: `Restored database ${s(m.name)} from the backup of ${s(m.backupFrom)} UTC` };
     case "database.backup_downloaded":
       return { area: "secrets", text: `Downloaded a backup of database ${s(m.name)}` };
+    case "database.query_run":
+      return { area: "secrets", text: `Ran a ${m.allowedWrites ? "query that changes data" : "query"} on database ${s(m.name)}: ${s(m.query)}` };
+    case "database.rows_changed":
+      return {
+        area: "projects",
+        text:
+          m.table === "keys"
+            ? `${m.change === "set" ? "Changed" : "Deleted"} ${s(m.rows)} key${m.rows === 1 ? "" : "s"} in database ${s(m.name)}${m.key ? ` (${s(m.key)})` : ""}`
+            : `${s(m.change) === "updated" ? "Changed" : s(m.change) === "inserted" ? "Added" : "Deleted"} ${s(m.rows)} row${m.rows === 1 ? "" : "s"} in ${s(m.table)} (database ${s(m.name)})${m.columns ? `: ${s(m.columns)}` : ""}`,
+      };
     case "database.backup_settings_updated":
       return { area: "infra", text: `Changed the backup schedule of database ${s(m.name)}` };
     case "backup_storage.updated":

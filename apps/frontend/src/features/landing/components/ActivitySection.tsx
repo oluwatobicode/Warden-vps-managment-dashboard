@@ -5,29 +5,29 @@ import { TONE } from "../tone";
 
 /**
  * A team's day replaying on a loop: events arrive one by one; when deploy
- * #418 fails its gate, the Slack toast appears and its board card flips to
- * "rolled back".
+ * #44 fails its health check, the Slack toast appears and its board card
+ * flips to "failed".
  */
 export function ActivitySection() {
   const step = useCycle(7, 2200) + 1; // 1…7, like the design
   const shown = Math.min(step, FEED.length);
   const failed = shown >= 3;
-  const gate418 = failed ? "rolled back" : shown >= 2 ? "gate 3 of 3" : "gate 2 of 3";
+  const check44 = failed ? "failed · #43 kept serving" : shown >= 2 ? "checking /" : "starting";
 
   return (
     <section id="activity" className="border-t border-[#161718]">
       <div className="mx-auto flex max-w-[1200px] flex-col gap-24 px-6 pt-32">
         <SectionIntro
-          eyebrow="04 — ACTIVITY"
+          eyebrow="06 — ACTIVITY"
           title="Know who shipped what."
           sub="And when."
-          body="Every deploy, rollback, variable change and cleanup is logged with who did it and when. Failures go to Slack or email so the right person hears about it first."
+          body="Every deploy, rollback, variable change and cleanup is logged with who did it and when, never with secret values. Everyone on the team sees a project’s activity; admins get the full audit log. Failed deploys go to Slack, Discord or email."
         />
         <div className="relative grid max-h-[640px] grid-cols-[repeat(auto-fit,minmax(min(100%,360px),1fr))] items-start gap-4 overflow-hidden">
           <div className="l-panel relative z-[2] max-w-[440px] rounded-xl">
             <div className="flex items-center justify-between border-b border-[#23252a] px-[18px] py-3.5">
               <span className="text-sm font-[590] text-[#e5e5e6]">
-                Activity <span className="font-normal text-[#62666d]">argus · production</span>
+                Activity <span className="font-normal text-[#62666d]">shop · production</span>
               </span>
               <span className="text-xs text-[#62666d]">Today</span>
             </div>
@@ -55,13 +55,13 @@ export function ActivitySection() {
               <div className="l-enter mx-3 mb-2 flex items-center gap-2.5 rounded-lg bg-[#08090a] px-3 py-2.5 shadow-[inset_0_0_0_1px_rgba(235,87,87,0.35)]">
                 <Dot tone={TONE.crit} />
                 <span className="min-w-0 text-xs text-[#d0d6e0]">
-                  Posted to <span className="text-[#8b5cf6]">#deploys</span> · Adaeze and Tobi notified
+                  Posted to <span className="text-[#8b5cf6]">#deploys</span> on Slack
                 </span>
               </div>
             )}
             <div className="l-hair mx-3 mb-3 flex items-center justify-between gap-3 rounded-lg bg-[#161718] px-3.5 py-3">
               <span className="text-[13px] text-[#d0d6e0]">
-                Alert <span className="rounded bg-[rgba(139,92,246,0.12)] px-[5px] py-px text-[#8b5cf6]">#deploys</span> when a gate fails
+                Alert <span className="rounded bg-[rgba(139,92,246,0.12)] px-[5px] py-px text-[#8b5cf6]">#deploys</span> when a deploy fails
               </span>
               <span className="flex h-4 w-7 shrink-0 items-center justify-end rounded-full bg-(--accent) p-0.5">
                 <span className="block size-3 rounded-full bg-white" />
@@ -78,15 +78,15 @@ export function ActivitySection() {
                   <span className="text-[13px] text-[#62666d]">{col.cards.length}</span>
                 </div>
                 {col.cards.map((c) => {
-                  const is418 = c.id.startsWith("#418");
+                  const is44 = c.id.startsWith("#44");
                   return (
                     <div key={c.id} className={`l-hair flex flex-col gap-2 rounded-lg bg-[#161718] px-3.5 py-3 ${"faded" in c && c.faded ? "opacity-55" : ""}`}>
                       <span className="l-mono text-[11px] text-[#62666d]">{c.id}</span>
                       <span className="truncate text-[13px] text-[#e5e5e6]">{c.title}</span>
                       <span className="flex flex-wrap gap-1.5">
                         <span className="l-hair flex items-center gap-[5px] rounded px-[7px] py-0.5 text-[11px] text-[#8a8f98]">
-                          <Dot tone={is418 ? (failed ? TONE.crit : TONE.run) : c.tagTone} />
-                          {is418 ? gate418 : c.tag}
+                          <Dot tone={is44 ? (failed ? TONE.crit : TONE.run) : c.tagTone} />
+                          {is44 ? check44 : c.tag}
                         </span>
                       </span>
                     </div>

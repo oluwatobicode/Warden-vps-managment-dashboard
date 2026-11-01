@@ -19,15 +19,36 @@ function check(kind: string, value: string, pattern: RegExp): string {
 /** Single-quote for sh: 'it'"'"'s' style. */
 export const q = (s: string) => `'${s.replace(/'/g, `'"'"'`)}'`;
 
-/** Create the network if it isn't there yet. Containers on it reach each other by name. */
+/**
+ * For every long-running container Warden starts. Docker's default json-file
+ * driver never rotates, so a chatty app would grow its log until the disk is
+ * full. 3 × 10 MB per container; Warden's own log store keeps the history.
+ */
+export const LOG_OPTS = "--log-driver json-file --log-opt max-size=10m --log-opt max-file=3";
+
+/**
+ * Create the network if it isn't there yet. Containers on it reach each other
+ * by name. Two databases created at once in a new environment both try to
+ * create it: the one that loses gets "already exists", which is fine, so a
+ * failed create counts if the network is there afterwards.
+ */
 export async function ensureNetwork(run: Run, name: string): Promise<void> {
+  await docker(run, ensureNetworkCommand(name));
+}
+
+/** The command ensureNetwork runs, for scripts that run outside Warden (the EC2 installer). */
+export function ensureNetworkCommand(name: string): string {
   const n = q(check("network name", name, NAME));
-  await docker(run, `docker network inspect ${n} >/dev/null 2>&1 || docker network create --label warden=1 ${n}`);
+  return `docker network inspect ${n} >/dev/null 2>&1 || docker network create --label warden=1 ${n} || docker network inspect ${n} >/dev/null 2>&1`;
 }
 
 /** Create the volume (a no-op when it exists). The data lives here, not in the container. */
 export async function ensureVolume(run: Run, name: string): Promise<void> {
-  await docker(run, `docker volume create --label warden=1 ${q(check("volume name", name, NAME))}`);
+  await docker(run, ensureVolumeCommand(name));
+}
+
+export function ensureVolumeCommand(name: string): string {
+  return `docker volume create --label warden=1 ${q(check("volume name", name, NAME))}`;
 }
 
 /**
@@ -70,6 +91,7 @@ export function runCommand(s: ContainerSpec): string {
     `--name ${q(check("container name", s.name, NAME))}`,
     `--network ${q(check("network name", s.network, NAME))}`,
     "--restart unless-stopped",
+    LOG_OPTS,
     `-v ${q(`${check("volume name", s.volume, NAME)}:${check("data path", s.dataPath, PATH)}`)}`,
     `--env-file ${q(check("env file", s.envFile, PATH))}`,
     ...labels,
@@ -120,6 +142,30 @@ export async function waitHealthy(run: Run, name: string, opts: { timeoutMs?: nu
 export async function containerLogTail(run: Run, name: string, lines = 15): Promise<string> {
   const r = await run(`docker logs --tail ${lines} ${q(check("container name", name, NAME))} 2>&1`);
   return r.stdout.trim();
+}
+
+/** Was the container created with LOG_OPTS? Log settings only apply when a container is created. */
+export async function logRotated(run: Run, name: string): Promise<boolean> {
+  const r = await run(`docker inspect -f '{{index .HostConfig.LogConfig.Config "max-size"}}' ${q(check("container name", name, NAME))}`);
+  return r.code === 0 && r.stdout.trim() !== "" && r.stdout.trim() !== "<no value>";
+}
+
+/**
+ * A byte pipe to the database's port inside its own container: the data
+ * browser runs a real driver over this, so nothing is ever published. Bash's
+ * /dev/tcp opens the connection; two `cat`s copy each way, and whichever side
+ * ends first (Warden closing stdin, or the database closing the socket) stops
+ * both. fd 4 keeps the real stdin: bash gives background commands /dev/null.
+ *
+ * The final `wait` matters: bash must reap the cats itself. A process that
+ * outlives its parent is handed to the container's PID 1, which in the
+ * Postgres image is Postgres; it treats an unknown child dying of a signal as
+ * a crash and restarts, dropping every connection (seen in testing).
+ */
+export function bridgeCommand(container: string, port: number): string {
+  if (!Number.isInteger(port) || port < 1 || port > 65535) throw new DockerError("failed", `Refusing an unsafe port: ${port}`);
+  const inner = `exec 4<&0 3<>/dev/tcp/127.0.0.1/${port}; cat <&3 & a=$!; cat <&4 >&3 & b=$!; wait -n; kill $a $b 2>/dev/null; wait`;
+  return `docker exec -i ${q(check("container name", container, NAME))} bash -c ${q(inner)}`;
 }
 
 export async function restartContainer(run: Run, name: string): Promise<void> {

@@ -1,10 +1,10 @@
-import { CHANGELOG } from "../data";
+import { CHANGELOG, GITHUB_URL } from "../data";
 import { ArrowIcon } from "./bits";
 
 const PILLS = [
-  { text: "v0.9.4", tone: "#e4f222", className: "top-2.5 left-0 -rotate-6" },
-  { text: "+ preview envs", tone: "#27a644", className: "top-0 right-1.5 rotate-[5deg]" },
-  { text: "fix: ssh keepalive", tone: "#02b8cc", className: "right-7 bottom-2 -rotate-3" },
+  { text: "+ deploy tokens", tone: "#e4f222", className: "top-2.5 left-0 -rotate-6" },
+  { text: "+ databases", tone: "#27a644", className: "top-0 right-1.5 rotate-[5deg]" },
+  { text: "fix: static sites", tone: "#02b8cc", className: "right-7 bottom-2 -rotate-3" },
 ];
 
 export function ChangelogSection() {
@@ -25,7 +25,7 @@ export function ChangelogSection() {
           </h2>
         </div>
         <p className="m-0 max-w-[460px] text-[17px] leading-[1.6] text-balance text-[#8a8f98]">
-          What changed in Warden recently. Every release is tagged on GitHub with full notes.
+          What changed in Warden recently, straight from the commit history on GitHub.
         </p>
       </div>
       <ol className="m-0 grid list-none grid-cols-[repeat(auto-fit,minmax(min(100%,180px),1fr))] gap-y-12 p-0">
@@ -46,7 +46,7 @@ export function ChangelogSection() {
           </li>
         ))}
       </ol>
-      <a href="#changelog" className="flex w-max items-center gap-1.5 text-[15px] text-[#8a8f98] hover:text-[#e5e5e6]">
+      <a href={`${GITHUB_URL}/commits/main`} target="_blank" rel="noreferrer" className="flex w-max items-center gap-1.5 text-[15px] text-[#8a8f98] hover:text-[#e5e5e6]">
         View all <ArrowIcon />
       </a>
     </section>

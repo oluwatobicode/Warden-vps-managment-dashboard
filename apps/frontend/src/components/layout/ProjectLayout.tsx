@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, NavLink, Outlet, useMatch, useParams, useSearchParams } from "react-router";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Activity01Icon, ArrowLeft01Icon, DashboardSquare01Icon, Home01Icon, Settings01Icon, SquareLock02Icon } from "@hugeicons/core-free-icons";
+import { Activity01Icon, CommandLineIcon, ArrowLeft01Icon, DashboardSquare01Icon, Home01Icon, Settings01Icon, SquareLock02Icon } from "@hugeicons/core-free-icons";
 import type { Environment, ProjectDetail, ServiceStatus } from "shared-types";
 import { useProject } from "../../features/projects/hooks/useProjects";
 import { useEnvironments } from "../../features/environments/hooks/useEnvironments";
@@ -100,13 +100,15 @@ function ProjectShell({
   const onSettings = useMatch("/projects/:projectId/settings");
   const onActivity = useMatch("/projects/:projectId/activity");
   const onCanvas = useMatch("/projects/:projectId/canvas");
-  const title = serviceMatch ? (service.data?.serviceName ?? "Service") : onVariables ? "Variables" : onCanvas ? "Canvas" : onActivity ? "Activity" : onSettings ? "Project settings" : "Overview";
+  const onLogs = useMatch("/projects/:projectId/logs");
+  const title = serviceMatch ? (service.data?.serviceName ?? "Service") : onVariables ? "Variables" : onCanvas ? "Canvas" : onActivity ? "Activity" : onLogs ? "Logs" : onSettings ? "Project settings" : "Overview";
 
   const nav = [
     { to: base, label: "Overview", icon: Home01Icon, end: true },
     { to: `${base}/canvas`, label: "Canvas", icon: DashboardSquare01Icon, end: false },
     { to: `${base}/variables`, label: "Variables", icon: SquareLock02Icon, end: false },
     { to: `${base}/activity`, label: "Activity", icon: Activity01Icon, end: false },
+    { to: `${base}/logs`, label: "Logs", icon: CommandLineIcon, end: false },
     { to: `${base}/settings`, label: "Settings", icon: Settings01Icon, end: false },
   ];
 

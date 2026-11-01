@@ -27,6 +27,7 @@ import ServicePage from "../pages/project/ServicePage";
 import ProjectVariablesPage from "../pages/project/ProjectVariablesPage";
 import ProjectSettingsPage from "../pages/project/ProjectSettingsPage";
 import ProjectActivityPage from "../pages/project/ProjectActivityPage";
+import ProjectLogsPage from "../pages/project/ProjectLogsPage";
 import { RedirectIfAuthed, RequireAuth, RequireRole } from "./guards";
 
 export const router = createBrowserRouter([
@@ -102,6 +103,7 @@ export const router = createBrowserRouter([
             lazy: async () => ({ Component: (await import("../pages/project/ProjectCanvasPage")).default }),
           },
           { path: "activity", element: <ProjectActivityPage /> },
+          { path: "logs", element: <ProjectLogsPage /> },
           { path: "settings", element: <ProjectSettingsPage /> },
         ],
       },

@@ -7,7 +7,8 @@ import { databaseJob } from "./jobs/database";
 import { backupJob, backupTick } from "./jobs/backup";
 import { deployJob, deployPrune, proxyJob } from "./jobs/deploy";
 import { collectServer } from "./jobs/collect";
-import { pruneMetrics } from "./jobs/prune";
+import { pruneMetrics, pruneServiceLogs } from "./jobs/prune";
+import { LogCollectors } from "./logs/collector";
 import { tick } from "./jobs/tick";
 import { log } from "./log";
 import { backupQueue, deployQueue, monitoringQueue } from "./queues";
@@ -18,6 +19,7 @@ import { redis } from "./redis";
  *   monitoring queue: metrics-tick (every MONITOR_INTERVAL_SECONDS) fans out
  *                     one collect-server job per server; prune-metrics hourly
  *   docker-cleanup:   enqueued by the api when someone presses Run cleanup
+ *   app + server logs: LogCollectors (logs/), long-lived SSH streams, not jobs
  * Every job payload is checked against its shared-types schema before use.
  */
 
@@ -31,7 +33,8 @@ async function monitoringJob(job: Job): Promise<void> {
     case MONITORING_JOBS.collect:
       return collectServer(CollectServerJobSchema.parse(job.data).serverId);
     case MONITORING_JOBS.prune:
-      return pruneMetrics();
+      await pruneMetrics();
+      return pruneServiceLogs();
     default:
       log.warn(`unknown monitoring job "${job.name}", skipped`);
   }
@@ -79,11 +82,14 @@ async function main() {
       { connection: redis, concurrency: 4, lockDuration: 60_000 },
     ),
   ];
+  const logs = env.LOGS_COLLECT ? new LogCollectors() : null;
+  logs?.start();
+
   for (const w of workers) {
     w.on("failed", (job, err) => log.error(`${w.name}/${job?.name ?? "?"} failed: ${err.message}`));
     w.on("error", (err) => log.error(`${w.name}: ${err.message}`));
   }
-  log.info(`polling every ${env.MONITOR_INTERVAL_SECONDS}s, ${env.MONITOR_CONCURRENCY} at a time${env.NOTIFY_DRY_RUN ? ", alerts in dry-run" : ""}`);
+  log.info(`polling every ${env.MONITOR_INTERVAL_SECONDS}s, ${env.MONITOR_CONCURRENCY} at a time${env.NOTIFY_DRY_RUN ? ", alerts in dry-run" : ""}${logs ? ", collecting app and server logs" : ""}`);
 
   // Let running jobs finish their writes before exiting.
   let stopping = false;
@@ -91,7 +97,7 @@ async function main() {
     if (stopping) return;
     stopping = true;
     log.info(`${signal}: finishing current jobs`);
-    await Promise.all(workers.map((w) => w.close()));
+    await Promise.all([...workers.map((w) => w.close()), logs?.stop()]);
     await Promise.all([monitoringQueue.close(), backupQueue.close(), deployQueue.close()]);
     await prisma.$disconnect();
     redis.disconnect();

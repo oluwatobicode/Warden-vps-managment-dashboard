@@ -1,11 +1,5 @@
-import { COMPOSE, DEPLOY_GROUPS } from "../data";
+import { DEPLOY_GROUPS, DEPLOY_LOG } from "../data";
 import { Ring, SectionIntro } from "./bits";
-
-const LINE = {
-  same: { bg: "transparent", num: "#383b3f", text: "#8a8f98" },
-  del: { bg: "rgba(235,87,87,0.08)", num: "#eb5757", text: "#e5e5e6" },
-  add: { bg: "rgba(39,166,68,0.08)", num: "#27a644", text: "#e5e5e6" },
-};
 
 export function DeploysSection() {
   return (
@@ -15,7 +9,7 @@ export function DeploysSection() {
           eyebrow="01 — DEPLOYS"
           title="Push to deploy."
           sub="Nothing to babysit."
-          body="Connect a repo and pick a branch. Every push builds an image on your server and starts it beside the old one, so users never see a restart. Previous images stay on disk, so rolling back takes seconds."
+          body="Connect a repo and pick a branch. Every push builds an image on your server and starts it beside the old one, so users never see a restart. The last three images stay on the server, so a rollback reuses one instead of rebuilding."
         />
         <div className="relative grid max-h-[560px] grid-cols-[repeat(auto-fit,minmax(min(100%,400px),1fr))] items-start gap-4 overflow-hidden">
           {/* deploy list, grouped by state */}
@@ -42,31 +36,28 @@ export function DeploysSection() {
             ))}
           </div>
 
-          {/* the compose diff for #417 → #418 */}
+          {/* the log of #41 (live), and a rollback to the kept #40 */}
           <div className="l-panel overflow-hidden rounded-xl">
             <div className="flex items-center justify-between gap-3 border-b border-[#23252a] px-5 py-3.5">
-              <span className="l-mono truncate text-xs text-[#8a8f98]">argus/api/compose.yml</span>
-              <span className="flex shrink-0 items-center gap-2.5">
-                <span className="l-hair-strong rounded px-[7px] py-0.5 text-[11px] text-[#8a8f98]">Editable</span>
-                <span className="text-xs text-[#62666d]">#417 → #418</span>
-              </span>
+              <span className="l-mono truncate text-xs text-[#8a8f98]">api · deploy #41</span>
+              <span className="text-xs text-[#62666d]">e91b04d · lag-01</span>
             </div>
-            <div
-              contentEditable
-              suppressContentEditableWarning
-              spellCheck={false}
-              aria-label="Example compose file"
-              className="l-mono cursor-text pt-3.5 pb-10 text-[12.5px] leading-[2] caret-[#e4f222] outline-none"
-            >
-              {COMPOSE.map(([n, text, kind], i) => {
-                const c = LINE[kind];
-                return (
-                  <div key={i} className="flex gap-[18px] px-5 whitespace-pre" style={{ background: c.bg }}>
-                    <span contentEditable={false} className="w-[18px] shrink-0 select-none" style={{ color: c.num }}>{n}</span>
-                    <span style={{ color: c.text }}>{text}</span>
-                  </div>
-                );
-              })}
+            <div className="l-mono flex flex-col gap-0.5 px-5 pt-3.5 pb-4 text-[12px] leading-[1.9]">
+              {DEPLOY_LOG.map(([t, msg, tone], i) => (
+                <div key={i} className="flex gap-4 whitespace-pre">
+                  <span className="shrink-0 text-[#383b3f]">{t}</span>
+                  <span className="truncate" style={{ color: tone }}>{msg}</span>
+                </div>
+              ))}
+            </div>
+            <div className="mx-3 mb-3 flex flex-col gap-2 rounded-lg bg-[#161718] px-3.5 py-3 shadow-[inset_0_0_0_1px_#23252a]">
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-[13px] text-[#e5e5e6]">Roll back to #40</span>
+                <span className="l-hair-strong rounded px-2 py-0.5 text-[11px] text-[#d0d6e0]">Roll back</span>
+              </div>
+              <span className="text-xs leading-normal text-[#8a8f98]">
+                Reuses the image kept from #40, no rebuild. Database changes and variables aren’t rolled back.
+              </span>
             </div>
           </div>
           <div className="l-fade-bottom pointer-events-none absolute inset-x-0 bottom-0 z-[3] h-40" />

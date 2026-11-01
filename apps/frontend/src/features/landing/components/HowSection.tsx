@@ -33,7 +33,7 @@ export function HowSection() {
         </h2>
       </div>
       <p className="-mt-16 mb-0 max-w-[480px] text-center text-[17px] leading-[1.6] text-balance text-[#8a8f98]">
-        From <span className="l-mono text-[15px] text-[#e5e5e6]">git push</span> to live traffic in four steps, on a server you control.
+        From <span className="l-mono text-[15px] text-[#e5e5e6]">git push</span> to live traffic in four steps, on a server you own.
       </p>
       <div className="relative grid w-full grid-cols-[repeat(auto-fit,minmax(min(100%,200px),1fr))] gap-y-14">
         {/* the line joining the four steps, with a dot travelling along it */}
@@ -59,6 +59,9 @@ export function HowSection() {
           </div>
         ))}
       </div>
+      <p className="-mt-12 mb-0 max-w-[560px] text-center text-[15px] leading-[1.6] text-balance text-[#62666d]">
+        Deploying from CI instead? Create an API token and call Warden from a GitHub Actions step. It waits for the deploy and fails the job if the deploy fails.
+      </p>
     </section>
   );
 }

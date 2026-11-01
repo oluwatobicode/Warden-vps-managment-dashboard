@@ -1,0 +1,17 @@
+# The dashboard's static files. Traefik in front does HTTPS and sends /api to
+# the api; everything else lands here. Unknown paths get index.html (the
+# dashboard's own router handles them).
+{
+	admin off
+	auto_https off
+}
+
+:8080 {
+	root * /srv
+	encode zstd gzip
+	# Vite names these after their content, so they never change.
+	header /assets/* Cache-Control "public, max-age=31536000, immutable"
+	header /index.html Cache-Control "no-cache"
+	try_files {path} /index.html
+	file_server
+}

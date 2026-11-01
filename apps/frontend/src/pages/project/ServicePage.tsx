@@ -19,7 +19,8 @@ import { TYPE_LABEL, sourceLabel } from "../../features/services/components/serv
 import { VariablesPanel } from "../../features/variables/components/VariablesPanel";
 import { ResolvedVariables } from "../../features/variables/components/ResolvedVariables";
 import { apiMessage, apiStatus } from "../../utils/apiMessage";
-import { DatabasePanel } from "../../features/databases/components/DatabasePanel";
+import { DatabasePanel, type DatabaseSection } from "../../features/databases/components/DatabasePanel";
+import { DataTab } from "../../features/database-data/components/DataTab";
 import { atLeast } from "../../utils/roles";
 import { DatabaseLogo } from "../../features/databases/components/DatabaseLogo";
 import { engineOf } from "../../features/databases/engine";
@@ -29,8 +30,10 @@ import { BuildSettingsForm } from "../../features/deploys/components/BuildSettin
 import { GithubRepoPicker } from "../../features/deploys/components/GithubRepoPicker";
 import { DomainsCard } from "../../features/deploys/components/DomainsCard";
 import { useDeployInfo } from "../../features/deploys/hooks/useDeploys";
+import { ServiceLogs } from "../../features/logs/components/ServiceLogs";
 
-type Tab = "deployments" | "variables" | "settings";
+type Tab = "deployments" | "logs" | "variables" | "settings";
+type DbTab = DatabaseSection | "data" | "logs";
 type Section = "general" | "build" | "github" | "domains" | "delete";
 
 export default function ServicePage() {
@@ -42,6 +45,7 @@ export default function ServicePage() {
   const servers = useServers();
   const del = useDeleteService(serviceId);
   const [tab, setTab] = useState<Tab>("deployments");
+  const [dbTab, setDbTab] = useState<DbTab>("overview");
   const [section, setSection] = useState<Section>("general");
   const deployInfo = useDeployInfo(serviceId);
   const [view, setView] = useState<"own" | "resolved">("own");
@@ -110,12 +114,25 @@ export default function ServicePage() {
     </>
   );
 
-  // A database has its own page body: connection, deploy log, restart, delete.
+  // A database has its own page body: Overview (connection, deploy log, restart), Data, Backups, Logs, Danger zone (delete).
   if (s.type === "DATABASE") {
     return (
       <>
         {header}
-        <DatabasePanel service={s} canEdit={canEdit} afterDelete={overview} />
+        <Tabs
+          value={dbTab}
+          onChange={setDbTab}
+          tabs={[
+            { id: "overview", label: "Overview" },
+            { id: "data", label: "Data" },
+            { id: "backups", label: "Backups" },
+            { id: "logs", label: "Logs" },
+            ...(canEdit ? [{ id: "danger" as const, label: "Danger zone" }] : []),
+          ]}
+        />
+        {(dbTab === "overview" || dbTab === "backups" || dbTab === "danger") && <DatabasePanel service={s} canEdit={canEdit} afterDelete={overview} section={dbTab} />}
+        {dbTab === "data" && engine && <DataTab serviceId={s.id} engine={engine} running={s.status !== "NOT_DEPLOYED" && s.status !== "DEPLOYING"} />}
+        {dbTab === "logs" && <ServiceLogs service={s} />}
       </>
     );
   }
@@ -141,12 +158,15 @@ export default function ServicePage() {
         onChange={setTab}
         tabs={[
           { id: "deployments", label: "Deployments" },
+          { id: "logs", label: "Logs" },
           { id: "variables", label: "Variables" },
           { id: "settings", label: "Settings" },
         ]}
       />
 
       {tab === "deployments" && <DeploysPanel service={s} canEdit={canEdit} deployPath={deployPath} />}
+
+      {tab === "logs" && <ServiceLogs service={s} />}
 
       {tab === "variables" && (
         <div className="mt-[18px] pb-2">

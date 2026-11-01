@@ -1,0 +1,95 @@
+# Builds Warden's images on every push to main and publishes them to GitHub's
+# container registry (ghcr.io), tagged `latest` and the commit's sha:
+#   ghcr.io/oluwatobicode/warden      api + worker (infra/production/docker-compose.yml)
+#   ghcr.io/oluwatobicode/warden-web  the dashboard
+# Each CPU is built on its own machine (no emulation: a pnpm install + build
+# under QEMU takes many times longer), then both are joined under one tag, so
+# a server pulls the one matching its CPU (EC2 t4g = arm64, t3 = amd64).
+name: images
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: images
+  cancel-in-progress: true
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-24.04
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build api + worker
+        id: app
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          target: app
+          platforms: linux/${{ matrix.arch }}
+          outputs: type=image,name=ghcr.io/oluwatobicode/warden,push-by-digest=true,name-canonical=true,push=true
+          cache-from: type=gha,scope=${{ matrix.arch }}
+          cache-to: type=gha,scope=${{ matrix.arch }},mode=max
+
+      # Same builder, so the shared build stage comes from the step above.
+      - name: Build dashboard
+        id: web
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          target: web
+          platforms: linux/${{ matrix.arch }}
+          outputs: type=image,name=ghcr.io/oluwatobicode/warden-web,push-by-digest=true,name-canonical=true,push=true
+          cache-from: type=gha,scope=${{ matrix.arch }}
+
+      - name: Keep the digests
+        run: |
+          mkdir -p digests
+          echo "${{ steps.app.outputs.digest }}" > digests/app
+          echo "${{ steps.web.outputs.digest }}" > digests/web
+      - uses: actions/upload-artifact@v4
+        with:
+          name: digests-${{ matrix.arch }}
+          path: digests
+          retention-days: 1
+
+  publish:
+    needs: build
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: digests-*
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Tag both CPUs as latest and as the commit
+        run: |
+          for pair in app:warden web:warden-web; do
+            target=${pair%%:*}; image=ghcr.io/oluwatobicode/${pair#*:}
+            docker buildx imagetools create \
+              -t "$image:latest" -t "$image:${GITHUB_SHA}" \
+              "$image@$(cat digests-amd64/$target)" "$image@$(cat digests-arm64/$target)"
+          done

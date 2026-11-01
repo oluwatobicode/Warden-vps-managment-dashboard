@@ -92,15 +92,7 @@ export function Eyebrow({ children }: { children: ReactNode }) {
   return <span className="l-mono text-xs tracking-[0.08em] text-[#62666d]">{children}</span>;
 }
 
-export function LearnMore({ href = "#docs" }: { href?: string }) {
-  return (
-    <a href={href} className="flex w-max items-center gap-1.5 text-[15px] text-[#8a8f98] hover:text-[#e5e5e6]">
-      Learn more <ArrowIcon />
-    </a>
-  );
-}
-
-/** The two-column intro used by Deploys, Fleet and Activity. */
+/** The two-column intro used by Deploys, Databases, Fleet and Activity. */
 export function SectionIntro({ eyebrow, title, sub, body }: { eyebrow: string; title: string; sub: string; body: string }) {
   return (
     <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,420px),1fr))] items-start gap-x-16 gap-y-8">
@@ -114,7 +106,6 @@ export function SectionIntro({ eyebrow, title, sub, body }: { eyebrow: string; t
       </div>
       <div className="flex flex-col gap-10">
         <p className="m-0 text-[clamp(18px,1.8vw,22px)] leading-[1.42] tracking-[-0.26px] text-pretty text-[#d0d6e0]">{body}</p>
-        <LearnMore />
       </div>
     </div>
   );

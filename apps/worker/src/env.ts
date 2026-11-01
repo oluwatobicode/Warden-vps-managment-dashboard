@@ -20,6 +20,8 @@ const EnvSchema = z.object({
   DISK_HIGH_PERCENT: z.coerce.number().min(50).max(99).default(90),
   /** Servers polled at the same time. */
   MONITOR_CONCURRENCY: z.coerce.number().int().min(1).max(50).default(10),
+  /** false: don't collect app logs (e.g. a second worker only for builds). */
+  LOGS_COLLECT: z.stringbool().default(true),
   /** true: log alerts instead of sending them (local testing). */
   NOTIFY_DRY_RUN: z.stringbool().default(false),
   /**

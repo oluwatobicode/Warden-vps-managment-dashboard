@@ -8,6 +8,10 @@ export const envSchema = z.object({
   DATABASE_URL: z.string(),
   REDIS_URL: z.string(),
 
+  // How many proxies sit in front (production: 1, Traefik). The rate limit and
+  // audit IPs then use the visitor's address from X-Forwarded-For; 0 = ignore
+  // that header (so it can't be faked when nothing in front sets it).
+  TRUST_PROXY: z.coerce.number().int().min(0).max(5).default(0),
   CORS_ORIGIN: z.string().default(''),
   APP_URL: z.string().default(''),
   // 32-byte master key (KEK) as 64 hex chars. Wraps every org's data key.

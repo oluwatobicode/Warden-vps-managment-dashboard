@@ -22,6 +22,7 @@ export {
 } from "./docker";
 export {
   q,
+  LOG_OPTS,
   ensureNetwork,
   ensureVolume,
   writePrivateFile,
@@ -33,6 +34,10 @@ export {
   waitHealthy,
   containerLogTail,
   restartContainer,
+  logRotated,
+  bridgeCommand,
+  ensureNetworkCommand,
+  ensureVolumeCommand,
   removeContainer,
   removeVolume,
   type ContainerSpec,

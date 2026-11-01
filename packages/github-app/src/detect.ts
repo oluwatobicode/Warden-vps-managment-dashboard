@@ -289,9 +289,19 @@ const lockfileOf = (pm: PM) =>
     npm: "package-lock.json",
   })[pm];
 
-/** A non-Node app at the repo root (Railpack knows these languages). */
-function otherApp(ctx: Ctx): DetectedApp | null {
-  const has = ctx.has;
+/** The package manager, from the lockfile in `dir` (the repo root when ""). */
+const pmOf = (has: (p: string) => boolean, dir: string): PM =>
+  has(join(dir, "pnpm-lock.yaml")) || has(join(dir, "pnpm-workspace.yaml"))
+    ? "pnpm"
+    : has(join(dir, "yarn.lock"))
+      ? "yarn"
+      : has(join(dir, "bun.lock")) || has(join(dir, "bun.lockb"))
+        ? "bun"
+        : "npm";
+
+/** A non-Node app in `dir` ("" = the repo root). Railpack knows these languages. */
+function otherApp(ctx: Ctx, dir = ""): DetectedApp | null {
+  const has = (p: string) => ctx.has(join(dir, p));
   const lang = has("Dockerfile")
     ? { label: "Dockerfile", port: 3000 }
     : has("requirements.txt") || has("pyproject.toml") || has("Pipfile")
@@ -315,14 +325,14 @@ function otherApp(ctx: Ctx): DetectedApp | null {
   // to serve. Without a package.json, Railpack serves the HTML by itself.
   const siteFolder = site && has("package.json") ? "." : null;
   return {
-    path: "",
-    name: slug(ctx.repo.repoName),
+    path: dir,
+    name: slug(dir ? dir : ctx.repo.repoName),
     packageName: null,
     framework: lang.label,
     type: "APPLICATION",
     website: site,
     buildMethod: docker ? "DOCKERFILE" : "RAILPACK",
-    rootDirectory: "",
+    rootDirectory: dir,
     dockerfilePath: "Dockerfile",
     buildCommand: null,
     startCommand: null,
@@ -352,14 +362,7 @@ export async function detectApps(
   const rootPkg = parse(
     has("package.json") ? await repo.read("package.json") : null,
   );
-  const pm: PM =
-    has("pnpm-lock.yaml") || has("pnpm-workspace.yaml")
-      ? "pnpm"
-      : has("yarn.lock")
-        ? "yarn"
-        : has("bun.lock") || has("bun.lockb")
-          ? "bun"
-          : "npm";
+  const pm = pmOf(has, "");
 
   let globs: string[] = [];
   if (has("pnpm-workspace.yaml"))
@@ -413,5 +416,29 @@ export async function detectApps(
     if (app) return { monorepo: false, apps: [app] };
   }
   const other = otherApp(ctxSingle);
-  return { monorepo: false, apps: other ? [other] : [] };
+  if (other) return { monorepo: false, apps: [other] };
+
+  // Nothing at the root: separate apps side by side in folders (backend/ +
+  // frontend/, no workspaces). Each is built on its own, from its folder.
+  const folders = [
+    ...new Set(
+      repo.files.filter((f) => f.includes("/")).map((f) => f.split("/")[0]),
+    ),
+  ]
+    .filter((d) => !d.startsWith(".") && d !== "node_modules")
+    .sort()
+    .slice(0, 30);
+  const apps: DetectedApp[] = [];
+  for (const dir of folders) {
+    const folderCtx: Ctx = { ...ctxSingle, pm: pmOf(has, dir) };
+    const pkg = parse(
+      has(`${dir}/package.json`)
+        ? await repo.read(`${dir}/package.json`)
+        : null,
+    );
+    const app =
+      (pkg && (await nodeApp(folderCtx, dir, pkg))) ?? otherApp(folderCtx, dir);
+    if (app) apps.push(app);
+  }
+  return { monorepo: apps.length > 1, apps };
 }

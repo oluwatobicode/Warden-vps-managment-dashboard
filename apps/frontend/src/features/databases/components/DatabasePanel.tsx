@@ -15,8 +15,11 @@ import { timeAgo } from "../../../utils/formatDate";
 import { BackupsCard } from "./BackupsCard";
 import { isInProgress, useDatabase, useDeleteDatabase, useRestartDatabase, useRevealConnection } from "../hooks/useDatabases";
 
-/** A database service's page body: connection, the latest create/restart/restore log, backups, restart and delete. */
-export function DatabasePanel({ service, canEdit, afterDelete }: { service: Service; canEdit: boolean; afterDelete: string }) {
+/** Which tab of a database's page: connection + latest create/restart/restore log, backups, or delete. */
+export type DatabaseSection = "overview" | "backups" | "danger";
+
+/** One tab of a database service's page (the page's Tabs pick the section). */
+export function DatabasePanel({ service, canEdit, afterDelete, section }: { service: Service; canEdit: boolean; afterDelete: string; section: DatabaseSection }) {
   const info = useDatabase(service.id);
   const restart = useRestartDatabase(service.id);
   const reveal = useRevealConnection(service.id);
@@ -43,63 +46,65 @@ export function DatabasePanel({ service, canEdit, afterDelete }: { service: Serv
 
   return (
     <div className="mt-5 flex flex-col gap-3.5 pb-2">
-      <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,340px),1fr))] items-start gap-3.5">
-        <Card title="Connection" sub={`Saved as the secret variable ${d.variableName} in this environment. Only reachable from services on the same server.`}>
-          <div className="mt-3">
-            <FactRow label="Engine">{`${spec.label} ${d.version}`}</FactRow>
-            <FactRow label="Host">{d.host}</FactRow>
-            <FactRow label="Port">{d.port}</FactRow>
-            {d.databaseName && <FactRow label="Database">{d.databaseName}</FactRow>}
-            {d.username && <FactRow label="User">{d.username}</FactRow>}
-          </div>
-          {canEdit && (
-            <div className="mt-3.5 flex items-center gap-2 rounded-xl border border-cb bg-field px-3 py-2.5">
-              <span className="min-w-0 flex-1 truncate font-mono text-[11.5px] text-body">{shown ?? "•••••••••••••••••••••••• (connection string)"}</span>
-              {shown ? (
-                <>
-                  <CopyButton value={shown} label="Copy connection string" done="Connection string copied" />
-                  <Button variant="ghost" onClick={() => setShown(null)} className="px-2 py-1 text-[11px]">
-                    Hide
+      {section === "overview" && (
+        <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,340px),1fr))] items-start gap-3.5">
+          <Card title="Connection" sub={`Saved as the secret variable ${d.variableName} in this environment. Only reachable from services on the same server.`}>
+            <div className="mt-3">
+              <FactRow label="Engine">{`${spec.label} ${d.version}`}</FactRow>
+              <FactRow label="Host">{d.host}</FactRow>
+              <FactRow label="Port">{d.port}</FactRow>
+              {d.databaseName && <FactRow label="Database">{d.databaseName}</FactRow>}
+              {d.username && <FactRow label="User">{d.username}</FactRow>}
+            </div>
+            {canEdit && (
+              <div className="mt-3.5 flex items-center gap-2 rounded-xl border border-cb bg-field px-3 py-2.5">
+                <span className="min-w-0 flex-1 truncate font-mono text-[11.5px] text-body">{shown ?? "•••••••••••••••••••••••• (connection string)"}</span>
+                {shown ? (
+                  <>
+                    <CopyButton value={shown} label="Copy connection string" done="Connection string copied" />
+                    <Button variant="ghost" onClick={() => setShown(null)} className="px-2 py-1 text-[11px]">
+                      Hide
+                    </Button>
+                  </>
+                ) : (
+                  <Button variant="secondary" onClick={onReveal} loading={reveal.isPending} className="px-3 py-1.5 text-[11px]">
+                    Reveal
                   </Button>
-                </>
-              ) : (
-                <Button variant="secondary" onClick={onReveal} loading={reveal.isPending} className="px-3 py-1.5 text-[11px]">
-                  Reveal
+                )}
+              </div>
+            )}
+          </Card>
+
+          <Card
+            title={dep ? `Deployment #${dep.number}` : "Deployments"}
+            sub={dep ? `${dep.finishedAt ? `Finished ${timeAgo(dep.finishedAt)}` : `Started ${timeAgo(dep.createdAt)}`}` : "Nothing yet"}
+            action={dep && <StatusPill status={dep.status as never} />}
+          >
+            {dep && (
+              <ol className="mt-3.5 flex list-none flex-col gap-1.5 p-0" aria-live="polite">
+                {dep.history.map((h, i) => (
+                  <li key={i} className="flex gap-3 text-[11.5px]">
+                    <span className="w-[54px] shrink-0 font-mono text-faint">{new Date(h.at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}</span>
+                    <span className={`min-w-0 font-mono break-words whitespace-pre-wrap ${h.status === "FAILED" ? "text-crit" : h.status === "SUCCESS" ? "text-good" : "text-muted-deep"}`}>{h.message}</span>
+                  </li>
+                ))}
+                {busy && <li className="text-[11.5px] text-sand">…</li>}
+              </ol>
+            )}
+            {canEdit && (
+              <div className="mt-4 flex justify-end">
+                <Button variant="secondary" onClick={onRestart} loading={restart.isPending} disabled={busy} className="px-3.5 py-2 text-xs">
+                  Restart
                 </Button>
-              )}
-            </div>
-          )}
-        </Card>
+              </div>
+            )}
+          </Card>
+        </div>
+      )}
 
-        <Card
-          title={dep ? `Deployment #${dep.number}` : "Deployments"}
-          sub={dep ? `${dep.finishedAt ? `Finished ${timeAgo(dep.finishedAt)}` : `Started ${timeAgo(dep.createdAt)}`}` : "Nothing yet"}
-          action={dep && <StatusPill status={dep.status as never} />}
-        >
-          {dep && (
-            <ol className="mt-3.5 flex list-none flex-col gap-1.5 p-0" aria-live="polite">
-              {dep.history.map((h, i) => (
-                <li key={i} className="flex gap-3 text-[11.5px]">
-                  <span className="w-[54px] shrink-0 font-mono text-faint">{new Date(h.at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}</span>
-                  <span className={`min-w-0 font-mono break-words whitespace-pre-wrap ${h.status === "FAILED" ? "text-crit" : h.status === "SUCCESS" ? "text-good" : "text-muted-deep"}`}>{h.message}</span>
-                </li>
-              ))}
-              {busy && <li className="text-[11.5px] text-sand">…</li>}
-            </ol>
-          )}
-          {canEdit && (
-            <div className="mt-4 flex justify-end">
-              <Button variant="secondary" onClick={onRestart} loading={restart.isPending} disabled={busy} className="px-3.5 py-2 text-xs">
-                Restart
-              </Button>
-            </div>
-          )}
-        </Card>
-      </div>
+      {section === "backups" && <BackupsCard service={service} info={d} canEdit={canEdit} busy={busy} />}
 
-      <BackupsCard service={service} info={d} canEdit={canEdit} busy={busy} />
-
-      {canEdit && (
+      {section === "danger" && canEdit && (
         <DangerZone
           body={`Deleting ${service.serviceName} removes its container. Its data volume (${d.volumeName}) stays on the server unless you choose to delete it too. Its backups are deleted either way.`}
           action={

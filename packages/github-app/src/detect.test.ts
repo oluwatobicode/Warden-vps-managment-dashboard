@@ -106,4 +106,32 @@ describe("detectApps", () => {
     expect(r.apps.map((a) => a.name)).toEqual(["web", "web-2"]);
     expect(r.apps[0]).toMatchObject({ framework: "Next.js", buildCommand: "npm run build --workspace=apps/web", startCommand: "npm run start --workspace=apps/web" });
   });
+
+  it("separate apps in folders with nothing at the root (like AfriTailor) are each built from their folder", async () => {
+    const r = await detectApps(
+      repo("AfriTailor", {
+        "backend/package.json": { name: "backend", scripts: { build: "tsc", start: "node dist/src/server.js" }, dependencies: { express: "^5", bullmq: "^5" } },
+        "backend/package-lock.json": "",
+        "frontend/package.json": { name: "frontend", scripts: { build: "tsc -b && vite build" }, devDependencies: { vite: "^7" } },
+        "frontend/pnpm-lock.yaml": "",
+        "frontend/.env.example": "VITE_API_URL=",
+        "scripts/notes.txt": "",
+        ".github/workflows/ci.yml": "",
+      }),
+    );
+    expect(r.monorepo).toBe(true);
+    expect(r.apps.map((a) => `${a.name}:${a.type}:${a.framework}`)).toEqual(["backend:APPLICATION:Express", "frontend:APPLICATION:Vite"]);
+    const [api, web] = r.apps;
+    // Railpack runs inside the folder, so its own build/start, with the folder's package manager.
+    expect(api).toMatchObject({ rootDirectory: "backend", buildCommand: null, startCommand: null, port: 3000, watchPaths: [] });
+    expect(api.notes.join(" ")).toContain("npm run start");
+    expect(web).toMatchObject({ rootDirectory: "frontend", website: true, staticOutputDir: null, healthCheckPath: "/health", buildVars: ["VITE_API_URL"] });
+    expect(web.notes.join(" ")).toContain("pnpm run build");
+  });
+
+  it("a Go app in a folder is found too", async () => {
+    const r = await detectApps(repo("svc", { "server/go.mod": "", "server/main.go": "", "README.md": "" }));
+    expect(r.apps).toHaveLength(1);
+    expect(r.apps[0]).toMatchObject({ name: "server", framework: "Go", rootDirectory: "server", path: "server", port: 8080 });
+  });
 });

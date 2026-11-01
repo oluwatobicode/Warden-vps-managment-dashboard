@@ -29,14 +29,17 @@ const BAR_POINTS = [
 ];
 const SWAP_PATH = "M60 96 C 70 46, 120 36, 138 70";
 
+/** Which drawing goes with which entry of GATE_FIGURES (the failure one reuses the bars). */
+const FIGURE_ORDER = [0, 1, 3, 2];
+
 const FIGURES: ReactNode[] = [
-  // 0.1 container running: slabs stack, a ring pulses on top
+  // step 1, started beside the old one: slabs stack, a ring pulses on top
   <>
     {[92, 70, 48].map((y, i) => <Slab key={y} y={y} className="l-fl" style={delay(i * 260)} />)}
     <ellipse className="l-ring" cx="100" cy="78" rx="18" ry="9" fill="none" stroke="#27a644" strokeWidth="1" />
     <circle className="l-ringdot" cx="100" cy="78" r="2" fill="#27a644" />
   </>,
-  // 0.2 http health check: a heartbeat traced over the slab
+  // step 2, health check: a heartbeat traced over the slab
   <>
     <Slab y={100} />
     <line x1="40" y1="70" x2="40" y2="130" stroke="#23252a" strokeDasharray="2 3" />
@@ -44,7 +47,7 @@ const FIGURES: ReactNode[] = [
     <line x1="100" y1="70" x2="100" y2="100" stroke="#23252a" strokeDasharray="2 3" />
     <polyline className="l-pulse" pathLength={1} points="40,70 70,70 80,48 92,96 104,58 114,70 160,70" fill="none" stroke="#02b8cc" strokeWidth="1.2" strokeLinejoin="round" />
   </>,
-  // 0.3 error-rate window: bars, the last one crosses the threshold
+  // if anything fails: bars rising, the last one crosses the line and stops
   <>
     {BAR_POINTS.map((p, i) => (
       <polygon
@@ -60,7 +63,7 @@ const FIGURES: ReactNode[] = [
     ))}
     <line className="l-thresh" x1="36" y1="60" x2="148" y2="116" stroke="#eb5757" strokeOpacity="0.7" strokeDasharray="3 3" />
   </>,
-  // 0.4 traffic swap: requests hop from the old container to the new one
+  // step 3, traffic switch: requests hop from the old container to the new one
   <>
     <polygon className="l-sw-old" points="30,115 60,100 90,115 90,125 60,140 30,125" {...line} fill="#08090a" />
     <polyline points="30,115 60,130 90,115" {...line} />
@@ -86,10 +89,10 @@ export function GatesSection() {
   return (
     <section id="gates" className="mx-auto flex max-w-[1200px] flex-col gap-24 px-6 pt-36 pb-32">
       <div className="flex flex-col gap-5">
-        <Eyebrow>02 — HEALTH GATES</Eyebrow>
+        <Eyebrow>02 — HEALTH CHECKS</Eyebrow>
         <h2 className="m-0 max-w-[1100px] text-[clamp(32px,4.2vw,48px)] leading-[1.08] font-semibold tracking-[-1.056px] text-pretty text-white">
-          Traffic moves only when the new container is healthy.{" "}
-          <span className="text-[#8a8f98]">Every deploy passes through gates you define. If one fails, the old container keeps serving and nothing changes for your users.</span>
+          Traffic moves only when the new version is healthy.{" "}
+          <span className="text-[#8a8f98]">Every deploy goes through the same steps. If any of them fails, the old version keeps serving and nothing changes for your users.</span>
         </h2>
       </div>
       <div className="-mx-6 grid grid-cols-[repeat(auto-fit,minmax(min(100%,180px),1fr))] gap-y-16 overflow-hidden">
@@ -98,7 +101,7 @@ export function GatesSection() {
             <span className="l-mono text-[11px] tracking-[0.08em] text-[#62666d]">{f.fig}</span>
             <div className="grid aspect-square w-full max-w-[280px] place-items-center self-center">
               <svg width="100%" height="100%" viewBox="0 0 200 200" aria-hidden>
-                {FIGURES[i]}
+                {FIGURES[FIGURE_ORDER[i]]}
               </svg>
             </div>
             <div className="mt-4 flex flex-col gap-2">
@@ -108,6 +111,10 @@ export function GatesSection() {
           </div>
         ))}
       </div>
+      <p className="-mt-12 mb-0 text-[13px] text-[#62666d]">
+        <span className="l-hair mr-2 rounded px-1.5 py-0.5 text-[11px] text-[#8a8f98]">Coming later</span>
+        Watching error rates after the switch, through Argus.
+      </p>
     </section>
   );
 }

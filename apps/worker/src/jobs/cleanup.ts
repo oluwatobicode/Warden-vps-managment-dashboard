@@ -5,6 +5,7 @@ import { withSsh } from "ssh-client";
 import { sshTargetFor } from "../keys";
 import { log } from "../log";
 import { notify, serverUrl } from "../notify";
+import { serverEvent } from "../logs/server-sink";
 
 /**
  * Run cleanup for one DockerCleanupLog row the api created as QUEUED.
@@ -34,6 +35,7 @@ export async function cleanup({ cleanupId, serverId, organizationId }: CleanupJo
     where: { id: row.id },
     data: { status: error ? "FAILED" : "SUCCESS", reclaimedBytes, errorMessage: error, finishedAt: new Date() },
   });
+  await serverEvent(server, error ? `Docker cleanup failed: ${error}` : `Docker cleanup freed ${Math.round(reclaimedBytes / 1e6).toLocaleString("en-US")} MB`);
   log.info(`cleanup on ${server.serverName}: ${error ? `failed (${error})` : "done"}, freed ${Math.round(reclaimedBytes / 1e6)} MB`);
 
   if (error) {

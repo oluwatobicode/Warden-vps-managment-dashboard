@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { CreateFromRepoSchema, type DetectedApp } from "shared-types";
-import { appToForm, formField, formsToInput } from "./repoForm";
+import { appToForm, formField, formsToInput, looksLikeDotenv, mergePastedEnv } from "./repoForm";
 import { parseRepo } from "./hooks/useRepoServices";
 
 const site: DetectedApp = {
@@ -51,5 +51,34 @@ describe("repo form", () => {
   it("parses the ways people write a repo", () => {
     for (const s of ["acme/api", "https://github.com/acme/api", "github.com/acme/api.git", "https://github.com/acme/api/"]) expect(parseRepo(s)).toBe("acme/api");
     expect(parseRepo("not a repo")).toBeNull();
+  });
+});
+
+describe("pasting a .env into the variables", () => {
+  it("tells a .env from a plain key", () => {
+    expect(looksLikeDotenv("VITE_API_URL")).toBe(false);
+    expect(looksLikeDotenv("VITE_API_URL=https://api.example.com")).toBe(true);
+    expect(looksLikeDotenv("A=1\nB=2")).toBe(true);
+    expect(looksLikeDotenv("export TOKEN=x")).toBe(true);
+  });
+
+  it("fills keys already there, adds new ones, drops the empty row it went into, reports bad lines", () => {
+    const rows = [
+      { key: "VITE_API_URL", value: "" },
+      { key: "", value: "" },
+    ];
+    const r = mergePastedEnv(rows, "# comment\nVITE_API_URL=https://api.example.com\nJWT_SECRET='s3cret # kept'\nnot a line\nJWT_SECRET=last-wins", 1);
+    expect(r.rows).toEqual([
+      { key: "VITE_API_URL", value: "https://api.example.com" },
+      { key: "JWT_SECRET", value: "last-wins" },
+    ]);
+    expect(r).toMatchObject({ added: 1, updated: 1, problems: ["line 4: No = sign: expected KEY=value"] });
+  });
+
+  it("the whole request stays under the api's body limit", () => {
+    const big = { ...appToForm(site, "6f9619ff-8b86-4d01-b42d-00cf4fc964ff"), vars: Array.from({ length: 5 }, (_, i) => ({ key: `K${i}`, value: "x".repeat(15_000) })) };
+    const r = CreateFromRepoSchema.safeParse(formsToInput("6f9619ff-8b86-4d01-b42d-00cf4fc964ff", { installationId: null, repo: "acme/api", branch: "" }, [big], true));
+    expect(r.success).toBe(false);
+    expect(r.error?.issues.map((i) => i.path.join("."))).toContain("services.0.variables");
   });
 });

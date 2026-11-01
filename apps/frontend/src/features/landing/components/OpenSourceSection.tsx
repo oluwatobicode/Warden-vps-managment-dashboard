@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { OPEN_SOURCE } from "../data";
+import { GITHUB_URL, OPEN_SOURCE } from "../data";
 import { ServerIcon } from "./bits";
 
 const svg = (children: ReactNode) => (
@@ -22,7 +22,12 @@ const ICON: Record<(typeof OPEN_SOURCE)[number]["icon"], ReactNode> = {
     </>,
   ),
   server: <ServerIcon size={20} />,
-  heart: svg(<path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10Z" />),
+  terminal: svg(
+    <>
+      <rect x="3" y="4" width="18" height="16" rx="2" />
+      <path d="m7 9 3 3-3 3M13 15h4" />
+    </>,
+  ),
 };
 
 export function OpenSourceSection() {
@@ -30,20 +35,20 @@ export function OpenSourceSection() {
     <section id="github" className="mx-auto max-w-[1200px] px-6 pt-40">
       <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,460px),1fr))] items-center gap-x-[72px] gap-y-14">
         <div className="flex flex-col gap-7">
-          <h2 className="m-0 text-[clamp(44px,5.6vw,72px)] leading-none font-bold tracking-[-0.035em] text-white">100% open source</h2>
+          <h2 className="m-0 text-[clamp(44px,5.6vw,72px)] leading-none font-bold tracking-[-0.035em] text-white">Open source</h2>
           <p className="m-0 max-w-[540px] text-[clamp(17px,1.6vw,20px)] leading-[1.6] text-pretty text-[#8a8f98]">
-            Warden is built in the open. Read the code that touches your servers, contribute features, or fork it and run the whole control plane on your own infrastructure.
+            Warden’s code is public on GitHub. Read the code that touches your servers, report what breaks, or run the whole control plane on your own server instead of using a hosted one.
           </p>
           <div className="mt-2 flex flex-wrap gap-3">
-            <a href="#github" className="flex items-center gap-2.5 rounded-full bg-white px-6 py-[13px] text-base font-[590] text-[#08090a] hover:bg-[#e5e5e6]">
+            <a href={GITHUB_URL} target="_blank" rel="noreferrer" className="flex items-center gap-2.5 rounded-full bg-white px-6 py-[13px] text-base font-[590] text-[#08090a] hover:bg-[#e5e5e6]">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
                 <path d="m12 2.5 2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.4l-5.9 3.1 1.2-6.5L2.5 9.4l6.6-.9z" />
               </svg>
               Star on GitHub
             </a>
-            <a href="#community" className="l-hair-strong flex items-center gap-2.5 rounded-full bg-[#0f1011] px-6 py-[13px] text-base font-[590] text-[#e5e5e6] hover:bg-[#161718] hover:text-white">
+            <a href={`${GITHUB_URL}/issues`} target="_blank" rel="noreferrer" className="l-hair-strong flex items-center gap-2.5 rounded-full bg-[#0f1011] px-6 py-[13px] text-base font-[590] text-[#e5e5e6] hover:bg-[#161718] hover:text-white">
               {svg(<path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12Z" />)}
-              Join the community
+              Open an issue
             </a>
           </div>
         </div>

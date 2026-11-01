@@ -1,4 +1,5 @@
 import type { CreateFromRepoInput, DetectedApp } from "shared-types";
+import { parseDotenv } from "../../utils/dotenv";
 
 /** One app on the "Check and deploy" step: everything editable, as the inputs hold it (text). */
 export interface AppForm {
@@ -31,7 +32,7 @@ export interface RepoSource {
 
 export const appKey = (a: Pick<DetectedApp, "path">) => a.path || ".";
 
-/** A detected app → its form, on the given server. Build-time variables start as empty rows to fill. */
+/** A detected app → its form, on the given server. Build-time variables start as empty rows to fill (or one blank row). */
 export function appToForm(a: DetectedApp, serverId: string): AppForm {
   return {
     key: appKey(a),
@@ -50,7 +51,8 @@ export function appToForm(a: DetectedApp, serverId: string): AppForm {
     staticOutputDir: a.staticOutputDir ?? "",
     healthCheckPath: a.healthCheckPath,
     watchPathsText: a.watchPaths.join("\n"),
-    vars: a.buildVars.map((key) => ({ key, value: "" })),
+    // At least one row, so there's always a Key box to paste a .env into.
+    vars: a.buildVars.length ? a.buildVars.map((key) => ({ key, value: "" })) : [{ key: "", value: "" }],
   };
 }
 
@@ -87,6 +89,34 @@ export function formsToInput(environmentId: string, source: RepoSource, apps: Ap
       variables: f.vars.filter((v) => v.key.trim() && v.value !== "").map((v) => ({ key: v.key.trim(), value: v.value })),
     })),
   };
+}
+
+/** Does pasted text look like a .env (several lines, or KEY=value), not just a key? */
+export const looksLikeDotenv = (text: string) => /\r?\n/.test(text.trim()) || /^\s*(export\s+)?[A-Za-z_][A-Za-z0-9_]*\s*=/.test(text);
+
+/**
+ * A .env pasted into the Key box of row `at` → the app's variable rows:
+ * keys already there get the pasted value, new keys are added, and the row
+ * it was pasted into goes away if it was empty. Bad lines come back as
+ * problems ("line 4: …") and are left out.
+ */
+export function mergePastedEnv(rows: AppForm["vars"], text: string, at: number): { rows: AppForm["vars"]; added: number; updated: number; problems: string[] } {
+  const parsed = parseDotenv(text);
+  const out = rows.filter((r, i) => i !== at || r.key.trim() || r.value);
+  let added = 0;
+  let updated = 0;
+  for (const l of parsed) {
+    if (l.error || l.overridden) continue;
+    const existing = out.findIndex((r) => r.key.trim() === l.key);
+    if (existing >= 0) {
+      out[existing] = { key: l.key, value: l.value };
+      updated++;
+    } else {
+      out.push({ key: l.key, value: l.value });
+      added++;
+    }
+  }
+  return { rows: out, added, updated, problems: parsed.filter((l) => l.error).map((l) => `line ${l.line}: ${l.error}`) };
 }
 
 /** An API field ("services.1.port") → the form field holding it ("apps.1.port"). */

@@ -3,6 +3,8 @@ node_modules/
 dist/
 .env
 .env.*
+# The production settings template is meant to be in the repo (install.sh copies it).
+!infra/production/.env.example
 .DS_Store
 *.tsbuildinfo
 # personal decision log, not for the public repo yet

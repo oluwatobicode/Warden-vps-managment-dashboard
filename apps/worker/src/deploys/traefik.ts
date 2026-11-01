@@ -1,4 +1,4 @@
-import { ensureNetwork, ensureVolume, q, removeContainer, type Run } from "docker-client";
+import { ensureNetwork, ensureNetworkCommand, ensureVolume, ensureVolumeCommand, LOG_OPTS, q, removeContainer, type Run } from "docker-client";
 
 /*
  * Traefik: the front door on every server (ports 80/443). Apps never publish
@@ -60,24 +60,7 @@ export async function setupProxy(run: Run): Promise<void> {
   const pull = await run(`docker pull -q ${PROXY_IMAGE}`);
   if (pull.code !== 0) throw new Error(`Couldn't download Traefik: ${firstLine(pull.stderr || pull.stdout)}`);
   await removeContainer(run, PROXY_CONTAINER);
-  const r = await run(
-    [
-      "docker run -d",
-      `--name ${PROXY_CONTAINER}`,
-      "--restart unless-stopped",
-      "-p 80:80 -p 443:443",
-      `--network ${PROXY_NETWORK}`,
-      // Read-only: Traefik only watches containers, it never starts or stops them.
-      "-v /var/run/docker.sock:/var/run/docker.sock:ro",
-      "-v warden-traefik-acme:/letsencrypt",
-      `-v warden-traefik-dynamic:${DYNAMIC_DIR}`,
-      // "host.docker.internal" = the server itself, for routes to apps not deployed by Warden.
-      "--add-host=host.docker.internal:host-gateway",
-      "--label warden=1",
-      PROXY_IMAGE,
-      ...ARGS,
-    ].join(" "),
-  );
+  const r = await run(proxyRunCommand());
   if (r.code !== 0) {
     const why = firstLine(r.stderr || r.stdout);
     throw new Error(
@@ -87,6 +70,47 @@ export async function setupProxy(run: Run): Promise<void> {
     );
   }
   await waitForProxy(run);
+}
+
+/** The `docker run` that starts Traefik: shared by setupProxy and proxySetupScript, so both make the same proxy. */
+export function proxyRunCommand(): string {
+  return [
+    "docker run -d",
+    `--name ${PROXY_CONTAINER}`,
+    "--restart unless-stopped",
+    LOG_OPTS,
+    "-p 80:80 -p 443:443",
+    `--network ${PROXY_NETWORK}`,
+    // Read-only: Traefik only watches containers, it never starts or stops them.
+    "-v /var/run/docker.sock:/var/run/docker.sock:ro",
+    "-v warden-traefik-acme:/letsencrypt",
+    `-v warden-traefik-dynamic:${DYNAMIC_DIR}`,
+    // "host.docker.internal" = the server itself, for routes to apps not deployed by Warden.
+    "--add-host=host.docker.internal:host-gateway",
+    "--label warden=1",
+    PROXY_IMAGE,
+    ...ARGS,
+  ].join(" ");
+}
+
+/**
+ * setupProxy as a shell script, for the server Warden itself runs on: its
+ * installer starts Traefik before there's a dashboard to click "Set up proxy"
+ * in (`node apps/worker/dist/cli/proxy-script.js | sh`). Leaves an existing
+ * warden-traefik alone; Warden's own "Set up proxy" later recreates the same.
+ */
+export function proxySetupScript(): string {
+  return [
+    "set -e",
+    ensureNetworkCommand(PROXY_NETWORK),
+    ensureVolumeCommand("warden-traefik-acme") + " >/dev/null",
+    ensureVolumeCommand("warden-traefik-dynamic") + " >/dev/null",
+    `if [ "$(docker inspect -f '{{.State.Running}}' ${PROXY_CONTAINER} 2>/dev/null)" = true ]; then echo "${PROXY_CONTAINER} is already running"; exit 0; fi`,
+    `docker pull -q ${PROXY_IMAGE}`,
+    `docker rm -f ${PROXY_CONTAINER} >/dev/null 2>&1 || true`,
+    proxyRunCommand(),
+    `echo "${PROXY_CONTAINER} started"`,
+  ].join("\n") + "\n";
 }
 
 /** Traefik answers /ping on port 80 once it's up. */

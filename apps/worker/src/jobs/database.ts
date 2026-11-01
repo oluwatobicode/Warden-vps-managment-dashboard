@@ -9,6 +9,7 @@ import {
   removeFile,
   removeVolume,
   restartContainer,
+  logRotated,
   runContainer,
   waitHealthy,
   writePrivateFile,
@@ -64,9 +65,14 @@ async function deploy(db: Db, deploymentId: string, isNew: boolean): Promise<voi
     const target = await sshTargetFor({ ...server, organizationId: db.organizationId });
     await withSsh(target, async (run) => {
       try {
-        if (!isNew && (await healthStatus(run, db.containerName)) !== "missing") {
+        const exists = !isNew && (await healthStatus(run, db.containerName)) !== "missing";
+        if (exists && (await logRotated(run, db.containerName))) {
           await step("DEPLOYING", "Restarting the container");
           await restartContainer(run, db.containerName);
+        } else if (exists) {
+          // Made before log rotation (2026-10-28): only a new container gets it.
+          await step("DEPLOYING", "Recreating the container so its log can't fill the disk (the data stays)");
+          await start(run, db, step);
         } else {
           if (!isNew) await step("DEPLOYING", "The container was missing; recreating it with the existing data");
           await start(run, db, step);

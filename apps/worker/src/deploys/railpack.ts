@@ -84,10 +84,14 @@ export async function buildRailpack(run: Run, stream: Stream, log: DeployLog, o:
     }
 
     // The plan records secret NAMES only; their values never touch a command line.
+    // Each gets a placeholder value: Railpack leaves `KEY=` (empty) out of the
+    // plan's secrets, and the build step only mounts secrets listed there, so
+    // e.g. VITE_* never reached `npm run build`. The placeholder isn't written
+    // to the plan; the real value comes from the secret file below.
     await run(`mkdir -p ${q(secrets)} && chmod 700 ${q(work)}`);
     const envFlags = [
       ...Object.entries(config).map(([k, v]) => `--env ${q(`${k}=${v}`)}`),
-      ...secretKeys.map((k) => `--env ${q(`${k}=`)}`),
+      ...secretKeys.map((k) => `--env ${q(`${k}=set-at-build`)}`),
     ].join(" ");
     const prep = await streamed(stream, log, `${q(bin)} prepare ${q(o.contextDir)} --plan-out ${q(plan)} ${envFlags}`);
     if (prep.code !== 0) {

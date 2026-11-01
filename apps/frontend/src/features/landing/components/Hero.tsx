@@ -1,5 +1,6 @@
 import { useState, type CSSProperties } from "react";
-import { HERO_TAGS, SOURCES } from "../data";
+import { Link } from "react-router";
+import { GITHUB_URL, HERO_TAGS, SOURCES } from "../data";
 import { useCycle } from "../hooks/useCycle";
 import { ArrowIcon, BoxIcon, BranchIcon, ServerIcon, ShieldIcon, SparkleIcon } from "./bits";
 
@@ -48,7 +49,7 @@ export function Hero() {
         <div className="relative px-6 pt-[200px] pb-[72px]">
           <span className="l-mono absolute top-5 left-5 text-xs tracking-[0.06em] text-[#62666d]">[ 4 SERVERS ]</span>
           <span className="l-mono absolute top-5 right-5 text-xs tracking-[0.06em] text-[#62666d]">[ {tag} ]</span>
-          <span className="l-mono absolute bottom-5 left-5 text-xs tracking-[0.06em] text-[#62666d]">[ COMPOSE.YML ]</span>
+          <span className="l-mono absolute bottom-5 left-5 text-xs tracking-[0.06em] text-[#62666d]">[ DOCKERFILE ]</span>
           <span className="l-mono absolute right-5 bottom-5 text-xs tracking-[0.06em] text-[#62666d]">[ 200 OK ]</span>
 
           {["16.6%", "83.4%"].map((left, i) => (
@@ -77,11 +78,13 @@ export function Hero() {
 
           <div className="relative flex flex-col items-center gap-8 text-center">
             <a
-              href="#changelog"
+              href={GITHUB_URL}
+              target="_blank"
+              rel="noreferrer"
               style={rise(0)}
               className="l-rise flex w-max shrink-0 items-center gap-3 border border-[#23252a] bg-[#0f1011] py-[5px] pr-[5px] pl-3.5 text-sm whitespace-nowrap text-[#e5e5e6] hover:border-[#383b3f] hover:text-white"
             >
-              Free and open source
+              Open source and self-hostable
               <span className="grid size-[22px] place-items-center bg-[#e5e5e6] text-[#08090a]">
                 <ArrowIcon size={12} strokeWidth={2.4} />
               </span>
@@ -96,10 +99,10 @@ export function Hero() {
               <span className="bg-[#161718] px-2 py-0.5 text-white [box-decoration-break:clone]">Keep the speed, drop the PaaS bill.</span>
             </p>
             <div style={rise(3)} className="l-rise flex flex-wrap justify-center gap-4">
-              <a href="#install" className="flex items-center gap-2.5 rounded-[2px] bg-[#e5e5e6] px-[26px] py-3.5 text-base font-[510] text-[#08090a] hover:bg-white">
-                Install Warden <ArrowIcon size={16} strokeWidth={2.2} />
-              </a>
-              <a href="#docs" className="flex items-center gap-3 rounded-[2px] border border-[#23252a] bg-[#0f1011] py-[9px] pr-5 pl-2.5 text-base font-[510] text-[#e5e5e6] hover:border-[#383b3f] hover:text-white">
+              <Link to="/signup" className="flex items-center gap-2.5 rounded-[2px] bg-[#e5e5e6] px-[26px] py-3.5 text-base font-[510] text-[#08090a] hover:bg-white">
+                Get started <ArrowIcon size={16} strokeWidth={2.2} />
+              </Link>
+              <a href="#stack" className="flex items-center gap-3 rounded-[2px] border border-[#23252a] bg-[#0f1011] py-[9px] pr-5 pl-2.5 text-base font-[510] text-[#e5e5e6] hover:border-[#383b3f] hover:text-white">
                 <span className="flex">
                   {[BranchIcon, BoxIcon, ServerIcon].map((Icon, i) => (
                     <span key={i} className="grid size-[26px] place-items-center border border-[#23252a] bg-[#161718] text-[#d0d6e0]">
@@ -107,7 +110,7 @@ export function Hero() {
                     </span>
                   ))}
                 </span>
-                Connect a repo
+                What you can deploy
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                   <path d="m6 9 6 6 6-6" />
                 </svg>
@@ -117,7 +120,7 @@ export function Hero() {
             <div style={rise(4)} className="l-rise mt-2 w-full max-w-[820px] border border-[#23252a] bg-[#0f1011] text-left">
               <label className="flex items-center gap-3.5 border-b border-[#23252a] px-[22px] py-5">
                 <BranchIcon className="text-[#8a8f98]" />
-                <span className="sr-only">Repository or file</span>
+                <span className="sr-only">Repository, image or database</span>
                 <input
                   type="text"
                   placeholder={placeholder}
@@ -142,13 +145,13 @@ export function Hero() {
                     );
                   })}
                 </div>
-                <a href="#install" aria-label="Continue" className="grid h-11 w-14 place-items-center rounded-[2px] bg-[#e5e5e6] text-[#08090a] hover:bg-white">
+                <Link to="/signup" aria-label="Continue" className="grid h-11 w-14 place-items-center rounded-[2px] bg-[#e5e5e6] text-[#08090a] hover:bg-white">
                   <ArrowIcon size={18} strokeWidth={2.2} />
-                </a>
+                </Link>
               </div>
             </div>
             <p style={rise(5)} className="l-rise -mt-2 mb-0 max-w-[440px] text-[15px] leading-[1.6] text-balance text-[#62666d]">
-              Warden reads your Dockerfile or compose file and suggests health checks. Nothing deploys until you confirm.
+              Warden reads your repo, finds every app in it, monorepos too, and suggests how to build and start each one. Nothing deploys until you confirm.
             </p>
           </div>
         </div>

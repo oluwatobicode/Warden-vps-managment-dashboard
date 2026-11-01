@@ -18,6 +18,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { RedisService } from '../../redis/redis.service';
 import { OrgKeyService } from '../warden-crypto/org-key.service';
 import { AuditService } from '../audit/audit.service';
+import { recordServerEvent } from '../logs/server-logs.service';
 import { PROXY_MESSAGES } from '../../common/constants/messages.config';
 import type { Actor } from '../../common/types/actor';
 
@@ -144,6 +145,14 @@ export class ProxyConfigService {
         entityId: serverId,
         metadata: { server: server.serverName, problems: problems.length },
       });
+      await recordServerEvent(
+        this.prisma,
+        this.redis,
+        { id: serverId, organizationId: orgId },
+        problems.length
+          ? `Proxy config refused by Traefik and rolled back (${createdByName}): ${problems.map((p) => p.message).join('; ')}`.slice(0, 2000)
+          : `Proxy config ${source === 'REVERT' ? 'reverted' : 'applied'} by ${createdByName}`,
+      );
       return { applied: !problems.length, problems, versionId: row.id };
     } finally {
       await this.redis.del(lock);

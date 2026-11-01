@@ -19,3 +19,5 @@ export * from "./backup.js";
 export * from "./deploy.js";
 export * from "./repo.js";
 export * from "./proxy.js";
+export * from "./logs.js";
+export * from "./database-data.js";

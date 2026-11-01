@@ -3,11 +3,11 @@ import { CONSOLE } from "../data";
 import { CheckIcon, ClockIcon, Dot, ShieldIcon, WaitIcon } from "./bits";
 import { TONE } from "../tone";
 
-const GATE_ICON = { ok: CheckIcon, run: ClockIcon, wait: WaitIcon };
+const STEP_ICON = { ok: CheckIcon, run: ClockIcon, wait: WaitIcon };
 
 /**
  * The console screenshot under the hero, drawn as live markup: a deploy of
- * argus-api sitting at its health gates with the log streaming. Decorative,
+ * the api waiting on its health check with the log streaming. Decorative,
  * so it's hidden from screen readers (the alt text says what it shows).
  */
 export function ConsolePreview() {
@@ -20,14 +20,14 @@ export function ConsolePreview() {
         <div className="absolute -top-px right-[10%] left-[10%] block h-px bg-[linear-gradient(90deg,transparent,rgba(255,255,255,0.35),transparent)]" />
         <div
           role="img"
-          aria-label="Warden console showing a live deploy of argus-api with health gates and a streaming log"
+          aria-label="Warden console showing a deploy of an api service waiting on its health check, with a streaming log"
           className="grid min-h-[560px] grid-cols-1 overflow-hidden rounded-[14px] border border-[#1b1c1e] bg-[#08090a] md:grid-cols-[220px_minmax(0,1fr)] lg:grid-cols-[220px_minmax(0,1fr)_260px]"
         >
           {/* project sidebar */}
           <aside aria-hidden className="hidden flex-col gap-4 border-r border-[#161718] p-4 md:flex">
             <div className="flex items-center gap-2.5 text-white">
               <ShieldIcon size={16} className="text-[#e5e5e6]" />
-              <span className="text-sm font-semibold">argus</span>
+              <span className="text-sm font-semibold">shop</span>
               <span className="ml-auto rounded bg-[#161718] px-1.5 py-px text-[10px] text-[#8a8f98]">production</span>
             </div>
             <span className="l-mono mt-2 text-[10px] tracking-[0.08em] text-[#62666d]">SERVICES</span>
@@ -45,29 +45,24 @@ export function ConsolePreview() {
           {/* the deploy */}
           <div aria-hidden className="flex min-w-0 flex-col gap-5 p-5">
             <div className="flex flex-wrap items-center gap-3">
-              <span className="l-mono text-[13px] text-[#62666d]">#418</span>
-              <span className="text-[17px] font-semibold text-white">cache warm before swap</span>
+              <span className="l-mono text-[13px] text-[#62666d]">#42</span>
+              <span className="text-[17px] font-semibold text-white">add rate limits to public routes</span>
               <span className="flex items-center gap-1.5 rounded px-2 py-0.5 text-[11px] text-[#02b8cc] shadow-[inset_0_0_0_1px_rgba(2,184,204,0.35)]">
-                <span className="block size-1.5 animate-pulse-dot rounded-full bg-[#02b8cc]" /> Gating
+                <span className="block size-1.5 animate-pulse-dot rounded-full bg-[#02b8cc]" /> Health check
               </span>
               <span className="l-mono ml-auto text-[11px] text-[#62666d]">7f3c2a1 · lag-01</span>
             </div>
 
             <div className="l-hair flex flex-col rounded-[10px] bg-[#0f1011]">
-              {CONSOLE.gates.map((g, i) => {
-                const Icon = GATE_ICON[g.icon as keyof typeof GATE_ICON];
+              {CONSOLE.steps.map((g, i) => {
+                const Icon = STEP_ICON[g.icon as keyof typeof STEP_ICON];
                 return (
-                  <div key={g.name} className={`flex flex-col gap-2 px-4 py-3 ${i ? "border-t border-[#161718]" : ""}`}>
-                    <div className="flex items-center gap-3">
-                      <span className="grid size-[18px] place-items-center" style={{ color: g.tone }}>
-                        <Icon size={14} />
-                      </span>
-                      <span className="text-[13px] text-[#e5e5e6]">{g.name}</span>
-                      <span className="ml-auto text-[11.5px]" style={{ color: g.tone }}>{g.state}</span>
-                    </div>
-                    <span className="ml-[30px] block h-[3px] overflow-hidden rounded-sm bg-[#23252a]">
-                      <span className="block h-full transition-[width]" style={{ width: `${g.pct}%`, background: g.tone }} />
+                  <div key={g.name} className={`flex items-center gap-3 px-4 py-2.5 ${i ? "border-t border-[#161718]" : ""}`}>
+                    <span className="grid size-[18px] place-items-center" style={{ color: g.tone }}>
+                      <Icon size={14} />
                     </span>
+                    <span className="truncate text-[13px] text-[#e5e5e6]">{g.name}</span>
+                    <span className="ml-auto shrink-0 text-[11.5px]" style={{ color: g.tone }}>{g.state}</span>
                   </div>
                 );
               })}
@@ -101,7 +96,7 @@ export function ConsolePreview() {
               </div>
             ))}
             <div className="mt-auto rounded-lg bg-[rgba(235,87,87,0.08)] px-3 py-2.5 text-[11.5px] leading-normal" style={{ color: TONE.crit }}>
-              ams-01 disk at 91%. Run cleanup to free 18 GB.
+              ams-01 disk at 91%. Run Docker cleanup to free 18 GB.
             </div>
           </aside>
         </div>

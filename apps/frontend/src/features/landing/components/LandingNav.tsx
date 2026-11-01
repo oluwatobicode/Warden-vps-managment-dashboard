@@ -1,6 +1,6 @@
 import { Link } from "react-router";
 import { NAV_LINKS } from "../data";
-import { ChevronIcon, ShieldIcon } from "./bits";
+import { ShieldIcon } from "./bits";
 
 export function LandingNav() {
   return (
@@ -12,9 +12,13 @@ export function LandingNav() {
         </a>
         <div className="hidden max-h-10 min-w-0 flex-wrap md:flex items-center justify-center overflow-hidden">
           {NAV_LINKS.map((l) => (
-            <a key={l.label} href={l.href} className="flex items-center gap-1.5 px-3.5 py-2 text-[15px] whitespace-nowrap text-[#d0d6e0] hover:text-white">
+            <a
+              key={l.label}
+              href={l.href}
+              {...(l.external ? { target: "_blank", rel: "noreferrer" } : {})}
+              className="flex items-center gap-1.5 px-3.5 py-2 text-[15px] whitespace-nowrap text-[#d0d6e0] hover:text-white"
+            >
               {l.label}
-              {l.menu && <ChevronIcon />}
             </a>
           ))}
         </div>
@@ -23,7 +27,7 @@ export function LandingNav() {
             Log in
           </Link>
           <Link to="/signup" className="hidden bg-[#e5e5e6] sm:block px-5 py-[11px] text-[15px] font-[510] whitespace-nowrap text-[#08090a] hover:bg-white">
-            Start deploying
+            Get started
           </Link>
         </div>
       </nav>

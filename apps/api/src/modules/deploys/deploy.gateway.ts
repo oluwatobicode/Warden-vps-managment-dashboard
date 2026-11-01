@@ -12,21 +12,12 @@ import { ConfigService } from '@nestjs/config';
 import Redis from 'ioredis';
 import type { Server, Socket } from 'socket.io';
 import { DEPLOY_SOCKET, deployLogChannel } from 'shared-types';
-import { COOKIE } from '../../common/constants/constants.config';
 import { TokenService } from '../auth/session/token.service';
 import { SessionService } from '../auth/session/session.service';
+import { socketSession } from '../auth/session/socket-session';
 import { DeployService } from './deploy.service';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-/** "a=1; warden_access=xyz" → "xyz". */
-function cookie(header: string | undefined, name: string): string | null {
-  for (const part of (header ?? '').split(';')) {
-    const [k, ...v] = part.trim().split('=');
-    if (k === name) return decodeURIComponent(v.join('='));
-  }
-  return null;
-}
 
 /**
  * Live deploy logs. The worker publishes each chunk on Redis
@@ -74,19 +65,8 @@ export class DeployGateway implements OnGatewayConnection, OnGatewayDisconnect, 
   }
 
   private async authenticate(client: Socket): Promise<string | null> {
-    try {
-      const token = cookie(client.handshake.headers.cookie, COOKIE.access);
-      if (!token) throw new Error('no cookie');
-      const claims = await this.tokens.verifyAccess(token);
-      const session = await this.sessions.get(claims.sid);
-      if (!session) throw new Error('no session');
-      return session.organizationId;
-    } catch {
-      // The browser refreshes its cookie and reconnects (see useDeployLog).
-      client.emit('unauthorized');
-      client.disconnect(true);
-      return null;
-    }
+    // The browser refreshes its cookie and reconnects on `unauthorized` (see useDeployLog).
+    return (await socketSession(client, this.tokens, this.sessions))?.organizationId ?? null;
   }
 
   @SubscribeMessage(DEPLOY_SOCKET.watch)

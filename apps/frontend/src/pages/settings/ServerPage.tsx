@@ -20,12 +20,13 @@ import { ResourcesTab } from "../../features/servers/components/ResourcesTab";
 import { ContainersTab } from "../../features/servers/components/ContainersTab";
 import { CleanupModal } from "../../features/servers/components/CleanupModal";
 import { ProxyTab } from "../../features/proxy/components/ProxyTab";
+import { ServerLogs } from "../../features/logs/components/ServerLogs";
 import { serverWhere } from "../../features/servers/components/serverLabels";
 import { apiMessage } from "../../utils/apiMessage";
 import { formatDate, timeAgo } from "../../utils/formatDate";
 import { atLeast } from "../../utils/roles";
 
-type Tab = "resources" | "containers" | "proxy" | "details" | "danger";
+type Tab = "resources" | "containers" | "logs" | "proxy" | "details" | "danger";
 
 export default function ServerPage() {
   const { serverId = "" } = useParams();
@@ -109,6 +110,7 @@ export default function ServerPage() {
               ? `Containers · ${s.containers.total}`
               : "Containers",
           },
+          { id: "logs", label: "Logs" },
           ...(s.serverType === "DEPLOY" ? [{ id: "proxy" as const, label: "Proxy" }] : []),
           { id: "details", label: "Details" },
           ...(canEdit ? [{ id: "danger" as const, label: "Danger zone" }] : []),
@@ -117,6 +119,7 @@ export default function ServerPage() {
 
       {tab === "resources" && <ResourcesTab serverId={s.id} />}
       {tab === "containers" && <ContainersTab serverId={s.id} />}
+      {tab === "logs" && <ServerLogs serverId={s.id} />}
       {tab === "proxy" && <ProxyTab server={s} canEdit={canEdit} />}
 
       {tab === "details" && (

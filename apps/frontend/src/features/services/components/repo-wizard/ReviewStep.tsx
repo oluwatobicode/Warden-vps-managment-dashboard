@@ -1,10 +1,12 @@
-import { Controller, useFieldArray, useForm, type Control, type FieldErrors, type UseFormRegister } from "react-hook-form";
+import type { ClipboardEvent } from "react";
+import toast from "react-hot-toast";
+import { Controller, useFieldArray, useForm, useWatch, type Control, type FieldErrors, type UseFormRegister } from "react-hook-form";
 import { CreateFromRepoSchema } from "shared-types";
 import { Button } from "../../../../components/ui/Button";
 import { Input } from "../../../../components/ui/Input";
 import { Textarea } from "../../../../components/ui/Textarea";
 import { ServerSelect } from "../../../servers/components/ServerSelect";
-import { formField, formsToInput, type AppForm, type RepoSource } from "../../repoForm";
+import { formField, formsToInput, looksLikeDotenv, mergePastedEnv, type AppForm, type RepoSource } from "../../repoForm";
 import type { CreateFromRepoInput } from "shared-types";
 
 interface Form {
@@ -73,7 +75,19 @@ export function ReviewStep({
 function AppCard({ index: i, app, control, register, errors }: { index: number; app: AppForm; control: Control<Form>; register: UseFormRegister<Form>; errors: FieldErrors<Form> }) {
   const e = errors.apps?.[i];
   const vars = useFieldArray({ control, name: `apps.${i}.vars` });
+  const current = useWatch({ control, name: `apps.${i}.vars` });
   const web = app.type === "APPLICATION";
+
+  // A whole .env pasted into a Key box becomes rows (same rules as Variables → Import .env).
+  const onKeyPaste = (j: number) => (ev: ClipboardEvent<HTMLInputElement>) => {
+    const text = ev.clipboardData.getData("text");
+    if (!looksLikeDotenv(text)) return; // just a key: paste it normally
+    ev.preventDefault();
+    const r = mergePastedEnv(current ?? [], text, j);
+    vars.replace(r.rows);
+    if (r.added || r.updated) toast.success(`${r.added} added${r.updated ? `, ${r.updated} filled in` : ""} from the pasted .env`);
+    if (r.problems.length) toast.error(`Skipped ${r.problems.length} line${r.problems.length > 1 ? "s" : ""}: ${r.problems.slice(0, 3).join("; ")}`, { duration: 8000 });
+  };
   return (
     <section className="flex flex-col gap-3 rounded-xl border border-cb bg-field/30 px-4 py-3.5">
       <div className="flex flex-wrap items-center gap-2">
@@ -111,7 +125,7 @@ function AppCard({ index: i, app, control, register, errors }: { index: number; 
         <span className="text-xs text-label">Variables {app.website ? "(baked in when it's built, so set them now)" : "(you can add more later)"}</span>
         {vars.fields.map((v, j) => (
           <div key={v.id} className="grid grid-cols-[minmax(0,0.9fr)_minmax(0,1.3fr)_auto] items-start gap-2">
-            <Input label="Key" mono placeholder="KEY" error={e?.vars?.[j]?.key?.message} {...register(`apps.${i}.vars.${j}.key`)} />
+            <Input label="Key" mono placeholder="KEY" error={e?.vars?.[j]?.key?.message} {...register(`apps.${i}.vars.${j}.key`)} onPaste={onKeyPaste(j)} />
             <Input label="Value" mono type="password" autoComplete="off" placeholder="leave empty to skip" {...register(`apps.${i}.vars.${j}.value`)} />
             <Button variant="ghost" onClick={() => vars.remove(j)} className="mt-[26px] px-2 py-2 text-[11px]">
               Remove
@@ -119,6 +133,7 @@ function AppCard({ index: i, app, control, register, errors }: { index: number; 
           </div>
         ))}
         {e?.vars?.message && <span className="text-[11.5px] text-crit">{e.vars.message}</span>}
+        <span className="text-[11px] text-sand">Tip: paste a whole .env into a Key box and it fills in every row.</span>
         <Button variant="ghost" onClick={() => vars.append({ key: "", value: "" })} className="self-start px-0 text-[11.5px]">
           + Add a variable
         </Button>

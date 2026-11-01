@@ -90,7 +90,72 @@ function classify(err: Error & { code?: string }): SshError {
   return new SshError("unknown", "Connection failed");
 }
 
-function open(target: SshTarget): Promise<Client> {
+/**
+ * A command whose output is read as it arrives, for commands that never end
+ * on their own (`docker logs -f`). stdout and stderr stay apart.
+ */
+export interface Follow {
+  /** Resolves with the exit code when the command ends or the connection drops (-1). */
+  done: Promise<number>;
+  /**
+   * Closes the channel. The server doesn't kill the command for that; it only
+   * closes its stdin, so a follower must watch stdin (see the worker's logs).
+   */
+  stop(): void;
+}
+
+/**
+ * A connection that stays open, for the log collector. Each `follow` is one
+ * SSH channel; sshd allows about 10 per connection (MaxSessions), so a caller
+ * following many commands opens more connections.
+ */
+export interface SshSession {
+  run: Run;
+  follow(cmd: string, onStdout: (d: Buffer) => void, onStderr: (d: Buffer) => void): Promise<Follow>;
+  /** Resolves when the connection ends, with the error if it broke. */
+  closed: Promise<Error | null>;
+  close(): void;
+}
+
+export async function openSsh(target: SshTarget): Promise<SshSession> {
+  // Keepalives notice a dead server within ~45 s instead of waiting on TCP.
+  const client = await open(target, { keepaliveInterval: 15_000, keepaliveCountMax: 3 });
+  const closed = new Promise<Error | null>((resolve) => {
+    let error: Error | null = null;
+    client.on("error", (e) => (error = e));
+    client.on("close", () => resolve(error));
+  });
+  return {
+    run: (cmd, input) => exec(client, cmd, input),
+    follow: (cmd, onStdout, onStderr) => follow(client, cmd, onStdout, onStderr),
+    closed,
+    close: () => client.end(),
+  };
+}
+
+function follow(client: Client, cmd: string, onStdout: (d: Buffer) => void, onStderr: (d: Buffer) => void): Promise<Follow> {
+  return new Promise((resolve, reject) => {
+    try {
+      client.exec(cmd, (err, channel) => {
+        // Not classified: "Channel open failure" means this connection has no
+        // channel left, and the caller opens another connection for it.
+        if (err) return reject(err);
+        channel.on("data", onStdout);
+        channel.stderr.on("data", onStderr);
+        const done = new Promise<number>((res) => {
+          let code = -1;
+          channel.on("exit", (c: number | null) => (code = c ?? -1));
+          channel.on("close", () => res(code));
+        });
+        resolve({ done, stop: () => channel.close() });
+      });
+    } catch (e) {
+      reject(e as Error); // the connection is already gone
+    }
+  });
+}
+
+function open(target: SshTarget, extra: { keepaliveInterval?: number; keepaliveCountMax?: number } = {}): Promise<Client> {
   return new Promise((resolve, reject) => {
     const client = new Client();
     client
@@ -102,6 +167,7 @@ function open(target: SshTarget): Promise<Client> {
         username: target.username,
         privateKey: target.privateKey,
         readyTimeout: 10_000,
+        ...extra,
       });
   });
 }

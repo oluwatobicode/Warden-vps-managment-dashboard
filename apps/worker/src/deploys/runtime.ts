@@ -1,5 +1,5 @@
 import { prisma } from "db";
-import { containerLogTail, q, removeContainer, removeFile, writePrivateFile, type Run } from "docker-client";
+import { containerLogTail, LOG_OPTS, q, removeContainer, removeFile, writePrivateFile, type Run } from "docker-client";
 import type { Stream } from "ssh-client";
 import { unseal } from "../keys";
 import { PROXY_CONTAINER, PROXY_NETWORK } from "./traefik";
@@ -104,6 +104,7 @@ export async function startContainer(run: Run, s: StartSpec): Promise<void> {
       "docker run -d",
       `--name ${q(s.name)}`,
       "--restart unless-stopped",
+      LOG_OPTS,
       `--env-file ${q(s.envFile)}`,
       `--network ${q(s.network)}`,
       "--label warden=1",

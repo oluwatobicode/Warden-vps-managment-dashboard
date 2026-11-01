@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ensureNetwork, healthStatus, q, removeVolume, runCommand, waitHealthy, writePrivateFile, type ContainerSpec } from "./database";
+import { bridgeCommand, ensureNetwork, healthStatus, q, removeVolume, runCommand, waitHealthy, writePrivateFile, type ContainerSpec } from "./database";
 import type { Run } from "./run";
 
 function fakeRun(answer: (cmd: string, input?: string) => { code?: number; stdout?: string; stderr?: string } = () => ({})) {
@@ -41,6 +41,9 @@ describe("runCommand", () => {
     expect(cmd).toContain("--env-file '/tmp/warden-1a2b3c4d.env'");
     expect(cmd).toContain("--restart unless-stopped");
   });
+  it("rotates its log, so it can't fill the disk", () => {
+    expect(cmd).toContain("--log-opt max-size=10m --log-opt max-file=3");
+  });
   it("keeps $VARS literal in the health check, so the container fills them in", () => {
     expect(cmd).toContain(`--health-cmd 'pg_isready -h 127.0.0.1 -U "$POSTGRES_USER" -d "$POSTGRES_DB"'`);
   });
@@ -64,7 +67,9 @@ describe("ensureNetwork", () => {
   it("creates the network only if it's missing", async () => {
     const { run, calls } = fakeRun();
     await ensureNetwork(run, "warden-env-9f8e7d6c");
-    expect(calls[0].cmd).toBe("docker network inspect 'warden-env-9f8e7d6c' >/dev/null 2>&1 || docker network create --label warden=1 'warden-env-9f8e7d6c'");
+    expect(calls[0].cmd).toBe(
+      "docker network inspect 'warden-env-9f8e7d6c' >/dev/null 2>&1 || docker network create --label warden=1 'warden-env-9f8e7d6c' || docker network inspect 'warden-env-9f8e7d6c' >/dev/null 2>&1",
+    );
   });
 });
 
@@ -85,5 +90,23 @@ describe("health", () => {
 describe("removeVolume", () => {
   it("is fine when the volume is already gone", async () => {
     await expect(removeVolume(fakeRun(() => ({ code: 1, stdout: "Error: No such volume: v" })).run, "v")).resolves.toBeUndefined();
+  });
+});
+
+describe("bridgeCommand", () => {
+  it("pipes to the port inside the container, both ways, ending when either side does", () => {
+    const cmd = bridgeCommand("warden-db-1a2b3c4d", 5432);
+    expect(cmd.startsWith("docker exec -i 'warden-db-1a2b3c4d' bash -c ")).toBe(true);
+    expect(cmd).toContain("/dev/tcp/127.0.0.1/5432");
+    expect(cmd).toContain("wait -n");
+    // ...and reaps both cats before exiting, so none is ever handed to the container's PID 1 (Postgres).
+    expect(cmd).toMatch(/kill \$a \$b 2>\/dev\/null; wait'$/);
+    // The real stdin is kept on fd 4: a background command would otherwise read /dev/null.
+    expect(cmd).toContain("exec 4<&0");
+  });
+  it("refuses unsafe names and ports", () => {
+    expect(() => bridgeCommand("db; reboot", 5432)).toThrow();
+    expect(() => bridgeCommand("warden-db", 0)).toThrow();
+    expect(() => bridgeCommand("warden-db", 5432.5)).toThrow();
   });
 });

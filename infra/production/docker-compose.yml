@@ -1,0 +1,132 @@
+# Warden itself, on the server it runs on (e.g. an EC2 instance). See README.md.
+#
+# Traefik is NOT in here: it's the same warden-traefik Warden sets up on every
+# server (install.sh starts it), so this server can also run apps deployed by
+# Warden, and "Set up proxy" from the dashboard recreates the same thing.
+# Warden's own dashboard and api are two more routes on it.
+
+name: warden
+
+x-app: &app
+  image: ghcr.io/oluwatobicode/warden:${WARDEN_VERSION:-latest}
+  env_file: .env
+  environment:
+    NODE_ENV: production
+    APP_URL: https://${WARDEN_HOST}
+    DATABASE_URL: postgresql://warden:${POSTGRES_PASSWORD}@postgres:5432/warden
+    REDIS_URL: redis://redis:6379
+  restart: unless-stopped
+  logging: &logging
+    driver: json-file
+    options: { max-size: 10m, max-file: "3" }
+  networks: [internal]
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: warden
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: warden
+    # Sized for a 1-2 GB instance.
+    command: postgres -c shared_buffers=128MB -c max_connections=60
+    volumes: [warden-postgres:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U warden -d warden"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+    logging: *logging
+    networks: [internal]
+
+  redis:
+    image: redis:7.4-alpine
+    # Sessions and job queues live here: written to disk, never evicted.
+    command: redis-server --appendonly yes --maxmemory-policy noeviction
+    volumes: [warden-redis:/data]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+    logging: *logging
+    networks: [internal]
+
+  # Runs the database migrations, then exits. The api and worker wait for it.
+  migrate:
+    <<: *app
+    restart: "no"
+    working_dir: /app/packages/db
+    command: ["node_modules/.bin/prisma", "migrate", "deploy", "--config", "prisma7.config.ts"]
+    depends_on:
+      postgres: { condition: service_healthy }
+
+  api:
+    <<: *app
+    command: ["node", "--enable-source-maps", "apps/api/dist/main.js"]
+    environment:
+      NODE_ENV: production
+      APP_URL: https://${WARDEN_HOST}
+      DATABASE_URL: postgresql://warden:${POSTGRES_PASSWORD}@postgres:5432/warden
+      REDIS_URL: redis://redis:6379
+      PORT: "3000"
+      # Traefik is the one proxy in front.
+      TRUST_PROXY: "1"
+      # Same origin as the dashboard: no CORS needed.
+      CORS_ORIGIN: ""
+      GITHUB_CALLBACK_URL: https://${WARDEN_HOST}/api/auth/github/callback
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+      migrate: { condition: service_completed_successfully }
+    networks: [internal, warden-proxy]
+    labels:
+      - traefik.enable=true
+      # Longer rule than the dashboard's, so Traefik tries it first.
+      - traefik.http.routers.warden-api.rule=Host(`${WARDEN_HOST}`) && PathPrefix(`/api`)
+      - traefik.http.routers.warden-api.entrypoints=websecure
+      - traefik.http.routers.warden-api.tls.certresolver=le
+      - traefik.http.routers.warden-api.service=warden-api
+      - traefik.http.services.warden-api.loadbalancer.server.port=3000
+
+  worker:
+    <<: *app
+    command: ["node", "--enable-source-maps", "apps/worker/dist/index.js"]
+    # Shutdown finishes the job in hand and releases the log leases.
+    stop_grace_period: 60s
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+      migrate: { condition: service_completed_successfully }
+
+  web:
+    image: ghcr.io/oluwatobicode/warden-web:${WARDEN_VERSION:-latest}
+    restart: unless-stopped
+    logging: *logging
+    networks: [warden-proxy]
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.warden-web.rule=Host(`${WARDEN_HOST}`)
+      - traefik.http.routers.warden-web.entrypoints=websecure
+      - traefik.http.routers.warden-web.tls.certresolver=le
+      - traefik.http.routers.warden-web.service=warden-web
+      - traefik.http.services.warden-web.loadbalancer.server.port=8080
+      # http:// → https://, for the dashboard and the api alike.
+      - traefik.http.routers.warden-http.rule=Host(`${WARDEN_HOST}`)
+      - traefik.http.routers.warden-http.entrypoints=web
+      - traefik.http.routers.warden-http.middlewares=warden-to-https
+      - traefik.http.routers.warden-http.service=warden-web
+      - traefik.http.middlewares.warden-to-https.redirectscheme.scheme=https
+
+networks:
+  # Postgres and Redis live only here: never on warden-proxy, never published.
+  internal: {}
+  # Warden's Traefik network (install.sh / "Set up proxy" creates it).
+  warden-proxy:
+    external: true
+
+volumes:
+  warden-postgres: {}
+  warden-redis: {}

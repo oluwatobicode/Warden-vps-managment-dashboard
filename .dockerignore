@@ -1,0 +1,17 @@
+# Only the sources and the lockfile go into the build; everything is built inside.
+**/node_modules
+**/dist
+**/.turbo
+**/*.tsbuildinfo
+**/.env
+**/.env.*
+!infra/production/.env.example
+.git
+.github
+.claude
+infra/ssh-target
+infra/docker-compose.yml
+docs
+**/coverage
+**/test-results
+**/*.log

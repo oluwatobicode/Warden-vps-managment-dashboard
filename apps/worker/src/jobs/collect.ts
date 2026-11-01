@@ -8,6 +8,7 @@ import { log } from "../log";
 import { notify, serverUrl } from "../notify";
 import { countFailure, flags, hasFlag, redis, setFlag } from "../redis";
 import { diskAlert, statusAfterFailure, statusAfterSuccess } from "../status";
+import { serverEvent } from "../logs/server-sink";
 
 /** `docker system df` is slow on busy hosts; the pie chart doesn't need it every minute. */
 const DOCKER_DISK_EVERY_MS = 10 * 60 * 1000;
@@ -130,9 +131,11 @@ async function onSuccess(server: ServerRow, { host, containers, disk, dockerProb
   if (dockerProblem && !dockerWasMissing) {
     await setFlag(flags.dockerMissing(server.id));
     log.warn(`${server.serverName}: ${dockerProblem}`);
+    await serverEvent(server, `Docker isn't available: ${dockerProblem}`);
   } else if (!dockerProblem && dockerWasMissing) {
     await redis.del(flags.dockerMissing(server.id));
     log.info(`${server.serverName}: Docker is available again`);
+    await serverEvent(server, "Docker is available again");
   }
 
   const base = { organizationName: server.organization.organizationName, serverName: server.serverName, serverIp: server.serverIp, at: now, url: serverUrl(server.id) };
@@ -141,6 +144,7 @@ async function onSuccess(server: ServerRow, { host, containers, disk, dockerProb
   if (await hasFlag(flags.offlineAlerted(server.id))) {
     await redis.del(flags.offlineAlerted(server.id));
     log.info(`${server.serverName} is back online`);
+    await serverEvent(server, "Back online");
     await notify(server.organizationId, "server.recovered", { ...base, lastSeenAt: server.lastSeenAt });
   }
 
@@ -149,6 +153,7 @@ async function onSuccess(server: ServerRow, { host, containers, disk, dockerProb
   if (action === "alert") {
     await setFlag(flags.diskAlerted(server.id));
     log.info(`${server.serverName} disk at ${diskPct}%`);
+    await serverEvent(server, `Disk ${diskPct}% full (the alert is at ${env.DISK_HIGH_PERCENT}%)`);
     await notify(server.organizationId, "server.disk_high", { ...base, diskUsagePercent: diskPct, thresholdPercent: env.DISK_HIGH_PERCENT });
   } else if (action === "rearm") {
     await redis.del(flags.diskAlerted(server.id));
@@ -162,6 +167,7 @@ async function onFailure(server: ServerRow, reason: string) {
   if (status === server.status) return;
 
   await prisma.server.update({ where: { id: server.id }, data: { status } });
+  if (status === "OFFLINE") await serverEvent(server, `Offline: ${failures} checks in a row failed (${reason})`);
   // A server that was never reachable doesn't "go" offline; only a known-good one does.
   if (status === "OFFLINE" && server.lastSeenAt && !(await hasFlag(flags.offlineAlerted(server.id)))) {
     await setFlag(flags.offlineAlerted(server.id));

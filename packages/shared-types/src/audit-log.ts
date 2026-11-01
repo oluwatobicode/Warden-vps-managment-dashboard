@@ -33,6 +33,8 @@ export const AuditActionSchema = z.enum([
   "database.backup_restored",
   "database.backup_downloaded",
   "database.backup_settings_updated",
+  "database.query_run",
+  "database.rows_changed",
   "backup_storage.updated",
   "backup_storage.removed",
   "ssh_key.created",

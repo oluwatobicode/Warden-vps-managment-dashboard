@@ -4,6 +4,8 @@ import { variableKey } from "./variable.js";
 import { branch, port } from "./service.js";
 import { BuildMethodSchema, command, repoPath, watchPath } from "./deploy.js";
 
+const REPO_VARS_MAX_CHARS = 60_000;
+
 /*
  * "Add service → From GitHub": Warden reads the repo through the GitHub App
  * (or GitHub's public API) and prefills each app it finds. Railpack still
@@ -85,7 +87,7 @@ const NewServiceFromRepoSchema = z
     /** Saved as this service's own (secret) variables before the first build. */
     variables: z
       .array(z.object({ key: variableKey, value: z.string().max(16_000) }))
-      .max(50)
+      .max(200, "Up to 200 variables per app")
       .refine((v) => new Set(v.map((x) => x.key)).size === v.length, "Each variable only once"),
   })
   .superRefine((s, ctx) => {
@@ -104,7 +106,19 @@ export const CreateFromRepoSchema = z
     deploy: z.boolean().default(true),
     services: z.array(NewServiceFromRepoSchema).min(1, "Pick at least one app").max(10, "At most 10 at once"),
   })
-  .refine((v) => new Set(v.services.map((s) => s.serviceName)).size === v.services.length, { path: ["services"], message: "Each service needs its own name" });
+  .refine((v) => new Set(v.services.map((s) => s.serviceName)).size === v.services.length, { path: ["services"], message: "Each service needs its own name" })
+  // Express refuses JSON bodies over 100 KB: the same 60,000-character cap as
+  // a .env import, across every app, reported on the app that goes over it.
+  .superRefine((v, ctx) => {
+    let chars = 0;
+    for (const [i, s] of v.services.entries()) {
+      chars += s.variables.reduce((n, x) => n + x.key.length + x.value.length, 0);
+      if (chars > REPO_VARS_MAX_CHARS) {
+        ctx.addIssue({ code: "custom", path: ["services", i, "variables"], message: "Too many variables for one go (60,000 characters across all apps): add the rest from Variables afterwards" });
+        return;
+      }
+    }
+  });
 export type CreateFromRepoInput = z.infer<typeof CreateFromRepoSchema>;
 
 export const CreateFromRepoResultSchema = z.object({

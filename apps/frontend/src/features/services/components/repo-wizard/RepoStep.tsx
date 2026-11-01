@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { Controller, useForm, useWatch } from "react-hook-form";
 import { Link } from "react-router";
 import { Button } from "../../../../components/ui/Button";
@@ -8,6 +7,7 @@ import { apiMessage } from "../../../../utils/apiMessage";
 import { useGithubBranches, useGithubRepos, useGithubStatus } from "../../../github/hooks/useGithub";
 import { parseRepo } from "../../hooks/useRepoServices";
 import type { RepoSource } from "../../repoForm";
+import { RepoSearch } from "./RepoSearch";
 
 const PUBLIC = "public";
 
@@ -37,8 +37,6 @@ export function RepoStep({ initial, busy, onNext, onCancel }: { initial: RepoSou
   const viaApp = account !== PUBLIC;
   const repos = useGithubRepos(viaApp ? account : null);
   const branches = useGithubBranches(viaApp ? account : null, viaApp && repo ? repo : null);
-  const [filter, setFilter] = useState("");
-  const shown = (repos.data ?? []).filter((r) => r.fullName.toLowerCase().includes(filter.trim().toLowerCase()));
 
   const onSubmit = (f: Form) => {
     if (viaApp) {
@@ -83,22 +81,21 @@ export function RepoStep({ initial, busy, onNext, onCancel }: { initial: RepoSou
 
       {viaApp ? (
         <>
-          <Input label="Find a repo" placeholder="Type to filter…" value={filter} onChange={(e) => setFilter(e.target.value)} />
           <Controller
             control={control}
             name="repo"
             render={({ field }) => (
-              <Select
-                label="Repository"
-                {...field}
-                onChange={(v) => {
+              <RepoSearch
+                // A new account starts with an empty box.
+                key={account}
+                repos={repos.data ?? []}
+                value={field.value}
+                onPick={(v) => {
                   field.onChange(v);
                   setValue("branch", repos.data?.find((r) => r.fullName === v)?.defaultBranch ?? "");
                 }}
+                loading={repos.isPending}
                 error={errors.repo?.message ?? (repos.isError ? apiMessage(repos.error) : undefined)}
-                disabled={repos.isPending}
-                placeholder={repos.isPending ? "Loading repos…" : shown.length ? "Pick a repo" : "No repos match"}
-                options={shown.slice(0, 100).map((r) => ({ value: r.fullName, label: r.fullName, hint: `${r.private ? "private" : "public"} · default branch ${r.defaultBranch}` }))}
               />
             )}
           />

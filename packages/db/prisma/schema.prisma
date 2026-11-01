@@ -377,6 +377,7 @@ model Service {
   deployments          Deployment[]
   variables            ServiceVariable[]
   database             ServiceDatabase?
+  logs                 ServiceLog[]
   createdAt            DateTime            @default(now())
   updatedAt            DateTime            @updatedAt
 
@@ -472,6 +473,38 @@ model DeploymentLog {
   @@index([createdAt])
 }
 
+enum LogStream {
+  STDOUT
+  STDERR
+  /// A line Warden wrote itself, e.g. "1,240 lines dropped".
+  WARDEN
+}
+
+/// What a running service printed (docker logs), one row per line, kept 7
+/// days. Written by the worker's log collector; secrets are masked before a
+/// line is saved. Developer and up can read them. A bigint id because there
+/// are millions of rows; it also orders lines with the same timestamp.
+model ServiceLog {
+  id             BigInt    @id @default(autoincrement())
+  organizationId String
+  serviceId      String
+  service        Service   @relation(fields: [serviceId, organizationId], references: [id, organizationId], onDelete: Cascade)
+  /// The version that printed it (the container's warden.deployment label).
+  /// No FK: a log line must never block or slow a deployment's delete.
+  deploymentId   String?
+  stream         LogStream
+  /// Docker's timestamp for the line, not when it was saved.
+  ts             DateTime
+  message        String
+
+  /// Also covers the composite FK (serviceId leads it).
+  @@index([serviceId, ts])
+  /// The hourly prune.
+  @@index([ts])
+  /// Fast ILIKE '%text%' search (pg_trgm; the migration creates the extension).
+  @@index([message(ops: raw("gin_trgm_ops"))], type: Gin)
+}
+
 model DeploymentHistory {
   id           String           @id @default(uuid())
   deploymentId String
@@ -508,7 +541,7 @@ model Server {
   defaultFor            Environment[]       @relation("EnvironmentDefaultServer")
   serverMetrics         ServerMetrics[]
   serverContainers      ServerContainer[]
-  serverLogs            ServerLogs[]
+  serverLogs            ServerLog[]
   serverTraefik         ServerTraefik[]
   dockerCleanupLogs     DockerCleanupLog[]
   dockerDiskMetrics     DockerDiskMetrics[]
@@ -602,14 +635,35 @@ model ServerContainer {
   @@unique([serverId, dockerId])
 }
 
-model ServerLogs {
-  id         String   @id @default(uuid())
-  serverId   String
-  server     Server   @relation(fields: [serverId], references: [id], onDelete: Cascade)
-  logMessage String
-  createdAt  DateTime @default(now())
+/// Where a server log line came from (server page → Logs).
+enum ServerLogSource {
+  /// docker logs warden-traefik: certificate, routing and config errors.
+  TRAEFIK
+  /// journalctl -u docker: crashes, OOM kills, pull failures.
+  DOCKER
+  /// journalctl -p warning: the rest of the system, warnings and worse.
+  SYSTEM
+  /// Written by Warden: went offline, back online, cleanups, proxy changes.
+  WARDEN
+}
 
-  @@index([serverId, createdAt])
+/// A line from a server's own logs, kept 7 days like ServiceLog.
+model ServerLog {
+  id             BigInt          @id @default(autoincrement())
+  organizationId String
+  serverId       String
+  server         Server          @relation(fields: [serverId, organizationId], references: [id, organizationId], onDelete: Cascade)
+  source         ServerLogSource
+  /// The source's timestamp for the line, not when it was saved.
+  ts             DateTime
+  message        String
+
+  /// Also covers the composite FK (serverId leads it).
+  @@index([serverId, ts])
+  /// The hourly prune.
+  @@index([ts])
+  /// Fast ILIKE '%text%' search (pg_trgm, created by the service_logs migration).
+  @@index([message(ops: raw("gin_trgm_ops"))], type: Gin)
 }
 
 /// One version of a server's warden.yml (server page → Proxy). Every save is

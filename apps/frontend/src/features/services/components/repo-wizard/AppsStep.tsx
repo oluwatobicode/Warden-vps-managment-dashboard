@@ -31,7 +31,7 @@ export function AppsStep({
         <div className="rounded-xl border border-dashed border-fieldb px-5 py-8 text-center">
           <p className="m-0 text-[13px] font-semibold text-strong">Nothing to deploy here</p>
           <p className="mx-auto mt-2 mb-0 max-w-sm text-[12px] text-muted-warm">
-            Warden found no app in this repo: no package.json, Dockerfile, or Python/Go/Ruby/PHP files. Check it's the right repo and branch.
+            Warden found no app in this repo or its top-level folders: no package.json, Dockerfile, or Python/Go/Ruby/PHP files. Check it's the right repo and branch.
           </p>
         </div>
       ) : (

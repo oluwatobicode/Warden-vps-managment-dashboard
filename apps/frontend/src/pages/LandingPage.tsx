@@ -8,12 +8,13 @@ import { WhySection } from "../features/landing/components/WhySection";
 import { HowSection } from "../features/landing/components/HowSection";
 import { DeploysSection } from "../features/landing/components/DeploysSection";
 import { GatesSection } from "../features/landing/components/GatesSection";
+import { StackSection } from "../features/landing/components/StackSection";
+import { DatabasesSection } from "../features/landing/components/DatabasesSection";
 import { FleetSection } from "../features/landing/components/FleetSection";
 import { ActivitySection } from "../features/landing/components/ActivitySection";
-import { Testimonials } from "../features/landing/components/Testimonials";
 import { OpenSourceSection } from "../features/landing/components/OpenSourceSection";
 import { ChangelogSection } from "../features/landing/components/ChangelogSection";
-import { InstallSection } from "../features/landing/components/InstallSection";
+import { CtaSection } from "../features/landing/components/CtaSection";
 import { LandingFooter } from "../features/landing/components/LandingFooter";
 import "../features/landing/landing.css";
 
@@ -37,12 +38,13 @@ export default function LandingPage() {
         <HowSection />
         <DeploysSection />
         <GatesSection />
+        <StackSection />
+        <DatabasesSection />
         <FleetSection />
         <ActivitySection />
-        <Testimonials />
         <OpenSourceSection />
         <ChangelogSection />
-        <InstallSection />
+        <CtaSection />
       </main>
       <LandingFooter />
     </div>

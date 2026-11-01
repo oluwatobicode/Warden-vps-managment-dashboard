@@ -287,3 +287,33 @@ export const PROXY_MESSAGES = {
   version_not_found: 'That version doesn’t exist',
 } as const;
 
+
+export const DATA_MESSAGES = {
+  database_not_found: 'Database not found',
+  not_placed: 'This database isn’t on a server yet',
+  not_running: 'The database isn’t running. Restart it from its page, then try again',
+  unreachable: 'Couldn’t reach {server} over SSH',
+  wrong_engine: 'That isn’t available for this kind of database',
+  table_not_found: 'Table {table} doesn’t exist (or Warden’s database user can’t see it)',
+  column_not_found: 'Column {column} doesn’t exist',
+  no_primary_key: 'This table has no primary key, so rows can’t be edited here. Use the SQL box',
+  bad_key: 'That row’s key doesn’t match the table’s primary key. Reload the rows',
+  row_changed: 'That row was changed or deleted since you loaded it. Reload the rows',
+  nothing_to_change: 'Nothing to change',
+  confirm_mismatch: 'Type the table’s name to delete rows',
+  timed_out: 'Stopped after 15 seconds. Narrow the query or add a LIMIT',
+  too_big: 'The result was too big to show. Add a LIMIT or select fewer columns',
+  connection_lost: 'The connection to the database dropped: {reason}',
+  key_not_found: 'That key doesn’t exist (it may have expired)',
+  empty_command: 'Type a command',
+  unknown_command: 'Redis doesn’t know the command {command}',
+  command_refused: '{command} can’t be run from the dashboard',
+} as const;
+
+export const LOG_MESSAGES = {
+  service_not_found: 'Service not found',
+  environment_not_found: 'Environment not found',
+  line_not_found: 'That log line doesn’t exist (lines are kept 7 days)',
+  bad_cursor: 'That page link is out of date. Reload the logs',
+  server_not_found: 'Server not found',
+} as const;

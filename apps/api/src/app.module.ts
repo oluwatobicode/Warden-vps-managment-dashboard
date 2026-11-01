@@ -27,6 +27,8 @@ import { CanvasModule } from './modules/canvas/canvas.module';
 import { DatabaseModule } from './modules/databases/database.module';
 import { DeployModule } from './modules/deploys/deploy.module';
 import { ProxyConfigModule } from './modules/proxy/proxy.module';
+import { LogsModule } from './modules/logs/logs.module';
+import { DatabaseDataModule } from './modules/database-data/database-data.module';
 
 @Module({
   imports: [
@@ -66,6 +68,8 @@ import { ProxyConfigModule } from './modules/proxy/proxy.module';
     DatabaseModule,
     DeployModule,
     ProxyConfigModule,
+    LogsModule,
+    DatabaseDataModule,
   ],
   controllers: [AppController],
   providers: [AppService, { provide: APP_GUARD, useClass: ThrottlerGuard }],
