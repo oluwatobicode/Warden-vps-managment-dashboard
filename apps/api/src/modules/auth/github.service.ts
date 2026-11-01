@@ -73,21 +73,30 @@ export class GithubService {
     // 2. token → the user's stable numeric id. This is what we store as
     //    githubAccountId; usernames and emails can change, the id can't.
     const userRes = await fetch('https://api.github.com/user', { headers });
-    const user = (await userRes.json()) as { id: number };
+    const user = (await userRes.json()) as { id?: number };
+    if (!userRes.ok || typeof user.id !== 'number') {
+      throw new UnauthorizedException(AUTH_MESSAGES.oauth_state_invalid);
+    }
 
     // 3. token → their emails. Prefer primary+verified, accept any verified,
     //    refuse unverified (someone could claim an address they don't own).
+    //    A GitHub App answers 403 with an object here unless it has the
+    //    "Email addresses: Read-only" account permission.
     const emailsRes = await fetch('https://api.github.com/user/emails', {
       headers,
     });
-    const emails = (await emailsRes.json()) as Array<{
+    const emails = (await emailsRes.json()) as unknown;
+    if (!emailsRes.ok || !Array.isArray(emails)) {
+      throw new UnauthorizedException(AUTH_MESSAGES.oauth_email_unreadable);
+    }
+    const list = emails as Array<{
       email: string;
       primary: boolean;
       verified: boolean;
     }>;
     const chosen =
-      emails.find((e) => e.primary && e.verified) ??
-      emails.find((e) => e.verified);
+      list.find((e) => e.primary && e.verified) ??
+      list.find((e) => e.verified);
     if (!chosen) {
       throw new UnauthorizedException(AUTH_MESSAGES.oauth_email_missing);
     }

@@ -18,6 +18,7 @@ export const AUTH_MESSAGES = {
   logged_out: 'Logged out successfully',
   logged_out_everywhere: 'Logged out of all devices',
   oauth_state_invalid: 'Sign-in could not be completed. Please try again',
+  oauth_email_unreadable: 'GitHub didn’t share your email address with Warden. The GitHub App needs the “Email addresses: Read-only” permission; approve it when GitHub asks, then try again',
   oauth_email_missing: 'Your provider account has no verified email address',
   oauth_account_linked: 'Account linked successfully',
   reset_code_sent:
