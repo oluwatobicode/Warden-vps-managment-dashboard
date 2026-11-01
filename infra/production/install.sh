@@ -40,7 +40,11 @@ if [ ! -f .env ]; then
   set_var JWT_REFRESH_SECRET "$(openssl rand -hex 32)"
   NEW_ENV=1
 fi
-set -a; . ./.env; set +a
+# Read only what this script needs: .env is for Docker Compose, not a shell script
+# (MAIL_FROM=Warden <noreply@…> would be a redirect to a shell).
+env_get() { sed -n "s/^$1=//p" .env | tail -1; }
+WARDEN_HOST=$(env_get WARDEN_HOST)
+WARDEN_VERSION=$(env_get WARDEN_VERSION)
 
 # 4. Warden's Traefik: the same one "Set up proxy" makes on every server, printed by the worker's own code.
 say "Starting Traefik (ports 80 and 443)"
