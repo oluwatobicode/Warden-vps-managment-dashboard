@@ -2,6 +2,7 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -16,11 +17,13 @@ import {
   type UpdateNotificationChannelInput,
 } from 'shared-types';
 import {
+  renderEvent,
   renderTestMessage,
   sendDiscord,
   sendEmail,
   sendSlack,
   type EmailConfig,
+  type EventPayloads,
 } from 'notifier';
 import { decrypt, encrypt } from 'warden-crypto';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -31,6 +34,7 @@ import type { Actor } from '../../common/types/actor';
 
 @Injectable()
 export class NotificationService {
+  private readonly logger = new Logger(NotificationService.name);
   private readonly emailConfig: EmailConfig;
 
   constructor(
@@ -197,6 +201,57 @@ export class NotificationService {
     return ch.type === 'SLACK'
       ? sendSlack(url, msg.text)
       : sendDiscord(url, msg.text);
+  }
+
+  /**
+   * The api's side of the worker's notify(): events that happen in a request
+   * (members joining or leaving). Never throws: a failing channel, or a
+   * failing lookup, is logged and the request that caused it still succeeds.
+   */
+  async notify<E extends NotificationEvent>(
+    orgId: string,
+    event: E,
+    payload: EventPayloads[E],
+  ): Promise<void> {
+    try {
+      const channels = await this.prisma.client.notificationChannel.findMany({
+        where: { organizationId: orgId, enabled: true, events: { has: event } },
+      });
+      for (const ch of channels) {
+        try {
+          const msg = renderEvent(event, payload, { channelName: ch.name });
+          const result =
+            ch.type === 'EMAIL'
+              ? await sendEmail(
+                  this.emailConfig,
+                  ch.emailRecipients,
+                  msg.subject,
+                  msg.text,
+                  msg.html,
+                )
+              : ch.type === 'SLACK'
+                ? await sendSlack(
+                    await this.unseal(orgId, ch.webhookUrlEncrypted!),
+                    msg.text,
+                  )
+                : await sendDiscord(
+                    await this.unseal(orgId, ch.webhookUrlEncrypted!),
+                    msg.text,
+                  );
+          if (!result.ok) {
+            this.logger.warn(
+              `${event} → ${ch.type} "${ch.name}" not delivered: ${result.reason}`,
+            );
+          }
+        } catch (e) {
+          this.logger.warn(
+            `${event} → ${ch.type} "${ch.name}" failed: ${(e as Error).message}`,
+          );
+        }
+      }
+    } catch (e) {
+      this.logger.warn(`${event} alert failed: ${(e as Error).message}`);
+    }
   }
 
   private async seal(orgId: string, url: string): Promise<string> {

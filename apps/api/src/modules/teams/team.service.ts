@@ -13,6 +13,7 @@ import { AuditService } from '../audit/audit.service';
 import type { Actor } from '../../common/types/actor';
 import { MailService } from '../../mail/mail.service';
 import { SessionService } from '../auth/session/session.service';
+import { NotificationService } from '../notifications/notification.service';
 import { TEAM_MESSAGES } from '../../common/constants/messages.config';
 import { randomToken, sha256 } from '../../common/utils/token.util';
 import {
@@ -76,6 +77,7 @@ export class TeamService {
     private readonly mail: MailService,
     private readonly sessions: SessionService,
     private readonly audit: AuditService,
+    private readonly notifications: NotificationService,
     config: ConfigService,
   ) {
     this.appUrl = config.getOrThrow<string>('APP_URL');
@@ -354,23 +356,40 @@ export class TeamService {
       metadata: { email: member.user.email, role: member.role },
     });
 
+    const remover = await this.prisma.client.user.findUnique({
+      where: { id: callerUserId },
+      select: { firstName: true, lastName: true, email: true },
+    });
+    const removedByName = remover
+      ? `${remover.firstName} ${remover.lastName}`.trim()
+      : 'An organization admin';
+    const removedAt = new Date();
+    const roleLabel = ROLE_LABEL[member.role] ?? member.role;
+
     try {
-      const remover = await this.prisma.client.user.findUnique({
-        where: { id: callerUserId },
-        select: { firstName: true, lastName: true, email: true },
-      });
       await this.mail.sendMemberRemoved({
         memberEmail: member.user.email,
         organizationName: updated.organization.organizationName,
-        removedByName: remover
-          ? `${remover.firstName} ${remover.lastName}`.trim()
-          : 'An organization admin',
+        removedByName,
         removedByEmail: remover?.email ?? '',
-        previousRoleLabel: ROLE_LABEL[member.role] ?? member.role,
-        removedAt: new Date(),
+        previousRoleLabel: roleLabel,
+        removedAt,
       });
     } catch (e) {
       this.logger.warn(`member-removed email failed: ${(e as Error).message}`);
     }
+
+    // The org's own channels (Settings → Notifications); never throws.
+    await this.notifications.notify(orgId, 'member.removed', {
+      organizationName: updated.organization.organizationName,
+      memberName:
+        `${member.user.firstName} ${member.user.lastName}`.trim() ||
+        member.user.email,
+      memberEmail: member.user.email,
+      roleLabel,
+      by: removedByName,
+      at: removedAt,
+      url: `${this.appUrl}/settings/team`,
+    });
   }
 }

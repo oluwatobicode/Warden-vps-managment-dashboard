@@ -1,0 +1,106 @@
+---
+// The docs home's opening: the landing's grid backdrop, the title, one line
+// of what Warden is, and the two ways in.
+const { data } = Astro.locals.starlightRoute.entry;
+const { title = data.title, tagline, actions = [] } = data.hero ?? {};
+---
+
+<div class="hero">
+  <div class="grid" aria-hidden="true"></div>
+  <h1 id="_top">{title}</h1>
+  {tagline && <p class="tagline" set:html={tagline} />}
+  {
+    actions.length > 0 && (
+      <div class="actions">
+        {actions.map((a, i) => (
+          <a class:list={["action", i === 0 ? "primary" : "secondary"]} href={a.link}>
+            {a.text}
+            {i === 0 && (
+              <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M5 12h14M13 6l6 6-6 6" />
+              </svg>
+            )}
+          </a>
+        ))}
+      </div>
+    )
+  }
+</div>
+
+<style>
+  .hero {
+    position: relative;
+    padding: 4.5rem 0 3.5rem;
+    isolation: isolate;
+  }
+  .grid {
+    position: absolute;
+    top: -2rem;
+    bottom: 0;
+    left: 50%;
+    width: 100vw;
+    transform: translateX(-50%);
+    z-index: -1;
+    background-image:
+      radial-gradient(var(--w-grid-dot) 1px, transparent 1.2px),
+      linear-gradient(var(--w-grid-line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--w-grid-line) 1px, transparent 1px);
+    background-size: 96px 96px;
+    background-position:
+      48px 48px,
+      -1px -1px,
+      -1px -1px;
+    mask-image: linear-gradient(to bottom, #000 0%, transparent 92%);
+  }
+  h1 {
+    margin: 0;
+    max-width: 14ch;
+    font-family: var(--w-display);
+    font-size: clamp(2.5rem, 6vw, 3.75rem);
+    line-height: 1.02;
+    font-weight: 600;
+    letter-spacing: -0.035em;
+    color: var(--sl-color-white);
+    text-wrap: balance;
+  }
+  .tagline {
+    margin-top: 1.25rem;
+    max-width: 34rem;
+    font-size: var(--sl-text-lg);
+    line-height: 1.6;
+    color: var(--sl-color-gray-2);
+    text-wrap: pretty;
+  }
+  .actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-top: 2rem;
+  }
+  .action {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.6875rem 1.25rem;
+    border-radius: 2px;
+    font-size: var(--sl-text-sm);
+    font-weight: 510;
+    text-decoration: none;
+  }
+  .primary {
+    background: var(--w-button);
+    color: var(--w-on-button);
+  }
+  .primary:hover {
+    background: var(--sl-color-white);
+  }
+  .secondary {
+    background: var(--w-panel);
+    color: var(--sl-color-gray-1);
+    box-shadow: inset 0 0 0 1px var(--w-hair);
+  }
+  .secondary:hover {
+    color: var(--sl-color-white);
+    box-shadow: inset 0 0 0 1px var(--w-hair-strong);
+  }
+</style>

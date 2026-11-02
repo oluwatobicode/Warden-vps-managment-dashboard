@@ -3,38 +3,15 @@ title: Warden documentation
 description: Deploy apps and databases to servers you own, with push-to-deploy, health-checked releases and one-click rollback.
 template: splash
 hero:
-  tagline: The PaaS experience, on servers you own. Push to GitHub and Warden builds, health-checks and swaps in the new version, with rollback one click away.
+  title: Deploy to servers you own.
+  tagline: Warden turns any Linux server into a deploy platform. Push to GitHub and it builds, health-checks and swaps in the new version, with rollback one click away. These docs cover using Warden and running it yourself.
   actions:
     - text: Quick start
       link: /quick-start/
-      icon: right-arrow
     - text: Self-host Warden
       link: /self-hosting/install/
-      variant: minimal
 ---
 
-import { Card, CardGrid, LinkCard } from "@astrojs/starlight/components";
+import DocsIndex from "../../components/DocsIndex.astro";
 
-<CardGrid>
-  <Card title="Your servers, over SSH" icon="laptop">
-    Connect any Linux server with Docker. Warden works over SSH: nothing to install on the server, no agent.
-  </Card>
-  <Card title="Zero-downtime deploys" icon="rocket">
-    The new version starts next to the old one and only takes traffic once its health check passes. A failed deploy leaves the old version serving.
-  </Card>
-  <Card title="Databases with backups" icon="seti:db">
-    Postgres, MySQL and Redis on a private network, with encrypted daily backups to S3 or R2 and a data browser.
-  </Card>
-  <Card title="Logs you can search" icon="document">
-    Live app and server logs, kept 7 days and searchable, with secret values hidden before they're saved.
-  </Card>
-</CardGrid>
-
-## Where to start
-
-<CardGrid>
-  <LinkCard title="Quick start" description="Sign up, add a server and deploy your first app." href="/quick-start/" />
-  <LinkCard title="How Warden works" description="What happens on your server during a deploy." href="/how-it-works/" />
-  <LinkCard title="Deploy from GitHub" description="Monorepos, Dockerfiles, build settings and domains." href="/deploying/from-github/" />
-  <LinkCard title="Self-host Warden" description="Run Warden itself on your own server, such as an EC2 instance." href="/self-hosting/install/" />
-</CardGrid>
+<DocsIndex />

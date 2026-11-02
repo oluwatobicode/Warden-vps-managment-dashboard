@@ -1,46 +1,413 @@
-/* Warden's look: the dashboard's near-black surfaces, white accents, Space Grotesk. */
+/*
+ * Warden's docs, in the landing page's world: near-black, hairline outlines,
+ * white for what's active, no accent colour. Geom for headings, Inter to read.
+ * Light mode is the same system inverted.
+ */
+
+/* ─── Tokens ─────────────────────────────────────────────────────────────── */
 :root {
-  --sl-font: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+  --sl-font: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
   --sl-font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --w-display: "Geom", "Inter", ui-sans-serif, system-ui, sans-serif;
+
+  --sl-text-h1: 2rem;
+  --sl-text-h2: 1.375rem;
+  --sl-text-h3: 1.0625rem;
+  --sl-text-h4: 1rem;
+  --sl-text-h5: 0.9375rem;
+  --sl-line-height: 1.7;
+  --sl-line-height-headings: 1.25;
+  --sl-content-width: 46rem;
+  --sl-sidebar-width: 17rem;
+  --sl-nav-height: 3.75rem;
 }
 
 :root,
 ::backdrop {
-  --sl-color-accent-low: #0f2033;
-  --sl-color-accent: #60a5fa;
-  --sl-color-accent-high: #dbeafe;
-  --sl-color-white: #fafafa;
-  --sl-color-gray-1: #e4e4e7;
-  --sl-color-gray-2: #a1a1aa;
-  --sl-color-gray-3: #71717a;
-  --sl-color-gray-4: #52525b;
-  --sl-color-gray-5: #1f1f1f;
-  --sl-color-gray-6: #141414;
-  --sl-color-black: #0c0c0c;
+  --w-bg: #08090a;
+  --w-panel: #0f1011;
+  --w-hover: #161718;
+  --w-hair: #23252a;
+  --w-hair-strong: #383b3f;
+  --w-button: #e5e5e6;
+  --w-on-button: #08090a;
+  --w-grid-line: #141516;
+  --w-grid-dot: #2c2e32;
+  --w-note: #8a8f98;
+  --w-tip: #3ecf6e;
+  --w-caution: #fab219;
+  --w-danger: #e05555;
+
+  --sl-color-white: #f7f8f8;
+  --sl-color-gray-1: #e5e5e6;
+  --sl-color-gray-2: #c2c4c8;
+  --sl-color-gray-3: #8a8f98;
+  --sl-color-gray-4: #62666d;
+  --sl-color-gray-5: #23252a;
+  --sl-color-gray-6: #0f1011;
+  --sl-color-black: #08090a;
+
+  --sl-color-accent-low: #1b1c1e;
+  --sl-color-accent: #e5e5e6;
+  --sl-color-accent-high: #f7f8f8;
+
+  --sl-color-text: var(--sl-color-gray-2);
+  --sl-color-text-accent: var(--sl-color-white);
+  --sl-color-bg: var(--w-bg);
+  --sl-color-bg-nav: var(--w-bg);
+  --sl-color-bg-sidebar: var(--w-bg);
+  --sl-color-bg-inline-code: var(--w-hover);
+  --sl-color-hairline-light: var(--w-hair);
+  --sl-color-hairline: var(--w-hair);
+  --sl-color-hairline-shade: var(--w-bg);
+  --sl-color-backdrop-overlay: rgb(8 9 10 / 0.7);
 }
 
 :root[data-theme="light"],
 [data-theme="light"] ::backdrop {
-  --sl-color-accent-low: #dbeafe;
-  --sl-color-accent: #1d4ed8;
-  --sl-color-accent-high: #0f2033;
-  --sl-color-white: #0c0c0c;
-  --sl-color-gray-1: #1f1f1f;
-  --sl-color-gray-2: #3f3f46;
-  --sl-color-gray-3: #52525b;
-  --sl-color-gray-4: #a1a1aa;
-  --sl-color-gray-5: #e4e4e7;
-  --sl-color-gray-6: #f4f4f5;
-  --sl-color-gray-7: #fafafa;
+  --w-bg: #ffffff;
+  --w-panel: #fafafa;
+  --w-hover: #f1f1f2;
+  --w-hair: #e6e6e8;
+  --w-hair-strong: #cfd0d3;
+  --w-button: #18191b;
+  --w-on-button: #ffffff;
+  --w-grid-line: #f1f1f2;
+  --w-grid-dot: #dcdde0;
+  --w-note: #6b6f76;
+  --w-tip: #1f9d4d;
+  --w-caution: #b7791f;
+  --w-danger: #c53030;
+
+  --sl-color-white: #08090a;
+  --sl-color-gray-1: #18191b;
+  --sl-color-gray-2: #3c3f44;
+  --sl-color-gray-3: #62666d;
+  --sl-color-gray-4: #9a9ea5;
+  --sl-color-gray-5: #e6e6e8;
+  --sl-color-gray-6: #fafafa;
+  --sl-color-gray-7: #fcfcfc;
   --sl-color-black: #ffffff;
+
+  --sl-color-accent-low: #f1f1f2;
+  --sl-color-accent: #18191b;
+  --sl-color-accent-high: #08090a;
+  --sl-color-backdrop-overlay: rgb(255 255 255 / 0.7);
 }
 
-/* The logo is drawn white; in the light theme it needs to be dark. */
+/* ─── Browser surfaces ───────────────────────────────────────────────────── */
+body {
+  background: var(--w-bg);
+  /* The home backdrop runs edge to edge; never scroll sideways for it. */
+  overflow-x: clip;
+  font-feature-settings: "cv01", "ss03";
+  -webkit-font-smoothing: antialiased;
+}
+::selection {
+  background: var(--sl-color-white);
+  color: var(--w-bg);
+}
+:focus-visible {
+  outline: 2px solid var(--sl-color-white);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+html {
+  scrollbar-color: var(--w-hair-strong) transparent;
+}
+
+/* ─── Header ─────────────────────────────────────────────────────────────── */
+header.header {
+  border-bottom: 1px solid var(--w-hair);
+  background: color-mix(in srgb, var(--w-bg) 88%, transparent);
+  backdrop-filter: blur(10px);
+}
+.site-title {
+  font-family: var(--w-display);
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--sl-color-white);
+}
+.site-title img {
+  height: 1.25rem;
+}
 :root[data-theme="light"] .site-title img {
   filter: invert(1);
 }
+/* The search box: a quiet field with the shortcut on the right. */
+site-search button[data-open-modal] {
+  border: 0;
+  border-radius: 6px;
+  background: var(--w-panel);
+  box-shadow: inset 0 0 0 1px var(--w-hair);
+  color: var(--sl-color-gray-3);
+  font-size: var(--sl-text-sm);
+}
+site-search button[data-open-modal]:hover {
+  box-shadow: inset 0 0 0 1px var(--w-hair-strong);
+  color: var(--sl-color-gray-2);
+}
+site-search kbd {
+  border-radius: 4px;
+  background: var(--w-hover);
+  color: var(--sl-color-gray-3);
+}
+starlight-theme-select select {
+  font-size: var(--sl-text-sm);
+}
+
+/* ─── Sidebar ────────────────────────────────────────────────────────────── */
+.sidebar-pane {
+  border-inline-end: 1px solid var(--w-hair);
+}
+.sidebar-content .top-level > li + li {
+  margin-top: 1.5rem;
+}
+/* Section names: small mono capitals, like the landing's [ LABELS ]. */
+.sidebar-content summary {
+  padding-block: 0 0.375rem;
+}
+.sidebar-content summary .large {
+  font-family: var(--sl-font-mono);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--sl-color-gray-3);
+}
+.sidebar-content summary .caret {
+  width: 0.875rem;
+  height: 0.875rem;
+  color: var(--sl-color-gray-4);
+}
+.sidebar-content ul ul li {
+  margin-inline-start: 0;
+  padding-inline-start: 0;
+  border-inline-start: 1px solid var(--w-hair);
+}
+.sidebar-content a {
+  margin-inline-start: -1px;
+  padding: 0.3125rem 0.75rem;
+  border-inline-start: 1px solid transparent;
+  border-radius: 0;
+  color: var(--sl-color-gray-3);
+  font-size: var(--sl-text-sm);
+  line-height: 1.45;
+  transition: color 120ms;
+}
+.sidebar-content a:hover,
+.sidebar-content a:focus-visible {
+  color: var(--sl-color-white);
+  border-inline-start-color: var(--w-hair-strong);
+}
+.sidebar-content a[aria-current="page"],
+.sidebar-content a[aria-current="page"]:hover,
+.sidebar-content a[aria-current="page"]:focus {
+  background: transparent;
+  color: var(--sl-color-white);
+  font-weight: 500;
+  border-inline-start-color: var(--sl-color-white);
+}
+
+/* ─── Table of contents (right) ──────────────────────────────────────────── */
+starlight-toc h2,
+mobile-starlight-toc .toggle {
+  font-size: var(--sl-text-xs);
+  font-weight: 500;
+  color: var(--sl-color-gray-2);
+}
+starlight-toc a {
+  color: var(--sl-color-gray-3);
+  font-size: var(--sl-text-xs);
+}
+starlight-toc a:hover {
+  color: var(--sl-color-white);
+}
+starlight-toc a[aria-current="true"] {
+  color: var(--sl-color-white);
+}
+
+/* ─── Page body ──────────────────────────────────────────────────────────── */
+/* No rule under the title: the title block and the text are one column. */
+.content-panel + .content-panel {
+  border-top: 0;
+}
+.content-panel:first-of-type {
+  padding-bottom: 0;
+}
+.sl-markdown-content {
+  color: var(--sl-color-gray-2);
+}
+.sl-markdown-content :is(h2, h3, h4, h5) {
+  font-family: var(--w-display);
+  color: var(--sl-color-white);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+}
+.sl-markdown-content :is(h2, h3, h4) .sl-anchor-link,
+.sl-markdown-content :is(h2, h3, h4) a {
+  color: inherit;
+}
+.sl-markdown-content :is(h1, h2, h3, h4, h5, h6):not(:where(.not-content *)) {
+  margin-top: 2.75rem;
+  margin-bottom: 0.75rem;
+}
+.sl-markdown-content :is(h3, h4):not(:where(.not-content *)) {
+  margin-top: 2rem;
+  margin-bottom: 0.5rem;
+}
+.sl-markdown-content .sl-heading-wrapper + :not(:where(.not-content *)) {
+  margin-top: 0.625rem;
+}
+.sl-markdown-content :is(strong, b) {
+  color: var(--sl-color-gray-1);
+  font-weight: 600;
+}
+.sl-markdown-content a:not(:where(.not-content *)) {
+  color: var(--sl-color-white);
+  text-decoration: underline;
+  text-decoration-color: var(--w-hair-strong);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+  transition: text-decoration-color 120ms;
+}
+.sl-markdown-content a:not(:where(.not-content *)):hover {
+  text-decoration-color: var(--sl-color-white);
+}
+.sl-markdown-content li::marker {
+  color: var(--sl-color-gray-4);
+}
+.sl-markdown-content hr {
+  border-color: var(--w-hair);
+}
+.sl-markdown-content :not(pre) > code {
+  padding: 0.125rem 0.375rem;
+  border-radius: 4px;
+  background: var(--w-hover);
+  box-shadow: inset 0 0 0 1px var(--w-hair);
+  color: var(--sl-color-gray-1);
+  font-size: 0.8125em;
+}
+
+/* Tables sit in a hairline box, header row on the panel colour. */
+.sl-markdown-content table:not(:where(.not-content *)) {
+  /* Narrow screens: the box hugs the table and scrolls; wide: full column. */
+  width: max-content;
+  max-width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  border-radius: 8px;
+  box-shadow: inset 0 0 0 1px var(--w-hair);
+  font-size: var(--sl-text-sm);
+  font-variant-numeric: tabular-nums;
+}
+@media (min-width: 50rem) {
+  .sl-markdown-content table:not(:where(.not-content *)) {
+    display: table;
+    width: 100%;
+  }
+}
+.sl-markdown-content :is(th, td):not(:where(.not-content *)) {
+  padding: 0.625rem 0.875rem;
+  border-bottom: 1px solid var(--w-hair);
+  vertical-align: top;
+}
+.sl-markdown-content tr:last-child td {
+  border-bottom: 0;
+}
+.sl-markdown-content th:not(:where(.not-content *)) {
+  background: var(--w-panel);
+  color: var(--sl-color-gray-1);
+  font-weight: 500;
+  text-align: start;
+}
+.sl-markdown-content th:first-child {
+  border-start-start-radius: 8px;
+}
+.sl-markdown-content th:last-child {
+  border-start-end-radius: 8px;
+}
 
 .sl-markdown-content img {
-  border: 1px solid var(--sl-color-gray-5);
-  border-radius: 12px;
+  border-radius: 8px;
+  box-shadow: inset 0 0 0 1px var(--w-hair);
+}
+
+/* Notes and warnings: one hairline box, the kind shown by its icon's colour. */
+.starlight-aside {
+  padding: 0.875rem 1rem;
+  border: 0;
+  border-radius: 8px;
+  background: var(--w-panel);
+  box-shadow: inset 0 0 0 1px var(--w-hair);
+  color: var(--sl-color-gray-2);
+  font-size: var(--sl-text-sm);
+}
+.starlight-aside--note {
+  --sl-color-asides-text-accent: var(--w-note);
+}
+.starlight-aside--tip {
+  --sl-color-asides-text-accent: var(--w-tip);
+}
+.starlight-aside--caution {
+  --sl-color-asides-text-accent: var(--w-caution);
+}
+.starlight-aside--danger {
+  --sl-color-asides-text-accent: var(--w-danger);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--w-danger) 35%, var(--w-hair));
+}
+.starlight-aside__title {
+  font-size: var(--sl-text-sm);
+  font-weight: 600;
+  color: var(--sl-color-gray-1);
+}
+.starlight-aside__icon {
+  font-size: 1.1em;
+  color: var(--sl-color-asides-text-accent);
+}
+.starlight-aside__content a {
+  color: var(--sl-color-white);
+}
+
+/* Steps (numbered how-tos). */
+.sl-steps > li::before {
+  background: var(--w-panel);
+  box-shadow: inset 0 0 0 1px var(--w-hair-strong);
+  color: var(--sl-color-gray-1);
+  font-family: var(--sl-font-mono);
+  font-size: 0.75rem;
+}
+.sl-steps > li::after {
+  background: var(--w-hair);
+}
+
+/* ─── Page footer ────────────────────────────────────────────────────────── */
+.pagination-links a {
+  border: 0;
+  border-radius: 8px;
+  background: var(--w-panel);
+  box-shadow: inset 0 0 0 1px var(--w-hair);
+  transition: box-shadow 120ms;
+}
+.pagination-links a:hover {
+  box-shadow: inset 0 0 0 1px var(--w-hair-strong);
+}
+.pagination-links .link-title {
+  font-family: var(--w-display);
+  font-size: var(--sl-text-base);
+  color: var(--sl-color-white);
+}
+.meta,
+.meta a {
+  color: var(--sl-color-gray-3);
+  font-size: var(--sl-text-xs);
+}
+
+/* ─── Home (splash) ──────────────────────────────────────────────────────── */
+[data-has-hero] .content-panel {
+  border-top: 0;
+}
+[data-has-hero] .sl-markdown-content {
+  margin-top: 0;
 }

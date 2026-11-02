@@ -7,5 +7,6 @@ import { NotificationService } from './notification.service';
   imports: [SessionModule],
   providers: [NotificationService],
   controllers: [NotificationController],
+  exports: [NotificationService],
 })
 export class NotificationModule {}

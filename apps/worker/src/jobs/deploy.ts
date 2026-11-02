@@ -1,6 +1,6 @@
 import { prisma, type DeploymentStatus, type Prisma } from "db";
 import { q, type Run } from "docker-client";
-import { shortId, sslipHost, type DeployJob, type ProxyJob } from "shared-types";
+import { shortId, sslipHost, type DeployJob, type NotificationEvent, type ProxyJob } from "shared-types";
 import { withSsh, type Stream } from "ssh-client";
 import { env } from "../env";
 import { sshTargetFor } from "../keys";
@@ -100,6 +100,8 @@ export async function deployJob(job: DeployJob): Promise<void> {
     await prisma.deployment.update({ where: { id: dep.id }, data: { startedAt } });
     await prisma.service.update({ where: { id: dep.serviceId }, data: { status: "DEPLOYING" } });
     await step("BUILDING", `Connecting to ${server.serverName}`);
+    // An alert must never be what fails a deploy.
+    await notifyDeploy(dep, "deploy.started", startedAt, null).catch((e) => workerLog.warn(`deploy.started alert: ${(e as Error).message}`));
 
     const target = await sshTargetFor({ ...server, organizationId: dep.organizationId });
     await withSsh(target, (run, stream) => runDeploy(dep, run, stream, log, step));
@@ -111,7 +113,9 @@ export async function deployJob(job: DeployJob): Promise<void> {
     ]);
     log.say("Live");
     workerLog.info(`deploy #${dep.number} of ${dep.service.serviceName} is live`);
-    await notifyDeploy(dep, "deploy.succeeded", startedAt, null);
+    // A rollback that went live is "rolled back", not also "succeeded" (one message, not two).
+    if (dep.rollbackOf) await notifyDeploy(dep, "deploy.rolled_back", startedAt, `Back to the version of #${dep.rollbackOf.number}`);
+    else await notifyDeploy(dep, "deploy.succeeded", startedAt, null);
   } catch (e) {
     const failure = e instanceof DeployFailure ? e : new DeployFailure((e as Error).message);
     log.say(`Failed: ${failure.message}`);
@@ -242,7 +246,7 @@ async function runDeploy(dep: Dep, run: Run, stream: Stream, log: DeployLog, ste
 
 const ids = (svc: Dep["service"]) => ({ organizationId: svc.organizationId, environmentId: svc.environmentId, serviceId: svc.id });
 
-async function notifyDeploy(dep: Dep, event: "deploy.succeeded" | "deploy.failed" | "deploy.gate_failed" | "deploy.cancelled", startedAt: Date, reason: string | null) {
+async function notifyDeploy(dep: Dep, event: Extract<NotificationEvent, `deploy.${string}`>, startedAt: Date, reason: string | null) {
   const d = await prisma.deployment.findUnique({ where: { id: dep.id }, select: { commitSha: true, commitMessage: true, finishedAt: true } });
   const project = dep.service.environment.project;
   await notify(dep.organizationId, event, {

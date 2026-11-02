@@ -8,9 +8,10 @@ import { GithubService } from './github.service';
 import { PasswordResetService } from './password-reset.service';
 import { SessionModule } from './session/session.module';
 import { MailModule } from '../../mail/mail.module';
+import { NotificationModule } from '../notifications/notification.module';
 
 @Module({
-  imports: [SessionModule, MailModule],
+  imports: [SessionModule, MailModule, NotificationModule],
   controllers: [AuthController, AccountController],
   providers: [
     AuthService,

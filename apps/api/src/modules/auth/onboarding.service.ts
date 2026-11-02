@@ -18,6 +18,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { RedisService } from '../../redis/redis.service';
 import { SessionService } from './session/session.service';
 import { MailService } from '../../mail/mail.service';
+import { NotificationService } from '../notifications/notification.service';
 import { hashPassword } from '../../common/utils/password.util';
 import { sha256 } from '../../common/utils/token.util';
 import { uniqueSlug } from '../../common/utils/slug.util';
@@ -51,6 +52,7 @@ export class OnboardingService {
     private readonly redis: RedisService,
     private readonly sessions: SessionService,
     private readonly mail: MailService,
+    private readonly notifications: NotificationService,
     @Inject(KEY_PROVIDER) private readonly keys: KeyProvider,
     config: ConfigService,
   ) {
@@ -67,7 +69,7 @@ export class OnboardingService {
       },
       include: {
         organization: true,
-        invitedBy: { select: { email: true } },
+        invitedBy: { select: { email: true, firstName: true, lastName: true } },
       },
     });
     if (!invite) {
@@ -145,20 +147,25 @@ export class OnboardingService {
       created.membership.role,
     );
 
+    const memberName =
+      `${created.user.firstName} ${created.user.lastName}`.trim() ||
+      created.user.email;
+    const roleLabel =
+      ROLE_LABEL[created.membership.role] ?? created.membership.role;
+    const joinedAt = new Date();
+
     if (invite.invitedBy?.email) {
       try {
         const teamSize = await this.prisma.client.membership.count({
           where: { organizationId: invite.organizationId, status: 'ACTIVE' },
         });
         await this.mail.sendInviteAccepted(invite.invitedBy.email, {
-          memberName:
-            `${created.user.firstName} ${created.user.lastName}`.trim(),
+          memberName,
           memberEmail: created.user.email,
           organizationName: invite.organization.organizationName,
-          roleLabel:
-            ROLE_LABEL[created.membership.role] ?? created.membership.role,
+          roleLabel,
           invitedAt: invite.createdAt,
-          joinedAt: new Date(),
+          joinedAt,
           teamSize,
           manageTeamUrl: `${this.appUrl}/settings/team`,
         });
@@ -168,6 +175,19 @@ export class OnboardingService {
         );
       }
     }
+
+    // The org's own channels (Settings → Notifications); never throws.
+    await this.notifications.notify(invite.organizationId, 'member.joined', {
+      organizationName: invite.organization.organizationName,
+      memberName,
+      memberEmail: created.user.email,
+      roleLabel,
+      by: invite.invitedBy
+        ? `${invite.invitedBy.firstName} ${invite.invitedBy.lastName}`.trim()
+        : null,
+      at: joinedAt,
+      url: `${this.appUrl}/settings/team`,
+    });
 
     return {
       user: toSessionUser(
