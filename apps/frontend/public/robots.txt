@@ -1,0 +1,13 @@
+# The landing page is public; everything behind sign-in is useless to a search engine.
+User-agent: *
+Allow: /$
+Disallow: /projects
+Disallow: /settings
+Disallow: /account
+Disallow: /home
+Disallow: /onboarding
+Disallow: /invite
+Disallow: /auth
+Disallow: /api
+
+Sitemap: https://app.trywarden.xyz/sitemap.xml
