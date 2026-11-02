@@ -38,7 +38,8 @@ warden/
 ├── apps/
 │   ├── api/          # NestJS — REST/WS layer, deploy orchestration, enqueues jobs
 │   ├── worker/         # plain TS + BullMQ — where deploys actually run (SSH, Docker, health checks, rollback)
-│   └── frontend/         # Vite + React — dashboard UI
+│   ├── frontend/         # Vite + React — dashboard UI
+│   └── docs/             # Starlight (Astro) — the public docs at docs.trywarden.xyz, static, Markdown pages in src/content/docs
 ├── packages/
 │   ├── db/               # Prisma schema + client — single source of truth, shared by api + worker
 │   ├── ssh-client/         # ssh2 wrapper — connection pooling, exec, sftp

@@ -101,9 +101,9 @@ export default function NotificationsPage() {
           className="mt-px shrink-0 text-link"
         />
         <p className="m-0 text-xs text-muted-warm">
-          Real alerts start once deploys and server monitoring are running.
-          Until then, <span className="text-strong">Send test</span> is how you
-          check a channel works.
+          Each channel gets the events it&apos;s set to: deploys, servers going
+          offline, full disks, failed backups.{" "}
+          <span className="text-strong">Send test</span> checks a channel works.
         </p>
       </div>
 

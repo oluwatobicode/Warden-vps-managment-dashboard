@@ -25,12 +25,14 @@ import { TONE } from "./tone";
  */
 
 export const GITHUB_URL = "https://github.com/oluwatobicode/Warden-vps-managment-dashboard";
+export const DOCS_URL = "https://docs.trywarden.xyz";
 
 export const NAV_LINKS = [
   { href: "#deploys", label: "Product" },
   { href: "#how", label: "How it works" },
   { href: "#stack", label: "What you can deploy" },
   { href: "#changelog", label: "Changelog" },
+  { href: DOCS_URL, label: "Docs" },
   { href: GITHUB_URL, label: "GitHub", external: true },
 ];
 

@@ -1,5 +1,5 @@
 import { Link } from "react-router";
-import { GITHUB_URL } from "../data";
+import { DOCS_URL, GITHUB_URL } from "../data";
 
 const ANCHORS = [
   ["#stack", "What you can deploy"],
@@ -18,6 +18,9 @@ export function LandingFooter() {
               {label}
             </a>
           ))}
+          <a href={DOCS_URL} className="text-[13px] text-[#8a8f98] hover:text-[#e5e5e6]">
+            Docs
+          </a>
           <a href={GITHUB_URL} target="_blank" rel="noreferrer" className="text-[13px] text-[#8a8f98] hover:text-[#e5e5e6]">
             GitHub
           </a>

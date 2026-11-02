@@ -75,7 +75,7 @@ export function ChannelModal({ editing, onClose }: { editing?: NotificationChann
       onClose={onClose}
       width="w-[580px]"
       title={editing ? `Edit ${editing.name}` : "Add notification channel"}
-      description="Where Warden posts when something happens. Real alerts start with deploys and server monitoring."
+      description="Where Warden posts when something happens: deploys, servers going offline, full disks, failed backups."
       footer={
         <>
           <Button variant="ghost" onClick={onClose} className="px-0 text-xs">Cancel</Button>
