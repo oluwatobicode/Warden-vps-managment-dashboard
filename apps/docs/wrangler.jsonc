@@ -1,0 +1,10 @@
+// Cloudflare (Workers with static assets) serves the built docs: no server code,
+// just the files `astro build` writes to dist/. Deployed by `npx wrangler deploy`.
+{
+  "name": "warden-docs",
+  "compatibility_date": "2026-10-01",
+  "assets": {
+    "directory": "./dist",
+    "not_found_handling": "404-page",
+  },
+}

@@ -1,6 +1,7 @@
 import type { CSSProperties } from "react";
 import { CONSOLE } from "../data";
-import { CheckIcon, ClockIcon, Dot, ShieldIcon, WaitIcon } from "./bits";
+import { LogoMark } from "../../../components/ui/WardenMark";
+import { CheckIcon, ClockIcon, Dot, WaitIcon } from "./bits";
 import { TONE } from "../tone";
 
 const STEP_ICON = { ok: CheckIcon, run: ClockIcon, wait: WaitIcon };
@@ -26,7 +27,7 @@ export function ConsolePreview() {
           {/* project sidebar */}
           <aside aria-hidden className="hidden flex-col gap-4 border-r border-[#161718] p-4 md:flex">
             <div className="flex items-center gap-2.5 text-white">
-              <ShieldIcon size={16} className="text-[#e5e5e6]" />
+              <LogoMark size={11} className="text-[#e5e5e6]" />
               <span className="text-sm font-semibold">shop</span>
               <span className="ml-auto rounded bg-[#161718] px-1.5 py-px text-[10px] text-[#8a8f98]">production</span>
             </div>

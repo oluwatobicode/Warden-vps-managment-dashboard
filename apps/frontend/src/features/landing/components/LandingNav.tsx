@@ -1,13 +1,13 @@
 import { Link } from "react-router";
 import { NAV_LINKS } from "../data";
-import { ShieldIcon } from "./bits";
+import { LogoMark } from "../../../components/ui/WardenMark";
 
 export function LandingNav() {
   return (
     <header className="sticky top-0 z-10 bg-[linear-gradient(#08090a_60%,rgba(8,9,10,0))] px-6 pt-2.5">
       <nav className="mx-auto grid max-w-[1200px] grid-cols-[max-content_1fr] md:grid-cols-[minmax(max-content,1fr)_minmax(0,auto)_minmax(max-content,1fr)] items-center gap-4 border border-[#23252a] bg-[rgba(22,23,24,0.88)] py-2 pr-2 pl-4 backdrop-blur-[16px]">
         <a href="#top" className="flex w-max items-center gap-2.5 text-white">
-          <ShieldIcon className="text-[#e5e5e6]" />
+          <LogoMark size={15} className="text-[#e5e5e6]" />
           <span className="text-[19px] font-semibold tracking-[-0.3px]">Warden</span>
         </a>
         <div className="hidden max-h-10 min-w-0 flex-wrap md:flex items-center justify-center overflow-hidden">

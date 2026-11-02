@@ -15,7 +15,7 @@ const stroke = (size: number, width: number, rest: SVGProps<SVGSVGElement>) => (
   ...rest,
 });
 
-/** The Warden shield. */
+/** A shield: "protected / checked" (the health-check step, the hero's floating icons). */
 export const ShieldIcon = ({ size = 22, strokeWidth = 2, ...p }: IconProps) => (
   <svg {...stroke(size, Number(strokeWidth), p)}>
     <path d="M12 3 4 6v6c0 4.4 3.3 8.2 8 9 4.7-.8 8-4.6 8-9V6l-8-3Z" />
