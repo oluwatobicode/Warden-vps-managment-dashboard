@@ -31,7 +31,7 @@ MAIL_FROM=Warden <noreply@example.com>
 MAIL_SUPPORT=support@example.com
 ```
 
-Warden sends through [Resend](https://resend.com). `MAIL_FROM` must use a domain you've verified in Resend: add the DNS records Resend lists for the domain (DKIM, SPF and MX on a `send` subdomain), plus a DMARC record such as `v=DMARC1; p=none`. `MAIL_SUPPORT` is the reply-to address.
+Warden sends through [Resend](https://resend.com). `MAIL_FROM` must use a domain you've verified in Resend: add the DNS records Resend lists for the domain (DKIM, SPF and MX on a `send` subdomain), plus a DMARC record such as `v=DMARC1; p=none`. `MAIL_SUPPORT` is your support inbox: it appears as "Questions?" at the bottom of every email, and turns on the dashboard's **Support** button, whose messages (with up to 3 screenshots) are emailed there with the sender as Reply-To. Leave it empty and the Support button is hidden.
 
 Without `RESEND_API_KEY`, nothing is sent and links appear in the API's log instead.
 

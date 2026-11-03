@@ -4,6 +4,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { Activity01Icon, CommandLineIcon, ArrowLeft01Icon, DashboardSquare01Icon, Home01Icon, Settings01Icon, SquareLock02Icon } from "@hugeicons/core-free-icons";
 import type { Environment, ProjectDetail, ServiceStatus } from "shared-types";
 import { useProject } from "../../features/projects/hooks/useProjects";
+import { SupportLink } from "../../features/support/components/SupportLink";
 import { useEnvironments } from "../../features/environments/hooks/useEnvironments";
 import type { ProjectContext } from "../../features/projects/hooks/useProjectContext";
 import { useService } from "../../features/services/hooks/useServices";
@@ -179,7 +180,10 @@ function ProjectShell({
           </nav>
         </div>
 
-        <p className="mx-3 mt-auto mb-0.5 border-t border-cb pt-[13px] pl-1 text-[9.5px] text-[#45454b]">Warden · self-hosted</p>
+        <div className="mt-auto">
+          <SupportLink variant="sidebar" />
+          <p className="mx-3 mb-0.5 border-t border-cb pt-[13px] pl-1 text-[9.5px] text-[#45454b]">Warden · self-hosted</p>
+        </div>
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col gap-[13px]">

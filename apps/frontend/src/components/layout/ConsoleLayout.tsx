@@ -3,6 +3,7 @@ import { useAuth } from "../../features/auth/hooks/useAuth";
 import { useLogout } from "../../features/auth/hooks/useLogout";
 import { ROLE_LABEL } from "../../utils/roles";
 import { UserAvatar } from "../../features/account/components/UserAvatar";
+import { SupportLink } from "../../features/support/components/SupportLink";
 
 const TABS = [
   { to: "/home", label: "Home" },
@@ -52,6 +53,7 @@ export function ConsoleLayout() {
         </nav>
 
         <div className="flex items-center gap-3 justify-self-end">
+          <SupportLink variant="header" />
           <Link to="/account" aria-label="Account settings" title="Account settings" className="rounded-full ring-2 ring-transparent hover:ring-fieldb">
             <UserAvatar avatar={user?.avatar} name={user ? `${user.firstName} ${user.lastName}` : ""} size={38} />
           </Link>

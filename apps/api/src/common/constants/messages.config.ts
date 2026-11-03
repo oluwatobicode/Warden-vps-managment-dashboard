@@ -318,3 +318,11 @@ export const LOG_MESSAGES = {
   bad_cursor: 'That page link is out of date. Reload the logs',
   server_not_found: 'Server not found',
 } as const;
+
+export const SUPPORT_MESSAGES = {
+  not_configured: 'Support isn’t set up on this Warden',
+  too_many: 'You’ve sent {limit} messages in the last hour. Please wait a bit before sending another',
+  too_many_images: 'Attach at most {limit} screenshots',
+  image_too_big: 'Each screenshot must be {mb} MB or smaller',
+  not_an_image: '{name} isn’t a PNG, JPG, WebP or GIF image',
+} as const;

@@ -112,6 +112,8 @@ export const RATE_LIMIT = {
   refresh: { limit: 30, ttlSeconds: 60 },
   // live SSH from the api (cleanup preview, run): each one is a login to a real server
   serverSsh: { limit: 20, ttlSeconds: 15 * 60 },
+  // per IP; SupportService also caps each person at SUPPORT_LIMITS.perHour
+  support: { limit: 10, ttlSeconds: 60 * 60 },
   default: { limit: 100, ttlSeconds: 60 },
 } as const;
 

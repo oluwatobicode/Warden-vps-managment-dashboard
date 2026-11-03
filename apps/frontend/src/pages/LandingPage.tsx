@@ -15,6 +15,7 @@ import { ActivitySection } from "../features/landing/components/ActivitySection"
 import { OpenSourceSection } from "../features/landing/components/OpenSourceSection";
 import { ChangelogSection } from "../features/landing/components/ChangelogSection";
 import { CtaSection } from "../features/landing/components/CtaSection";
+import { SupportSection } from "../features/landing/components/SupportSection";
 import { LandingFooter } from "../features/landing/components/LandingFooter";
 import "../features/landing/landing.css";
 
@@ -45,6 +46,7 @@ export default function LandingPage() {
         <OpenSourceSection />
         <ChangelogSection />
         <CtaSection />
+        <SupportSection />
       </main>
       <LandingFooter />
     </div>

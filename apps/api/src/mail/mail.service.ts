@@ -24,6 +24,20 @@ import {
   resetPasswordOtpHtml,
   ResetPasswordOtpTemplateInput,
 } from './templates/reset-password-otp.template';
+import {
+  supportRequestHtml,
+  SupportRequestTemplateInput,
+} from './templates/support-request.template';
+import {
+  supportReceiptHtml,
+  SupportReceiptTemplateInput,
+} from './templates/support-receipt.template';
+
+/** A file sent with an email (support screenshots). */
+export interface MailAttachment {
+  filename: string;
+  content: Buffer;
+}
 
 /** Template inputs minus the branding fields the service fills in itself. */
 type Input<T> = Omit<T, 'appName' | 'supportEmail'>;
@@ -139,6 +153,41 @@ export class MailService {
     });
   }
 
+  // ─── Support ──────────────────────────────────────────────────────────────
+
+  /** The support inbox (MAIL_SUPPORT), or undefined: then the Support form is hidden. */
+  get supportInbox(): string | undefined {
+    return this.supportEmail;
+  }
+
+  /** To the support inbox; Reply-To is the sender. */
+  async sendSupportRequest(
+    input: Input<SupportRequestTemplateInput>,
+    attachments: MailAttachment[],
+  ): Promise<void> {
+    if (!this.supportEmail) throw new InternalServerErrorException('Support email is not set up');
+    await this.deliver({
+      to: this.supportEmail,
+      subject: `[${input.categoryLabel}] ${input.subject}`,
+      html: supportRequestHtml(input),
+      replyTo: input.senderEmail,
+      attachments,
+      consoleHint: `from ${input.senderEmail}, ${attachments.length} screenshot(s)`,
+      failure: 'Could not send your message',
+    });
+  }
+
+  /** The sender's copy. Replies to it reach the support inbox. */
+  async sendSupportReceipt(input: Input<SupportReceiptTemplateInput>): Promise<void> {
+    await this.deliver({
+      to: input.email,
+      subject: `We got your message: ${input.subject}`,
+      html: supportReceiptHtml({ ...input, supportEmail: this.supportEmail }),
+      replyTo: this.supportEmail,
+      failure: 'Could not send the confirmation email',
+    });
+  }
+
   // ─── Transport ────────────────────────────────────────────────────────────
 
   private async deliver(opts: {
@@ -149,6 +198,8 @@ export class MailService {
     consoleHint?: string;
     /** Message surfaced to the caller when delivery fails. */
     failure: string;
+    replyTo?: string;
+    attachments?: MailAttachment[];
   }): Promise<void> {
     if (!this.resend) {
       this.logger.log(
@@ -165,6 +216,8 @@ export class MailService {
         to: opts.to,
         subject: opts.subject,
         html: opts.html,
+        ...(opts.replyTo ? { replyTo: opts.replyTo } : {}),
+        ...(opts.attachments?.length ? { attachments: opts.attachments } : {}),
       });
       if (error) throw new Error(error.message);
     } catch (e) {

@@ -21,3 +21,4 @@ export * from "./repo.js";
 export * from "./proxy.js";
 export * from "./logs.js";
 export * from "./database-data.js";
+export * from "./support.js";
