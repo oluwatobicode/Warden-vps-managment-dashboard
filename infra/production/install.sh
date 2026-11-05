@@ -34,6 +34,8 @@ if [ ! -f .env ]; then
   chmod 600 .env
   set_var() { sed -i "s|^$1=.*|$1=$2|" .env; }
   set_var WARDEN_HOST "$WARDEN_HOST"
+  # app.example.com → admin.example.com, unless ADMIN_HOST is given.
+  set_var ADMIN_HOST "${ADMIN_HOST:-admin.${WARDEN_HOST#*.}}"
   set_var POSTGRES_PASSWORD "$(openssl rand -hex 24)"
   set_var MASTER_KEY "$(openssl rand -hex 32)"
   set_var JWT_ACCESS_SECRET "$(openssl rand -hex 32)"
@@ -44,6 +46,7 @@ fi
 # (MAIL_FROM=Warden <noreply@…> would be a redirect to a shell).
 env_get() { sed -n "s/^$1=//p" .env | tail -1; }
 WARDEN_HOST=$(env_get WARDEN_HOST)
+ADMIN_HOST=$(env_get ADMIN_HOST)
 WARDEN_VERSION=$(env_get WARDEN_VERSION)
 
 # 4. Warden's Traefik: the same one "Set up proxy" makes on every server, printed by the worker's own code.
@@ -59,7 +62,8 @@ $DOCKER compose up -d
 
 say "Done. Warden is starting at https://$WARDEN_HOST"
 cat <<NEXT
-  - DNS: an A record for $WARDEN_HOST pointing at this server's public IP.
+  - DNS: an A record for $WARDEN_HOST pointing at this server's public IP,
+    and one for $ADMIN_HOST (it only redirects to the platform page).
     HTTPS needs it: the certificate is issued on the first visit once DNS points here.
   - Open ports 80 and 443 to everyone (EC2: the security group). Keep 22 for your own IP.
   - Nightly backups of Warden's own database: fill in BACKUP_S3_* in .env, then

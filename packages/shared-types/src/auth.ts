@@ -76,6 +76,8 @@ export const SessionUserSchema = z.object({
   avatar: AvatarSchema,
   /** False for GitHub/Google sign-ups that never set one: the account page offers "Add a password". */
   hasPassword: z.boolean(),
+  /** User.platformRole = OWNER. Only decides whether the Platform link shows; the api checks the DB on every /platform call. */
+  isPlatformOwner: z.boolean(),
 });
 
 export type SessionUser = z.infer<typeof SessionUserSchema>;

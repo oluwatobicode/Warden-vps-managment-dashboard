@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { Link } from "react-router";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowDown01Icon, Logout03Icon, Search01Icon, UserSettings01Icon } from "@hugeicons/core-free-icons";
@@ -10,8 +10,11 @@ import { UserAvatar } from "../../features/account/components/UserAvatar";
 // ⌘ on a Mac, Ctrl elsewhere: show the key people will actually press.
 const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform);
 
-/** Top bar inside a project (ATLINIX-style): page title · search · action · account. */
-export function ProjectNavbar({ title, onSearch }: { title: string; onSearch: () => void }) {
+/**
+ * Top bar inside a project (ATLINIX-style): page title · search · action · account.
+ * The platform page reuses it with no search and its own `actions` (Refresh).
+ */
+export function ProjectNavbar({ title, onSearch, actions }: { title: string; onSearch?: () => void; actions?: ReactNode }) {
   const { user } = useAuth();
   const logout = useLogout();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -22,15 +25,18 @@ export function ProjectNavbar({ title, onSearch }: { title: string; onSearch: ()
       <h1 className="min-w-0 truncate font-display text-base font-bold tracking-[-0.32px] text-strong">{title}</h1>
 
       <div className="flex items-center gap-4">
-        <button
-          type="button"
-          onClick={onSearch}
-          className="hidden cursor-pointer items-center gap-[9px] rounded-xl border border-cb bg-field px-[13px] py-[9px] hover:border-fieldb lg:flex"
-        >
-          <HugeiconsIcon icon={Search01Icon} size={15} strokeWidth={1.5} className="text-sand" />
-          <span className="text-[12.5px] text-sand">Search services, projects, servers…</span>
-          <kbd className="rounded-md border border-fieldb px-1.5 py-px font-sans text-[10px] text-faint">{isMac ? "⌘K" : "Ctrl K"}</kbd>
-        </button>
+        {onSearch && (
+          <button
+            type="button"
+            onClick={onSearch}
+            className="hidden cursor-pointer items-center gap-[9px] rounded-xl border border-cb bg-field px-[13px] py-[9px] hover:border-fieldb lg:flex"
+          >
+            <HugeiconsIcon icon={Search01Icon} size={15} strokeWidth={1.5} className="text-sand" />
+            <span className="text-[12.5px] text-sand">Search services, projects, servers…</span>
+            <kbd className="rounded-md border border-fieldb px-1.5 py-px font-sans text-[10px] text-faint">{isMac ? "⌘K" : "Ctrl K"}</kbd>
+          </button>
+        )}
+        {actions}
 
 
         <span className="hidden h-7 w-px bg-fieldb sm:block" />

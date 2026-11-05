@@ -876,3 +876,35 @@ model ServiceDomain {
 
   @@index([serviceId, organizationId])
 }
+
+/// What's left of a deleted organization: numbers only, no name or email (the
+/// org asked to be deleted). Written in the same transaction as the org
+/// delete, so the platform page can count churn. No FK: the org is gone.
+model OrganizationTombstone {
+  id             String   @id @default(uuid())
+  organizationId String
+  orgCreatedAt   DateTime
+  deletedAt      DateTime @default(now())
+  memberCount    Int
+  serverCount    Int
+  deployCount    Int
+  /// Had at least one SUCCESS deploy.
+  everDeployedOk Boolean
+
+  @@index([deletedAt])
+}
+
+/// What the platform owner looked at that the platform pages hide by default
+/// (today only: revealing one user's email). Not org-scoped, so not AuditLog.
+/// No FKs on purpose: rows survive the user's deletion, like a tombstone.
+model PlatformAccessLog {
+  id           String   @id @default(uuid())
+  /// The platform owner who looked.
+  actorUserId  String
+  /// e.g. "user.email_revealed"
+  action       String
+  targetUserId String
+  createdAt    DateTime @default(now())
+
+  @@index([createdAt])
+}

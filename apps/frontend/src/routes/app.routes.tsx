@@ -28,7 +28,7 @@ import ProjectVariablesPage from "../pages/project/ProjectVariablesPage";
 import ProjectSettingsPage from "../pages/project/ProjectSettingsPage";
 import ProjectActivityPage from "../pages/project/ProjectActivityPage";
 import ProjectLogsPage from "../pages/project/ProjectLogsPage";
-import { RedirectIfAuthed, RequireAuth, RequireRole } from "./guards";
+import { RedirectIfAuthed, RequireAuth, RequirePlatformOwner, RequireRole } from "./guards";
 
 export const router = createBrowserRouter([
   {
@@ -83,6 +83,28 @@ export const router = createBrowserRouter([
                   </RequireRole>
                 ),
               },
+            ],
+          },
+        ],
+      },
+
+      // The platform owner's page: outside the org console, its own chunk (Recharts).
+      {
+        element: <RequirePlatformOwner />,
+        children: [
+          {
+            path: "platform",
+            lazy: async () => ({ Component: (await import("../pages/platform/PlatformLayout")).default }),
+            children: [
+              { index: true, lazy: async () => ({ Component: (await import("../pages/platform/PlatformPages")).OverviewPage }) },
+              { path: "growth", lazy: async () => ({ Component: (await import("../pages/platform/PlatformPages")).GrowthPage }) },
+              { path: "activation", lazy: async () => ({ Component: (await import("../pages/platform/PlatformPages")).ActivationPage }) },
+              { path: "deploys", lazy: async () => ({ Component: (await import("../pages/platform/PlatformPages")).DeploysPage }) },
+              { path: "infrastructure", lazy: async () => ({ Component: (await import("../pages/platform/PlatformPages")).InfrastructurePage }) },
+              { path: "orgs", lazy: async () => ({ Component: (await import("../pages/platform/PlatformPages")).OrgsPage }) },
+              { path: "users", lazy: async () => ({ Component: (await import("../pages/platform/PlatformPages")).UsersPage }) },
+              { path: "users/:id", lazy: async () => ({ Component: (await import("../pages/platform/PlatformPages")).UserPage }) },
+              { path: "health", lazy: async () => ({ Component: (await import("../pages/platform/PlatformPages")).HealthPage }) },
             ],
           },
         ],

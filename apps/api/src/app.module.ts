@@ -30,6 +30,7 @@ import { ProxyConfigModule } from './modules/proxy/proxy.module';
 import { LogsModule } from './modules/logs/logs.module';
 import { DatabaseDataModule } from './modules/database-data/database-data.module';
 import { SupportModule } from './modules/support/support.module';
+import { PlatformModule } from './modules/platform/platform.module';
 
 @Module({
   imports: [
@@ -72,6 +73,7 @@ import { SupportModule } from './modules/support/support.module';
     LogsModule,
     DatabaseDataModule,
     SupportModule,
+    PlatformModule,
   ],
   controllers: [AppController],
   providers: [AppService, { provide: APP_GUARD, useClass: ThrottlerGuard }],

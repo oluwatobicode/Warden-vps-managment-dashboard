@@ -16,7 +16,7 @@ Warden runs as five containers on one server: the dashboard (`web`), the `api`, 
   | 22 | this server's own public IP, only if Warden will also deploy apps to this server (it connects to itself over SSH) |
 
 - **Elastic IP:** allocate one and attach it, so the address survives a stop and start.
-- **DNS:** an `A` record for `app.trywarden.xyz` pointing at that IP. If the domain uses Cloudflare, set the record to **DNS only** (grey cloud): Let's Encrypt has to reach the server directly.
+- **DNS:** an `A` record for `app.trywarden.xyz` pointing at that IP, and one for `admin.trywarden.xyz` (`ADMIN_HOST`: it only redirects to `https://app.trywarden.xyz/platform`; an existing `.env` needs the `ADMIN_HOST=` line added before the next `update.sh`, or compose refuses to start and nothing changes). If the domain uses Cloudflare, set the record to **DNS only** (grey cloud): Let's Encrypt has to reach the server directly.
 
 ## 2. Install
 

@@ -52,6 +52,8 @@ export const PASSWORD_RESET = {
 
 export const SESSION_SLIDE_THRESHOLD_SECONDS = 6 * 24 * 60 * 60;
 export const SESSION_TOUCH_INTERVAL_SECONDS = 60 * 60;
+// Membership.lastActiveAt: written at most this often per person per org.
+export const LAST_ACTIVE_INTERVAL_SECONDS = 60 * 60;
 
 // Redis key builders.
 const PREFIX = 'warden';
@@ -71,6 +73,8 @@ export const REDIS_KEY = {
   passwordSet: (userId: string) => `${PREFIX}:pwset:${userId}`,
   passwordSetAttempts: (userId: string) => `${PREFIX}:pwset-attempts:${userId}`,
   passwordSetRequests: (userId: string) => `${PREFIX}:pwset-requests:${userId}`,
+  // Membership.lastActiveAt was written within the hour (SET NX EX): at most one DB write per hour.
+  lastActive: (userId: string, orgId: string) => `${PREFIX}:last-active:${userId}:${orgId}`,
 } as const;
 
 // JWT

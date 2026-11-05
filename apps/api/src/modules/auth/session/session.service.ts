@@ -1,10 +1,12 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { Role } from 'db';
 import { RedisService } from '../../../redis/redis.service';
+import { PrismaService } from '../../../prisma/prisma.service';
 import { TokenService } from './token.service';
 import { RefreshTokenService } from './refresh-token.service';
 import { randomToken } from '../../../common/utils/token.util';
 import {
+  LAST_ACTIVE_INTERVAL_SECONDS,
   REDIS_KEY,
   SESSION_SLIDE_THRESHOLD_SECONDS,
   SESSION_TOUCH_INTERVAL_SECONDS,
@@ -40,11 +42,14 @@ export interface SessionRecord {
  */
 @Injectable()
 export class SessionService {
-  // All three are injected by Nest (see SessionModule.providers).
+  private readonly logger = new Logger(SessionService.name);
+
+  // Injected by Nest (see SessionModule.providers; Prisma and Redis are global).
   constructor(
     private readonly redis: RedisService,
     private readonly tokens: TokenService,
     private readonly refresh: RefreshTokenService,
+    private readonly prisma: PrismaService,
   ) {}
 
   /**
@@ -94,6 +99,9 @@ export class SessionService {
       org: organizationId,
     });
 
+    // A fresh sign-in counts as activity at once (platform page's active users).
+    void this.markActive(userId, organizationId);
+
     return {
       refreshToken,
       accessToken,
@@ -131,6 +139,32 @@ export class SessionService {
       'EX',
       TTL_SECONDS.session,
     );
+  }
+
+  /**
+   * Stamp Membership.lastActiveAt at most once an hour per person per org:
+   * SET NX succeeds only when the hour's marker is gone, and only then does
+   * Postgres get a write. Called without awaiting by SessionGuard (cookie
+   * requests only; an API token isn't a person) and on sign-in. A failure is
+   * logged and never fails the request.
+   */
+  async markActive(userId: string, organizationId: string): Promise<void> {
+    try {
+      const first = await this.redis.set(
+        REDIS_KEY.lastActive(userId, organizationId),
+        '1',
+        'EX',
+        LAST_ACTIVE_INTERVAL_SECONDS,
+        'NX',
+      );
+      if (first !== 'OK') return;
+      await this.prisma.client.membership.updateMany({
+        where: { userId, organizationId },
+        data: { lastActiveAt: new Date() },
+      });
+    } catch (e) {
+      this.logger.warn(`lastActiveAt not written: ${(e as Error).message}`);
+    }
   }
 
   /**

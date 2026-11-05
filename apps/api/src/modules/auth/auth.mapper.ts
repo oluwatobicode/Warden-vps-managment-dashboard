@@ -12,6 +12,8 @@ interface UserLike {
   avatarSeed: string | null;
   /** Only read to say whether one exists. The hash itself never leaves this file. */
   passwordHashed: string | null;
+  /** Only read to say whether this is the platform owner. Never written by code. */
+  platformRole: 'OWNER' | null;
 }
 interface OrgLike {
   id: string;
@@ -45,6 +47,7 @@ export function toSessionUser(
     role: membership.role,
     avatar: avatarFor(user),
     hasPassword: user.passwordHashed !== null,
+    isPlatformOwner: user.platformRole === 'OWNER',
   };
 }
 

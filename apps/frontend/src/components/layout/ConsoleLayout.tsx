@@ -54,6 +54,11 @@ export function ConsoleLayout() {
 
         <div className="flex items-center gap-3 justify-self-end">
           <SupportLink variant="header" />
+          {user?.isPlatformOwner && (
+            <Link to="/platform" className="rounded-3xl border border-cb px-4 py-[9px] text-[12px] font-semibold text-muted-warm hover:text-strong">
+              Platform
+            </Link>
+          )}
           <Link to="/account" aria-label="Account settings" title="Account settings" className="rounded-full ring-2 ring-transparent hover:ring-fieldb">
             <UserAvatar avatar={user?.avatar} name={user ? `${user.firstName} ${user.lastName}` : ""} size={38} />
           </Link>

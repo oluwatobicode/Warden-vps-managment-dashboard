@@ -22,3 +22,4 @@ export * from "./proxy.js";
 export * from "./logs.js";
 export * from "./database-data.js";
 export * from "./support.js";
+export * from "./platform.js";

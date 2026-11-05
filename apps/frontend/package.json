@@ -62,6 +62,7 @@
     "react-hook-form": "^7.90.0",
     "react-hot-toast": "^2.6.1",
     "react-router": "^8.4.0",
+    "recharts": "^3.10.1",
     "shared-types": "workspace:*",
     "socket.io-client": "^4.8.4",
     "tailwindcss": "^4.3.3",

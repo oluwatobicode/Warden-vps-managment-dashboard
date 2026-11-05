@@ -47,6 +47,8 @@ export class SessionGuard implements CanActivate {
     req.sid = claims.sid;
 
     void this.sessions.touch(claims.sid, record);
+    // Cookie sessions only: SessionOrTokenGuard sends Bearer tokens elsewhere.
+    void this.sessions.markActive(record.userId, record.organizationId);
 
     return true;
   }

@@ -5,6 +5,7 @@ import { useAuth } from "../features/auth/hooks/useAuth";
 import { atLeast } from "../utils/roles";
 import { FullPageSpinner } from "../components/ui/Spinner";
 import { Button } from "../components/ui/Button";
+import NotFoundPage from "../pages/NotFoundPage";
 
 export function RequireAuth() {
   const { user, isLoading, isError, retry } = useAuth();
@@ -53,4 +54,15 @@ export function RequireRole({
     );
   }
   return children;
+}
+
+/**
+ * /platform: the platform owner only (User.platformRole = OWNER). Everyone
+ * else sees the ordinary 404, like the api answers. Only hides the page: the
+ * api checks the database on every call.
+ */
+export function RequirePlatformOwner() {
+  const { user } = useAuth();
+  if (!user?.isPlatformOwner) return <NotFoundPage />;
+  return <Outlet />;
 }

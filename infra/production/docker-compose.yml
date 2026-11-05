@@ -119,6 +119,22 @@ services:
       - traefik.http.routers.warden-http.middlewares=warden-to-https
       - traefik.http.routers.warden-http.service=warden-web
       - traefik.http.middlewares.warden-to-https.redirectscheme.scheme=https
+      # ADMIN_HOST (admin.trywarden.xyz) only redirects to the dashboard's /platform
+      # page, http or https, any path. It serves nothing, holds no cookies (they're
+      # host-only on WARDEN_HOST) and has no auth of its own: /platform's owner
+      # check is the api's. Required: compose stops before changing anything if unset.
+      - traefik.http.routers.warden-admin.rule=Host(`${ADMIN_HOST:?Set ADMIN_HOST in .env, see .env.example}`)
+      - traefik.http.routers.warden-admin.entrypoints=websecure
+      - traefik.http.routers.warden-admin.tls.certresolver=le
+      - traefik.http.routers.warden-admin.middlewares=warden-admin-redirect
+      - traefik.http.routers.warden-admin.service=warden-web
+      - traefik.http.routers.warden-admin-http.rule=Host(`${ADMIN_HOST}`)
+      - traefik.http.routers.warden-admin-http.entrypoints=web
+      - traefik.http.routers.warden-admin-http.middlewares=warden-admin-redirect
+      - traefik.http.routers.warden-admin-http.service=warden-web
+      # One hop straight to https://WARDEN_HOST/platform. 302, so changing it later isn't cached.
+      - traefik.http.middlewares.warden-admin-redirect.redirectregex.regex=^https?://[^/]+.*
+      - traefik.http.middlewares.warden-admin-redirect.redirectregex.replacement=https://${WARDEN_HOST}/platform
 
 networks:
   # Postgres and Redis live only here: never on warden-proxy, never published.
